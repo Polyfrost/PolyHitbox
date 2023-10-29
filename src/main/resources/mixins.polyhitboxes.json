@@ -2,7 +2,7 @@
   "compatibilityLevel": "JAVA_8",
   "minVersion": "0.7",
   "package": "org.polyfrost.hitboxes.mixin",
-  "refmap": "mixins.hitboxes.refmap.json",
+  "refmap": "mixins.polyhitboxes.refmap.json",
   "verbose": true,
   "client": [
     "RenderManagerMixin"

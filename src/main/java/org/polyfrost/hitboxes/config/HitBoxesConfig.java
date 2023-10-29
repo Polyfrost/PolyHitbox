@@ -4,6 +4,7 @@ import cc.polyfrost.oneconfig.config.annotations.*;
 import cc.polyfrost.oneconfig.config.core.ConfigUtils;
 import cc.polyfrost.oneconfig.config.data.*;
 import cc.polyfrost.oneconfig.config.elements.BasicOption;
+import net.minecraft.client.Minecraft;
 import org.polyfrost.hitboxes.HitBoxes;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.boss.EntityDragon;
@@ -124,7 +125,6 @@ public class HitBoxesConfig extends cc.polyfrost.oneconfig.config.Config {
     @Page(name = "Silverfish", location = PageLocation.TOP, subcategory = "Overworld", category = "Hostile Entities")
     public HitboxConfiguration silverfish = new HitboxConfiguration();
 
-    @Hitbox(EntitySkeleton.class)
     @Page(name = "Skeleton", location = PageLocation.TOP, subcategory = "Overworld", category = "Hostile Entities")
     public HitboxConfiguration skeleton = new HitboxConfiguration();
 
@@ -162,7 +162,6 @@ public class HitBoxesConfig extends cc.polyfrost.oneconfig.config.Config {
     @Page(name = "Magma Cube", location = PageLocation.TOP, subcategory = "The Nether", category = "Hostile Entities")
     public HitboxConfiguration magmaCube = new HitboxConfiguration();
 
-    @Hitbox(EntitySkeleton.class)
     @Page(name = "Wither Skeleton", location = PageLocation.TOP, subcategory = "The Nether", category = "Hostile Entities")
     public HitboxConfiguration witherSkeleton = new HitboxConfiguration();
 
@@ -214,13 +213,16 @@ public class HitBoxesConfig extends cc.polyfrost.oneconfig.config.Config {
     @Page(name = "Others", location = PageLocation.TOP)
     public Global other = new Global();
 
-    @Hitbox(EntityXPOrb.class)
-    @Page(name = "XP Orb", location = PageLocation.TOP, category = "Others")
-    public HitboxConfiguration xpOrb = new HitboxConfiguration();
+    @Page(name = "Self", location = PageLocation.TOP, category = "Others")
+    public HitboxConfiguration self = new HitboxConfiguration();
 
     @Hitbox(EntityItem.class)
     @Page(name = "Item", location = PageLocation.TOP, category = "Others")
     public HitboxConfiguration item = new HitboxConfiguration();
+
+    @Hitbox(EntityXPOrb.class)
+    @Page(name = "XP Orb", location = PageLocation.TOP, category = "Others")
+    public HitboxConfiguration xpOrb = new HitboxConfiguration();
 
     public HitBoxesConfig() {
         super(new Mod(HitBoxes.NAME, ModType.UTIL_QOL), HitBoxes.MODID + ".json");
@@ -250,24 +252,24 @@ public class HitBoxesConfig extends cc.polyfrost.oneconfig.config.Config {
     }
 
     public HitboxConfiguration getEntityType(Entity entity) {
+        HitboxConfigWrapper hitboxConfigField = configMap.get(entity.getClass());
+
+        if (hitboxConfigField != null)
+            return hitboxConfigField.getCategoryOrDefault(this);
+
         if (entity instanceof EntitySkeleton) {
             if (((EntitySkeleton) entity).getSkeletonType() == 1)
                 return this.witherSkeleton;
             return this.skeleton;
         }
 
-        HitboxConfigWrapper hitboxConfigField = configMap.get(entity.getClass());
-
-
-        if (hitboxConfigField != null)
-            return hitboxConfigField.getCategoryOrDefault(this);
-
+        if (entity.equals(Minecraft.getMinecraft().thePlayer)) return this.self;
 
         for (Map.Entry<Class<? extends Entity>, HitboxConfigWrapper> entry : configMap.entrySet()) {
             if (entry.getKey().isInstance(entity))
                 return entry.getValue().getCategoryOrDefault(this);
         }
 
-        return player;
+        return self;
     }
 }

@@ -1,11 +1,8 @@
-package org.polyfrost.hitboxes.config;
+package org.polyfrost.polyhitboxes.config
 
-import net.minecraft.entity.Entity;
+import net.minecraft.entity.Entity
+import kotlin.reflect.KClass
 
-import java.lang.annotation.*;
-
-@Retention(RetentionPolicy.RUNTIME)
-@Target(ElementType.FIELD)
-public @interface Hitbox {
-    Class<? extends Entity> value();
-}
+@Retention(AnnotationRetention.RUNTIME)
+@Target(AnnotationTarget.FIELD)
+annotation class Hitbox(val value: KClass<out Entity>)

@@ -1,20 +1,17 @@
-package org.polyfrost.hitboxes;
+package org.polyfrost.polyhitboxes
 
-import org.polyfrost.hitboxes.config.HitBoxesConfig;
+import net.minecraftforge.fml.common.Mod
+import net.minecraftforge.fml.common.event.FMLInitializationEvent
+import org.polyfrost.polyhitboxes.config.HitBoxesConfig
 
-@net.minecraftforge.fml.common.Mod(modid = HitBoxes.MODID, name = HitBoxes.NAME, version = HitBoxes.VERSION)
-public class HitBoxes {
-    public static final String MODID = "@ID@";
-    public static final String NAME = "@NAME@";
-    public static final String VERSION = "@VER@";
+@Mod(modid = PolyHitBoxes.MODID, name = PolyHitBoxes.NAME, version = PolyHitBoxes.VERSION, modLanguageAdapter = "cc.polyfrost.oneconfig.utils.KotlinLanguageAdapter")
+object PolyHitBoxes {
+    const val MODID = "@ID@"
+    const val NAME = "@NAME@"
+    const val VERSION = "@VER@"
 
-    @net.minecraftforge.fml.common.Mod.Instance(MODID)
-    public static HitBoxes INSTANCE;
-    public HitBoxesConfig config;
-
-    @net.minecraftforge.fml.common.Mod.EventHandler
-    public void onFMLInitialization(net.minecraftforge.fml.common.event.FMLInitializationEvent event) {
-        config = new HitBoxesConfig();
+    @Mod.EventHandler
+    fun onFMLInitialization(event: FMLInitializationEvent?) {
+        HitBoxesConfig
     }
-
 }

@@ -1,275 +1,267 @@
-package org.polyfrost.hitboxes.config;
+package org.polyfrost.polyhitboxes.config
 
-import cc.polyfrost.oneconfig.config.annotations.*;
-import cc.polyfrost.oneconfig.config.core.ConfigUtils;
-import cc.polyfrost.oneconfig.config.data.*;
-import cc.polyfrost.oneconfig.config.elements.BasicOption;
-import net.minecraft.client.Minecraft;
-import org.polyfrost.hitboxes.HitBoxes;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.boss.EntityDragon;
-import net.minecraft.entity.item.*;
-import net.minecraft.entity.monster.*;
-import net.minecraft.entity.passive.*;
-import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.entity.projectile.*;
+import cc.polyfrost.oneconfig.config.Config
+import cc.polyfrost.oneconfig.config.annotations.Button
+import cc.polyfrost.oneconfig.config.annotations.Exclude
+import cc.polyfrost.oneconfig.config.annotations.Page
+import cc.polyfrost.oneconfig.config.core.ConfigUtils
+import cc.polyfrost.oneconfig.config.data.Mod
+import cc.polyfrost.oneconfig.config.data.ModType
+import cc.polyfrost.oneconfig.config.data.PageLocation
+import net.minecraft.client.Minecraft
+import net.minecraft.entity.Entity
+import net.minecraft.entity.boss.EntityDragon
+import net.minecraft.entity.item.EntityArmorStand
+import net.minecraft.entity.item.EntityItem
+import net.minecraft.entity.item.EntityXPOrb
+import net.minecraft.entity.monster.*
+import net.minecraft.entity.passive.*
+import net.minecraft.entity.player.EntityPlayer
+import net.minecraft.entity.projectile.*
+import org.polyfrost.polyhitboxes.PolyHitBoxes
+import kotlin.reflect.KClass
 
-import java.lang.reflect.Field;
-import java.util.*;
-
-@SuppressWarnings("unused")
-public class HitBoxesConfig extends cc.polyfrost.oneconfig.config.Config {
+@Suppress("unused")
+object HitBoxesConfig : Config(Mod(PolyHitBoxes.NAME, ModType.UTIL_QOL), "${PolyHitBoxes.MODID}.json") {
 
     @Exclude
-    public static HashMap<Class<? extends Entity>, HitboxConfigWrapper> configMap = new HashMap<>();
+    var configMap = HashMap<KClass<out Entity>, HitboxConfigWrapper>()
 
     @Button(name = "Reset All", text = "Reset")
-    public void reset() {
-
-        for (HitboxConfigWrapper wrapper : configMap.values()) {
-            HitboxConfiguration hitboxConfig = wrapper.getOrNull(this);
-            if (hitboxConfig == null) return;
-            hitboxConfig.reset();
+    fun reset() {
+        for (wrapper in configMap.values) {
+            val hitboxConfig = wrapper.getOrNull ?: return
+            hitboxConfig.reset()
         }
-
-        passive.reset();
-        hostile.reset();
-        projectile.reset();
-        other.reset();
+        passive.reset()
+        hostile.reset()
+        projectile.reset()
+        other.reset()
     }
 
+    @JvmField
     @Page(name = "Passive Entities", location = PageLocation.TOP)
-    public Global passive = new Global();
+    var passive = Global()
 
-    @Hitbox(EntityArmorStand.class)
+    @Hitbox(EntityArmorStand::class)
     @Page(name = "Armor Stand", location = PageLocation.TOP, category = "Passive Entities")
-    public HitboxConfiguration armorStand = new HitboxConfiguration();
+    var armorStand = HitboxConfiguration()
 
-    @Hitbox(EntityBat.class)
+    @Hitbox(EntityBat::class)
     @Page(name = "Bat", location = PageLocation.TOP, category = "Passive Entities")
-    public HitboxConfiguration bat = new HitboxConfiguration();
+    var bat = HitboxConfiguration()
 
-    @Hitbox(EntityChicken.class)
+    @Hitbox(EntityChicken::class)
     @Page(name = "Chicken", location = PageLocation.TOP, category = "Passive Entities")
-    public HitboxConfiguration chicken = new HitboxConfiguration();
+    var chicken = HitboxConfiguration()
 
-    @Hitbox(EntityCow.class)
+    @Hitbox(EntityCow::class)
     @Page(name = "Cow", location = PageLocation.TOP, category = "Passive Entities")
-    public HitboxConfiguration cow = new HitboxConfiguration();
+    var cow = HitboxConfiguration()
 
-    @Hitbox(EntityHorse.class)
+    @Hitbox(EntityHorse::class)
     @Page(name = "Horse", location = PageLocation.TOP, category = "Passive Entities")
-    public HitboxConfiguration horse = new HitboxConfiguration();
+    var horse = HitboxConfiguration()
 
-    @Hitbox(EntityMooshroom.class)
+    @Hitbox(EntityMooshroom::class)
     @Page(name = "Mooshroom", location = PageLocation.TOP, category = "Passive Entities")
-    public HitboxConfiguration mooshroom = new HitboxConfiguration();
+    var mooshroom = HitboxConfiguration()
 
-    @Hitbox(EntityOcelot.class)
+    @Hitbox(EntityOcelot::class)
     @Page(name = "Ocelot", location = PageLocation.TOP, category = "Passive Entities")
-    public HitboxConfiguration ocelot = new HitboxConfiguration();
+    var ocelot = HitboxConfiguration()
 
-    @Hitbox(EntityPig.class)
+    @Hitbox(EntityPig::class)
     @Page(name = "Pig", location = PageLocation.TOP, category = "Passive Entities")
-    public HitboxConfiguration pig = new HitboxConfiguration();
+    var pig = HitboxConfiguration()
 
-    @Hitbox(EntityPlayer.class)
+    @JvmField
+    @Hitbox(EntityPlayer::class)
     @Page(name = "Player", location = PageLocation.TOP, category = "Passive Entities")
-    public HitboxConfiguration player = new HitboxConfiguration();
+    var player = HitboxConfiguration()
 
-    @Hitbox(EntityRabbit.class)
+    @Hitbox(EntityRabbit::class)
     @Page(name = "Rabbit", location = PageLocation.TOP, category = "Passive Entities")
-    public HitboxConfiguration rabbit = new HitboxConfiguration();
+    var rabbit = HitboxConfiguration()
 
-    @Hitbox(EntitySheep.class)
+    @Hitbox(EntitySheep::class)
     @Page(name = "Sheep", location = PageLocation.TOP, category = "Passive Entities")
-    public HitboxConfiguration sheep = new HitboxConfiguration();
+    var sheep = HitboxConfiguration()
 
-    @Hitbox(EntitySquid.class)
+    @Hitbox(EntitySquid::class)
     @Page(name = "Squid", location = PageLocation.TOP, category = "Passive Entities")
-    public HitboxConfiguration squid = new HitboxConfiguration();
+    var squid = HitboxConfiguration()
 
-    @Hitbox(EntityVillager.class)
+    @Hitbox(EntityVillager::class)
     @Page(name = "Villager", location = PageLocation.TOP, category = "Passive Entities")
-    public HitboxConfiguration villager = new HitboxConfiguration();
+    var villager = HitboxConfiguration()
 
-    @Hitbox(EntityWolf.class)
+    @Hitbox(EntityWolf::class)
     @Page(name = "Wolf", location = PageLocation.TOP, category = "Passive Entities")
-    public HitboxConfiguration wolf = new HitboxConfiguration();
+    var wolf = HitboxConfiguration()
 
     // hostile
+    @JvmField
     @Page(name = "Hostile Entities", location = PageLocation.TOP)
-    public Global hostile = new Global();
+    var hostile = Global()
 
-    @Hitbox(EntityCaveSpider.class)
+    @Hitbox(EntityCaveSpider::class)
     @Page(name = "Cave Spider", location = PageLocation.TOP, subcategory = "Overworld", category = "Hostile Entities")
-    public HitboxConfiguration caveSpider = new HitboxConfiguration();
+    var caveSpider = HitboxConfiguration()
 
-    @Hitbox(EntityCreeper.class)
+    @Hitbox(EntityCreeper::class)
     @Page(name = "Creeper", location = PageLocation.TOP, subcategory = "Overworld", category = "Hostile Entities")
-    public HitboxConfiguration creeper = new HitboxConfiguration();
+    var creeper = HitboxConfiguration()
 
-    @Hitbox(EntityGiantZombie.class)
+    @Hitbox(EntityGiantZombie::class)
     @Page(name = "Giant", location = PageLocation.TOP, subcategory = "Overworld", category = "Hostile Entities")
-    public HitboxConfiguration giant = new HitboxConfiguration();
+    var giant = HitboxConfiguration()
 
-    @Hitbox(EntityGuardian.class)
+    @Hitbox(EntityGuardian::class)
     @Page(name = "Guardian", location = PageLocation.TOP, subcategory = "Overworld", category = "Hostile Entities")
-    public HitboxConfiguration guardian = new HitboxConfiguration();
+    var guardian = HitboxConfiguration()
 
-    @Hitbox(EntityIronGolem.class)
+    @Hitbox(EntityIronGolem::class)
     @Page(name = "Iron Golem", location = PageLocation.TOP, subcategory = "Overworld", category = "Hostile Entities")
-    public HitboxConfiguration ironGolem = new HitboxConfiguration();
+    var ironGolem = HitboxConfiguration()
 
-    @Hitbox(EntitySilverfish.class)
+    @Hitbox(EntitySilverfish::class)
     @Page(name = "Silverfish", location = PageLocation.TOP, subcategory = "Overworld", category = "Hostile Entities")
-    public HitboxConfiguration silverfish = new HitboxConfiguration();
+    var silverfish = HitboxConfiguration()
 
     @Page(name = "Skeleton", location = PageLocation.TOP, subcategory = "Overworld", category = "Hostile Entities")
-    public HitboxConfiguration skeleton = new HitboxConfiguration();
+    var skeleton = HitboxConfiguration()
 
-    @Hitbox(EntitySlime.class)
+    @Hitbox(EntitySlime::class)
     @Page(name = "Slime", location = PageLocation.TOP, subcategory = "Overworld", category = "Hostile Entities")
-    public HitboxConfiguration slime = new HitboxConfiguration();
+    var slime = HitboxConfiguration()
 
-    @Hitbox(EntitySnowman.class)
+    @Hitbox(EntitySnowman::class)
     @Page(name = "Snow Golem", location = PageLocation.TOP, subcategory = "Overworld", category = "Hostile Entities")
-    public HitboxConfiguration snowGolem = new HitboxConfiguration();
+    var snowGolem = HitboxConfiguration()
 
-    @Hitbox(EntitySpider.class)
+    @Hitbox(EntitySpider::class)
     @Page(name = "Spider", location = PageLocation.TOP, subcategory = "Overworld", category = "Hostile Entities")
-    public HitboxConfiguration spider = new HitboxConfiguration();
+    var spider = HitboxConfiguration()
 
-    @Hitbox(EntityWitch.class)
+    @Hitbox(EntityWitch::class)
     @Page(name = "Witch", location = PageLocation.TOP, subcategory = "Overworld", category = "Hostile Entities")
-    public HitboxConfiguration witch = new HitboxConfiguration();
+    var witch = HitboxConfiguration()
 
-    @Hitbox(EntityZombie.class)
+    @Hitbox(EntityZombie::class)
     @Page(name = "Zombie", location = PageLocation.TOP, subcategory = "Overworld", category = "Hostile Entities")
-    public HitboxConfiguration zombie = new HitboxConfiguration();
+    var zombie = HitboxConfiguration()
 
-// nether
-
-    @Hitbox(EntityBlaze.class)
+    // nether
+    @Hitbox(EntityBlaze::class)
     @Page(name = "Blaze", location = PageLocation.TOP, subcategory = "The Nether", category = "Hostile Entities")
-    public HitboxConfiguration blaze = new HitboxConfiguration();
+    var blaze = HitboxConfiguration()
 
-    @Hitbox(EntityGhast.class)
+    @Hitbox(EntityGhast::class)
     @Page(name = "Ghast", location = PageLocation.TOP, subcategory = "The Nether", category = "Hostile Entities")
-    public HitboxConfiguration ghast = new HitboxConfiguration();
+    var ghast = HitboxConfiguration()
 
-    @Hitbox(EntityMagmaCube.class)
+    @Hitbox(EntityMagmaCube::class)
     @Page(name = "Magma Cube", location = PageLocation.TOP, subcategory = "The Nether", category = "Hostile Entities")
-    public HitboxConfiguration magmaCube = new HitboxConfiguration();
+    var magmaCube = HitboxConfiguration()
 
     @Page(name = "Wither Skeleton", location = PageLocation.TOP, subcategory = "The Nether", category = "Hostile Entities")
-    public HitboxConfiguration witherSkeleton = new HitboxConfiguration();
+    var witherSkeleton = HitboxConfiguration()
 
-    @Hitbox(EntityPigZombie.class)
+    @Hitbox(EntityPigZombie::class)
     @Page(name = "Zombie Pigman", location = PageLocation.TOP, subcategory = "The Nether", category = "Hostile Entities")
-    public HitboxConfiguration zombiePigman = new HitboxConfiguration();
+    var zombiePigman = HitboxConfiguration()
 
-// end
-
-    @Hitbox(EntityEnderman.class)
+    // end
+    @Hitbox(EntityEnderman::class)
     @Page(name = "Enderman", location = PageLocation.TOP, subcategory = "The End", category = "Hostile Entities")
-    public HitboxConfiguration enderman = new HitboxConfiguration();
+    var enderman = HitboxConfiguration()
 
-    @Hitbox(EntityEndermite.class)
+    @Hitbox(EntityEndermite::class)
     @Page(name = "Endermite", location = PageLocation.TOP, subcategory = "The End", category = "Hostile Entities")
-    public HitboxConfiguration endermite = new HitboxConfiguration();
+    var endermite = HitboxConfiguration()
 
-    @Hitbox(EntityDragon.class)
+    @Hitbox(EntityDragon::class)
     @Page(name = "Ender Dragon", location = PageLocation.TOP, subcategory = "The End", category = "Hostile Entities")
-    public HitboxConfiguration enderDragon = new HitboxConfiguration();
+    var enderDragon = HitboxConfiguration()
 
+    @JvmField
     @Page(name = "Projectile Entities", location = PageLocation.TOP)
-    public Global projectile = new Global();
+    var projectile = Global()
 
-    @Hitbox(EntityArrow.class)
+    @Hitbox(EntityArrow::class)
     @Page(name = "Arrow", location = PageLocation.TOP, category = "Projectiles")
-    public HitboxConfiguration arrow = new HitboxConfiguration();
+    var arrow = HitboxConfiguration()
 
-    @Hitbox(EntityEgg.class)
+    @Hitbox(EntityEgg::class)
     @Page(name = "Egg", location = PageLocation.TOP, category = "Projectiles")
-    public HitboxConfiguration egg = new HitboxConfiguration();
+    var egg = HitboxConfiguration()
 
-    @Hitbox(EntityFireball.class)
+    @Hitbox(EntityFireball::class)
     @Page(name = "Fireball", location = PageLocation.TOP, category = "Projectiles")
-    public HitboxConfiguration fireball = new HitboxConfiguration();
+    var fireball = HitboxConfiguration()
 
-    @Hitbox(EntityFishHook.class)
+    @Hitbox(EntityFishHook::class)
     @Page(name = "Fish Hook", location = PageLocation.TOP, category = "Projectiles")
-    public HitboxConfiguration fishHook = new HitboxConfiguration();
+    var fishHook = HitboxConfiguration()
 
-    @Hitbox(EntityPotion.class)
+    @Hitbox(EntityPotion::class)
     @Page(name = "Potion", location = PageLocation.TOP, category = "Projectiles")
-    public HitboxConfiguration potion = new HitboxConfiguration();
+    var potion = HitboxConfiguration()
 
-    @Hitbox(EntitySnowball.class)
+    @Hitbox(EntitySnowball::class)
     @Page(name = "Snowball", location = PageLocation.TOP, category = "Projectiles")
-    public HitboxConfiguration snowball = new HitboxConfiguration();
+    var snowball = HitboxConfiguration()
 
+    @JvmField
     @Page(name = "Others", location = PageLocation.TOP)
-    public Global other = new Global();
+    var other = Global()
 
     @Page(name = "Self", location = PageLocation.TOP, category = "Others")
-    public HitboxConfiguration self = new HitboxConfiguration();
+    var self = HitboxConfiguration()
 
-    @Hitbox(EntityItem.class)
+    @Hitbox(EntityItem::class)
     @Page(name = "Item", location = PageLocation.TOP, category = "Others")
-    public HitboxConfiguration item = new HitboxConfiguration();
+    var item = HitboxConfiguration()
 
-    @Hitbox(EntityXPOrb.class)
+    @Hitbox(EntityXPOrb::class)
     @Page(name = "XP Orb", location = PageLocation.TOP, category = "Others")
-    public HitboxConfiguration xpOrb = new HitboxConfiguration();
+    var xpOrb = HitboxConfiguration()
 
-    public HitBoxesConfig() {
-        super(new Mod(HitBoxes.NAME, ModType.UTIL_QOL), HitBoxes.MODID + ".json");
-        initialize();
-        setupConditions();
+    init {
+        initialize()
+        setupConditions()
     }
 
     /**
      * Sets the mod conditions, this will later be setup differently so that it is more efficient, this is it for now though.
      */
-    private void setupConditions() {
-        for (Map.Entry<String, BasicOption> entry : optionNames.entrySet()) {
-            if (entry.getKey().contains("showHitbox")) continue;
-            if (entry.getKey().contains("global")) continue;
-            Object parent = entry.getValue().getParent();
-            if (!(parent instanceof HitboxConfiguration)) continue;
-            String page = entry.getKey().split("\\.")[0];
-            entry.getValue().addDependency(page + ".showHitbox", () -> ((HitboxConfiguration) parent).showHitbox);
+    private fun setupConditions() {
+        for ((key, value) in optionNames) {
+            if (key.contains("showHitbox")) continue
+            if (key.contains("global")) continue
+            val parent = value.parent as? HitboxConfiguration ?: continue
+            val page = key.split("\\.".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()[0]
+            value.addDependency("$page.showHitbox") { parent.showHitbox }
         }
-
-        for (Field declaredField : getClass().getDeclaredFields()) {
-            Hitbox hitboxAnnotation = ConfigUtils.findAnnotation(declaredField, Hitbox.class);
-            Page pageAnnotation = ConfigUtils.findAnnotation(declaredField, Page.class);
-            if (hitboxAnnotation == null || pageAnnotation == null) continue;
-            configMap.put(hitboxAnnotation.value(), new HitboxConfigWrapper(declaredField, pageAnnotation.category()));
+        for (declaredField in javaClass.declaredFields) {
+            val hitboxAnnotation = ConfigUtils.findAnnotation(declaredField, Hitbox::class.java)
+            val pageAnnotation = ConfigUtils.findAnnotation(declaredField, Page::class.java)
+            if (hitboxAnnotation == null || pageAnnotation == null) continue
+            configMap[hitboxAnnotation.value] = HitboxConfigWrapper(declaredField, pageAnnotation.category)
         }
     }
 
-    public HitboxConfiguration getEntityType(Entity entity) {
-        HitboxConfigWrapper hitboxConfigField = configMap.get(entity.getClass());
-
-        if (hitboxConfigField != null)
-            return hitboxConfigField.getCategoryOrDefault(this);
-
-        if (entity instanceof EntitySkeleton) {
-            if (((EntitySkeleton) entity).getSkeletonType() == 1)
-                return this.witherSkeleton;
-            return this.skeleton;
+    fun getEntityType(entity: Entity): HitboxConfiguration {
+        val hitboxConfigField = configMap[entity::class]
+        if (hitboxConfigField != null) return hitboxConfigField.categoryOrDefault
+        if (entity is EntitySkeleton) {
+            return if (entity.skeletonType == 1) witherSkeleton else skeleton
         }
-
-        if (entity.equals(Minecraft.getMinecraft().thePlayer)) return this.self;
-
-        for (Map.Entry<Class<? extends Entity>, HitboxConfigWrapper> entry : configMap.entrySet()) {
-            if (entry.getKey().isInstance(entity))
-                return entry.getValue().getCategoryOrDefault(this);
+        if (entity == Minecraft.getMinecraft().thePlayer) return self
+        for ((key, value) in configMap) {
+            if (key.isInstance(entity)) return value.categoryOrDefault
         }
-
-        return self;
+        return self
     }
 }

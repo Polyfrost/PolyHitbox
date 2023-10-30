@@ -1,14 +1,14 @@
 package org.polyfrost.hitboxes.mixin;
 
 import cc.polyfrost.oneconfig.config.core.OneColor;
-import org.polyfrost.hitboxes.HitBoxes;
 import net.minecraft.client.renderer.*;
 import net.minecraft.client.renderer.entity.RenderManager;
 import net.minecraft.client.renderer.vertex.DefaultVertexFormats;
 import net.minecraft.entity.Entity;
 import net.minecraft.util.*;
 import org.lwjgl.opengl.GL11;
-import org.polyfrost.hitboxes.config.*;
+import org.polyfrost.polyhitboxes.config.HitBoxesConfig;
+import org.polyfrost.polyhitboxes.config.HitboxConfiguration;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.*;
 import org.spongepowered.asm.mixin.injection.callback.*;
@@ -28,7 +28,7 @@ public class RenderManagerMixin {
     ))
     public void overrideHitboxRendering(Entity entityIn, double x, double y, double z, float entityYaw, float partialTicks, boolean p_147939_10_, CallbackInfoReturnable<Boolean> cir) {
 
-        HitBoxesConfig config = HitBoxes.INSTANCE.config;
+        HitBoxesConfig config = HitBoxesConfig.INSTANCE;
 
         if (!config.enabled) return;
 
@@ -103,7 +103,7 @@ public class RenderManagerMixin {
     @Inject(method = "renderDebugBoundingBox", at = @At(value = "HEAD"), cancellable = true)
     public void cancelVanillaHitboxes(CallbackInfo ci) {
         // A true toggle of the mod, when it's disabled it can go back to the Vanilla behavior.
-        if (HitBoxes.INSTANCE.config.enabled) {
+        if (HitBoxesConfig.INSTANCE.enabled) {
             ci.cancel();
         }
     }

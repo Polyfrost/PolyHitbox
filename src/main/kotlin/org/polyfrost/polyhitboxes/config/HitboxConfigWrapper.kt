@@ -1,45 +1,33 @@
-package org.polyfrost.hitboxes.config;
+package org.polyfrost.polyhitboxes.config
 
-import java.lang.reflect.Field;
+import java.lang.reflect.Field
 
-public class HitboxConfigWrapper {
-    private final Field field;
-    public final String category;
-
-    public HitboxConfigWrapper(Field field, String category) {
-        this.field = field;
-        this.category = category;
-    }
-
-    public HitboxConfiguration getOrNull(HitBoxesConfig instance) {
-        try {
-            return (HitboxConfiguration) field.get(instance);
-        } catch (Exception e) {
-            return null;
+class HitboxConfigWrapper(private val field: Field, val category: String) {
+    val getOrNull: HitboxConfiguration?
+        get() = try {
+            this.field.get(HitBoxesConfig) as HitboxConfiguration?
+        } catch (e: Exception) {
+            null
         }
-    }
 
-    public HitboxConfiguration getCategoryOrDefault(HitBoxesConfig instance) {
-        try {
-            Global hitboxConfig = (Global) getCategory(instance);
-            if (hitboxConfig != null && hitboxConfig.global) return hitboxConfig;
-            return (HitboxConfiguration) field.get(instance);
-        } catch (Exception e) {
-            return instance.player;
-        }
-    }
+    val categoryOrDefault: HitboxConfiguration
+        get() = try {
+            val hitboxConfig = getCategory()
 
-    private HitboxConfiguration getCategory(HitBoxesConfig instance) {
-        switch (category) {
-            case "Passive Entities":
-                return instance.passive;
-            case "Hostile Entities":
-                return instance.hostile;
-            case "Projectiles":
-                return instance.projectile;
-            case "Others":
-                return instance.other;
+            if (hitboxConfig != null && hitboxConfig.global) {
+                hitboxConfig
+            } else {
+                this.field.get(HitBoxesConfig) as HitboxConfiguration
+            }
+        } catch (e: Exception) {
+            HitBoxesConfig.player
         }
-        return null;
+
+    private fun getCategory() = when (category) {
+        "Passive Entities" -> HitBoxesConfig.passive
+        "Hostile Entities" -> HitBoxesConfig.hostile
+        "Projectiles" -> HitBoxesConfig.projectile
+        "Others" -> HitBoxesConfig.other
+        else -> null
     }
 }

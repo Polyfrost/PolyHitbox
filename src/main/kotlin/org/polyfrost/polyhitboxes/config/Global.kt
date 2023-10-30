@@ -1,8 +1,9 @@
-package org.polyfrost.hitboxes.config;
+package org.polyfrost.polyhitboxes.config
 
-import cc.polyfrost.oneconfig.config.annotations.Switch;
+import cc.polyfrost.oneconfig.config.annotations.Switch
+import org.polyfrost.polyhitboxes.config.HitboxConfiguration
 
-public class Global extends HitboxConfiguration{
+class Global : HitboxConfiguration() {
     @Switch(name = "Enable")
-    public boolean global = true;
+    var global = true
 }

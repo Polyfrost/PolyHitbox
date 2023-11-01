@@ -39,7 +39,6 @@ object HitBoxesConfig : Config(Mod(PolyHitBoxes.NAME, ModType.UTIL_QOL), "${Poly
         other.reset()
     }
 
-    @JvmField
     @Page(name = "Passive Entities", location = PageLocation.TOP)
     var passive = Global()
 
@@ -75,7 +74,6 @@ object HitBoxesConfig : Config(Mod(PolyHitBoxes.NAME, ModType.UTIL_QOL), "${Poly
     @Page(name = "Pig", location = PageLocation.TOP, category = "Passive Entities")
     var pig = HitboxConfiguration()
 
-    @JvmField
     @Hitbox(EntityPlayer::class)
     @Page(name = "Player", location = PageLocation.TOP, category = "Passive Entities")
     var player = HitboxConfiguration()
@@ -101,7 +99,6 @@ object HitBoxesConfig : Config(Mod(PolyHitBoxes.NAME, ModType.UTIL_QOL), "${Poly
     var wolf = HitboxConfiguration()
 
     // hostile
-    @JvmField
     @Page(name = "Hostile Entities", location = PageLocation.TOP)
     var hostile = Global()
 
@@ -185,7 +182,7 @@ object HitBoxesConfig : Config(Mod(PolyHitBoxes.NAME, ModType.UTIL_QOL), "${Poly
     @Page(name = "Ender Dragon", location = PageLocation.TOP, subcategory = "The End", category = "Hostile Entities")
     var enderDragon = HitboxConfiguration()
 
-    @JvmField
+    
     @Page(name = "Projectile Entities", location = PageLocation.TOP)
     var projectile = Global()
 
@@ -213,7 +210,6 @@ object HitBoxesConfig : Config(Mod(PolyHitBoxes.NAME, ModType.UTIL_QOL), "${Poly
     @Page(name = "Snowball", location = PageLocation.TOP, category = "Projectiles")
     var snowball = HitboxConfiguration()
 
-    @JvmField
     @Page(name = "Others", location = PageLocation.TOP)
     var other = Global()
 
@@ -233,17 +229,15 @@ object HitBoxesConfig : Config(Mod(PolyHitBoxes.NAME, ModType.UTIL_QOL), "${Poly
         setupConditions()
     }
 
-    /**
-     * Sets the mod conditions, this will later be setup differently so that it is more efficient, this is it for now though.
-     */
     private fun setupConditions() {
         for ((key, value) in optionNames) {
             if (key.contains("showHitbox")) continue
             if (key.contains("global")) continue
             val parent = value.parent as? HitboxConfiguration ?: continue
-            val page = key.split("\\.".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()[0]
+            val page = key.split(".").getOrNull(0) ?: continue
             value.addDependency("$page.showHitbox") { parent.showHitbox }
         }
+
         for (declaredField in javaClass.declaredFields) {
             val hitboxAnnotation = ConfigUtils.findAnnotation(declaredField, Hitbox::class.java)
             val pageAnnotation = ConfigUtils.findAnnotation(declaredField, Page::class.java)

@@ -9,7 +9,6 @@ import net.minecraft.entity.Entity
 import net.minecraft.util.AxisAlignedBB
 import org.lwjgl.opengl.GL11
 import org.polyfrost.polyhitboxes.config.ConfigMap
-import org.polyfrost.polyhitboxes.config.HitBoxesConfig
 import org.polyfrost.polyhitboxes.config.HitBoxesConfigV2
 import org.polyfrost.polyhitboxes.config.HitboxConfiguration
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo

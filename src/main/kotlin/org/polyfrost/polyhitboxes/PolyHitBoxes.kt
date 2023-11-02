@@ -2,7 +2,7 @@ package org.polyfrost.polyhitboxes
 
 import net.minecraftforge.fml.common.Mod
 import net.minecraftforge.fml.common.event.FMLInitializationEvent
-import org.polyfrost.polyhitboxes.config.HitBoxesConfig
+import org.polyfrost.polyhitboxes.config.HitBoxesConfigV2
 
 @Mod(modid = PolyHitBoxes.MODID, name = PolyHitBoxes.NAME, version = PolyHitBoxes.VERSION, modLanguageAdapter = "cc.polyfrost.oneconfig.utils.KotlinLanguageAdapter")
 object PolyHitBoxes {
@@ -12,6 +12,6 @@ object PolyHitBoxes {
 
     @Mod.EventHandler
     fun onFMLInitialization(event: FMLInitializationEvent?) {
-        HitBoxesConfig
+        HitBoxesConfigV2
     }
 }

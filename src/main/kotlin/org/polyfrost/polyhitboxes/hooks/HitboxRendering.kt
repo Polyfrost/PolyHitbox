@@ -8,6 +8,7 @@ import net.minecraft.client.renderer.vertex.DefaultVertexFormats
 import net.minecraft.entity.Entity
 import net.minecraft.util.AxisAlignedBB
 import org.lwjgl.opengl.GL11
+import org.polyfrost.polyhitboxes.config.ConfigMap
 import org.polyfrost.polyhitboxes.config.HitBoxesConfig
 import org.polyfrost.polyhitboxes.config.HitboxConfiguration
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo
@@ -19,7 +20,7 @@ fun injectHitbox(entity: Entity, x: Double, y: Double, z: Double, partialTicks: 
 }
 
 private fun renderHitbox(entityIn: Entity, x: Double, y: Double, z: Double, partialTicks: Float) {
-    val hitboxConfig = HitBoxesConfig.getEntityType(entityIn)
+    val hitboxConfig = ConfigMap.getEntityType(entityIn)
     if (!hitboxConfig.showHitbox) return
 
     GlStateManager.depthMask(false)

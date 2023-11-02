@@ -10,11 +10,12 @@ import net.minecraft.util.AxisAlignedBB
 import org.lwjgl.opengl.GL11
 import org.polyfrost.polyhitboxes.config.ConfigMap
 import org.polyfrost.polyhitboxes.config.HitBoxesConfig
+import org.polyfrost.polyhitboxes.config.HitBoxesConfigV2
 import org.polyfrost.polyhitboxes.config.HitboxConfiguration
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo
 
 fun injectHitbox(entity: Entity, x: Double, y: Double, z: Double, partialTicks: Float, callbackInfo: CallbackInfo) {
-    if (!HitBoxesConfig.enabled) return
+    if (!HitBoxesConfigV2.enabled) return
     renderHitbox(entity, x, y, z, partialTicks)
     callbackInfo.cancel()
 }

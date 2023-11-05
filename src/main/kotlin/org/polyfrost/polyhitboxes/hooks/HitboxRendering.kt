@@ -8,19 +8,17 @@ import net.minecraft.client.renderer.vertex.DefaultVertexFormats
 import net.minecraft.entity.Entity
 import net.minecraft.util.AxisAlignedBB
 import org.lwjgl.opengl.GL11
-import org.polyfrost.polyhitboxes.config.ConfigMap
-import org.polyfrost.polyhitboxes.config.HitBoxesConfigV2
-import org.polyfrost.polyhitboxes.config.HitboxConfiguration
+import org.polyfrost.polyhitboxes.config.*
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo
 
 fun injectHitbox(entity: Entity, x: Double, y: Double, z: Double, partialTicks: Float, callbackInfo: CallbackInfo) {
-    if (!HitBoxesConfigV2.enabled) return
+    if (!ModConfig.enabled) return
     renderHitbox(entity, x, y, z, partialTicks)
     callbackInfo.cancel()
 }
 
 private fun renderHitbox(entityIn: Entity, x: Double, y: Double, z: Double, partialTicks: Float) {
-    val hitboxConfig = ConfigMap.getEntityType(entityIn)
+    val hitboxConfig = ModConfig.getEntityHitbox(entityIn)
     if (!hitboxConfig.showHitbox) return
 
     GlStateManager.depthMask(false)
@@ -48,7 +46,7 @@ private fun renderHitbox(entityIn: Entity, x: Double, y: Double, z: Double, part
 
 private const val ALTERNATING_PATTERN = 0b1010101010101010.toShort()
 
-private fun drawOutline(hitboxConfig: HitboxConfiguration, entity: Entity, x: Double, y: Double, z: Double) {
+private fun drawOutline(hitboxConfig: HitboxConfig, entity: Entity, x: Double, y: Double, z: Double) {
     GL11.glEnable(GL11.GL_BLEND)
     GL11.glLineWidth(hitboxConfig.outlineThickness)
 
@@ -76,7 +74,7 @@ private fun drawOutline(hitboxConfig: HitboxConfiguration, entity: Entity, x: Do
     GL11.glDisable(GL11.GL_BLEND)
 }
 
-private fun drawEyeHeight(hitboxConfig: HitboxConfiguration, entity: Entity, x: Double, y: Double, z: Double) {
+private fun drawEyeHeight(hitboxConfig: HitboxConfig, entity: Entity, x: Double, y: Double, z: Double) {
     GL11.glLineWidth(hitboxConfig.eyeHeightThickness)
 
     val halfWidth = entity.width / 2.0f
@@ -94,7 +92,7 @@ private fun drawEyeHeight(hitboxConfig: HitboxConfiguration, entity: Entity, x: 
 }
 
 
-private fun drawLookVector(hitboxConfig: HitboxConfiguration, entity: Entity, x: Double, y: Double, z: Double, partialTicks: Float) {
+private fun drawLookVector(hitboxConfig: HitboxConfig, entity: Entity, x: Double, y: Double, z: Double, partialTicks: Float) {
     val color = hitboxConfig.lookVectorColor
     GL11.glLineWidth(hitboxConfig.lookVectorThickness)
     GlStateManager.color(color.red / 255f, color.green / 255f, color.blue / 255f, color.alpha / 255f)

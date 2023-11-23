@@ -5,7 +5,7 @@ import cc.polyfrost.oneconfig.config.annotations.Slider
 import cc.polyfrost.oneconfig.config.annotations.Switch
 import cc.polyfrost.oneconfig.config.core.OneColor
 
-open class HitboxNode {
+open class HitboxProfile {
     @Switch(name = "Override", size = 1)
     var override = false
 

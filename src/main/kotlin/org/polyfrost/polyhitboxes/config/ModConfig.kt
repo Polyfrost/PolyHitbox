@@ -2,13 +2,15 @@ package org.polyfrost.polyhitboxes.config
 
 import cc.polyfrost.oneconfig.config.Config
 import cc.polyfrost.oneconfig.config.annotations.CustomOption
+import cc.polyfrost.oneconfig.config.annotations.Page
 import cc.polyfrost.oneconfig.config.data.Mod
 import cc.polyfrost.oneconfig.config.data.ModType
+import cc.polyfrost.oneconfig.config.data.PageLocation
 import cc.polyfrost.oneconfig.config.elements.BasicOption
 import cc.polyfrost.oneconfig.config.elements.OptionPage
 import net.minecraft.entity.Entity
-import net.minecraft.entity.EntityList
 import org.polyfrost.polyhitboxes.PolyHitBoxes
+import org.polyfrost.polyhitboxes.config.tree.HitboxTreeView
 import java.lang.reflect.Field
 
 object ModConfig : Config(Mod(PolyHitBoxes.NAME, ModType.UTIL_QOL), "${PolyHitBoxes.MODID}.json") {
@@ -17,6 +19,9 @@ object ModConfig : Config(Mod(PolyHitBoxes.NAME, ModType.UTIL_QOL), "${PolyHitBo
 
     @CustomOption(id = "filtered")
     var filtered = FilteredHitboxList()
+
+    @Page(name = "Hitbox Tree View", location = PageLocation.BOTTOM)
+    var testPage = HitboxTreeView()
 
     init {
         initialize()

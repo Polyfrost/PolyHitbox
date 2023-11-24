@@ -41,7 +41,7 @@ open class NamedHitbox(
         get() = HitboxMainTree.savedMap[name]
 
     override fun findHitbox(entity: Entity): HitboxProfile? = readHitbox?.takeIf { it.override && checkEntity(entity) }
-    override fun click(index: Int) = takeIf { index == 0 }
+    override fun find(index: Int) = takeIf { index == 0 }
     override fun size() = 1
 
     override fun drawBranch(vg: Long, x: Int, y: Int, inputHandler: InputHandler) = nanoVG(vg) {
@@ -66,22 +66,21 @@ class ParentNamedHitbox(
 
     override fun size() = expandedList.sumOf { it.size() }
 
-    override fun click(index: Int): NamedHitbox? {
-        if (index == 0) {
-            expanded = !expanded
-            return hitbox
-        }
-
+    override fun find(index: Int): NamedHitbox? {
         var indexDec = index
         for (child in expandedList) {
-            child.click(indexDec)?.let { return it }
+            child.find(indexDec)?.let { return it }
             indexDec -= child.size()
         }
         return null
     }
 
     override fun drawBranch(vg: Long, x: Int, y: Int, inputHandler: InputHandler) {
-        vg.drawText(if (expanded) "v" else ">", x, y + 14, 0xFFAAAAAA.toInt(), 14, Fonts.BOLD)
+        if (inputHandler.isAreaClicked(x.toFloat(), y.toFloat(), 10f, 32f)) {
+            expanded = !expanded
+        }
+
+        vg.drawText(if (expanded) "v" else ">", x, y + 16, 0xFFAAAAAA.toInt(), 14, Fonts.SEMIBOLD)
         hitbox.drawBranch(vg, x, y, inputHandler)
 
         if (!expanded) return
@@ -104,7 +103,7 @@ interface HitboxProvider {
 
     fun drawBranch(vg: Long, x: Int, y: Int, inputHandler: InputHandler)
     fun size(): Int
-    fun click(index: Int): NamedHitbox?
+    fun find(index: Int): NamedHitbox?
 }
 
 inline fun <T, R : Any> List<T>.lastNotNullOfOrNull(transform: (T) -> R?): R? {

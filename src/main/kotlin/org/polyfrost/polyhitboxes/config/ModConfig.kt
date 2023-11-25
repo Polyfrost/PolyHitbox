@@ -10,7 +10,7 @@ import cc.polyfrost.oneconfig.config.elements.BasicOption
 import cc.polyfrost.oneconfig.config.elements.OptionPage
 import net.minecraft.entity.Entity
 import org.polyfrost.polyhitboxes.PolyHitBoxes
-import org.polyfrost.polyhitboxes.config.tree.HitboxTreeView
+import org.polyfrost.polyhitboxes.config.tree.HitboxTreePage
 import java.lang.reflect.Field
 
 object ModConfig : Config(Mod(PolyHitBoxes.NAME, ModType.UTIL_QOL), "${PolyHitBoxes.MODID}.json") {
@@ -21,7 +21,7 @@ object ModConfig : Config(Mod(PolyHitBoxes.NAME, ModType.UTIL_QOL), "${PolyHitBo
     var filtered = FilteredHitboxList()
 
     @Page(name = "Hitbox Tree View", location = PageLocation.BOTTOM)
-    var testPage = HitboxTreeView()
+    var testPage = HitboxTreePage()
 
     init {
         initialize()

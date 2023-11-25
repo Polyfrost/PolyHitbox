@@ -17,7 +17,7 @@ fun injectHitbox(entity: Entity, x: Double, y: Double, z: Double, partialTicks: 
     callbackInfo.cancel()
 }
 
-private fun renderHitbox(entityIn: Entity, x: Double, y: Double, z: Double, partialTicks: Float) {
+fun renderHitbox(entityIn: Entity, x: Double, y: Double, z: Double, partialTicks: Float) {
     val hitboxConfig = ModConfig.getEntityHitbox(entityIn)
     if (!hitboxConfig.showHitbox) return
 

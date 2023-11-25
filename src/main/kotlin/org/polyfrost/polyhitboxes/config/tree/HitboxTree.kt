@@ -11,7 +11,6 @@ import net.minecraft.entity.IProjectile
 import net.minecraft.entity.monster.IMob
 import net.minecraft.entity.player.EntityPlayer
 import net.minecraft.entity.projectile.EntityArrow
-import java.util.*
 
 object HitboxMainTree { // todo: finish this
     var savedMap = HashMap<String, HitboxProfile>()
@@ -30,6 +29,8 @@ object HitboxMainTree { // todo: finish this
 
 private inline fun <reified T> typedHitbox(name: String) = NamedHitbox(name) { it is T }
 
+const val BRANCH_HEIGHT = 32
+
 open class NamedHitbox(
     val name: String,
     val checkEntity: (Entity) -> Boolean,
@@ -40,12 +41,12 @@ open class NamedHitbox(
     private val readHitbox: HitboxProfile?
         get() = HitboxMainTree.savedMap[name]
 
-    override fun findHitbox(entity: Entity): HitboxProfile? = readHitbox?.takeIf { it.override && checkEntity(entity) }
+    override fun findHitbox(entity: Entity): HitboxProfile? = readHitbox?.takeIf { !it.inherit && checkEntity(entity) }
     override fun find(index: Int) = takeIf { index == 0 }
     override fun size() = 1
 
     override fun drawBranch(vg: Long, x: Int, y: Int, inputHandler: InputHandler) = nanoVG(vg) {
-        drawText(name, x + 14, y + 16, 0xFFFFFFFF.toInt(), 14, Fonts.MEDIUM)
+        drawText(name, x + 14, y + BRANCH_HEIGHT / 2, 0xFFFFFFFF.toInt(), 14, Fonts.MEDIUM)
     }
 
     fun withChildren(vararg children: HitboxProvider) = ParentNamedHitbox(this, listOf(*children))
@@ -76,18 +77,18 @@ class ParentNamedHitbox(
     }
 
     override fun drawBranch(vg: Long, x: Int, y: Int, inputHandler: InputHandler) {
-        if (inputHandler.isAreaClicked(x.toFloat(), y.toFloat(), 10f, 32f)) {
+        if (inputHandler.isAreaClicked(x.toFloat(), y.toFloat(), 10f, BRANCH_HEIGHT.toFloat())) {
             expanded = !expanded
         }
 
-        vg.drawText(if (expanded) "v" else ">", x, y + 16, 0xFFAAAAAA.toInt(), 14, Fonts.SEMIBOLD)
+        vg.drawText(if (expanded) "v" else ">", x, y + BRANCH_HEIGHT / 2, 0xFFAAAAAA.toInt(), 14, Fonts.SEMIBOLD)
         hitbox.drawBranch(vg, x, y, inputHandler)
 
         if (!expanded) return
-        var y2 = y + hitbox.size() * 32
+        var y2 = y + hitbox.size() * BRANCH_HEIGHT
         for (child in children) {
             child.drawBranch(vg, x + 10, y2, inputHandler)
-            y2 += child.size() * 32
+            y2 += child.size() * BRANCH_HEIGHT
         }
     }
 

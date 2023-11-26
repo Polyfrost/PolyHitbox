@@ -17,17 +17,15 @@ class HitboxTreePage : Page("Hitbox Tree View") {
     var options: List<BasicOption> = ConfigUtils.getClassOptions(HitboxMainTree.all.savedHitbox)
 
     override fun draw(vg: Long, x: Int, y: Int, inputHandler: InputHandler) {
-        PolyHitBoxes.pageRendered = true
-
         if (inputHandler.isAreaClicked(x + 20f, y + 20f, TREE_WIDTH.toFloat(), TREE_HEIGHT.toFloat())) {
             val dy = inputHandler.mouseY() - (y + 20f)
             val index = dy.toInt() / BRANCH_HEIGHT
 
-            HitboxMainTree.all.find(index)?.let { clicked ->
+            HitboxMainTree.all.find(index)?.takeIf { it != selectedProfile }?.let { clicked ->
                 selectionAnimation = EaseInOutQuad(100, selectionAnimation.get(), index.toFloat(), false)
                 selectedProfile = clicked
-
                 options = ConfigUtils.getClassOptions(selectedProfile.savedHitbox)
+                options[0].addDependency("Inherited from parent") { true }
             }
         }
 
@@ -40,6 +38,8 @@ class HitboxTreePage : Page("Hitbox Tree View") {
             option.draw(vg, x + 20 + TREE_WIDTH + 30, optionY, inputHandler)
             optionY += option.height + 16
         }
+
+        PolyHitBoxes.previewHitbox = selectedProfile.savedHitbox
     }
 
 }

@@ -1,22 +1,27 @@
 package org.polyfrost.polyhitboxes.config.tree
 
+import cc.polyfrost.oneconfig.gui.elements.config.ConfigCheckbox
 import cc.polyfrost.oneconfig.libs.universal.wrappers.UPlayer
 import cc.polyfrost.oneconfig.renderer.font.Fonts
 import cc.polyfrost.oneconfig.utils.InputHandler
 import cc.polyfrost.oneconfig.utils.dsl.drawText
-import cc.polyfrost.oneconfig.utils.dsl.nanoVG
 import net.minecraft.entity.Entity
 import net.minecraft.entity.EntityLiving
+import net.minecraft.entity.EntityLivingBase
 import net.minecraft.entity.IProjectile
 import net.minecraft.entity.monster.IMob
 import net.minecraft.entity.player.EntityPlayer
 import net.minecraft.entity.projectile.EntityArrow
+import kotlin.reflect.jvm.javaField
 
 object HitboxMainTree { // todo: finish this
     var savedMap = HashMap<String, HitboxProfile>()
     val all = NamedHitbox("All") { true }.withChildren(
         typedHitbox<EntityPlayer>("Player").withChildren(
-            NamedHitbox("Self") { it == UPlayer.getPlayer() }
+            NamedHitbox("Self") { it == UPlayer.getPlayer() },
+            NamedHitbox("Same Team") {
+                it is EntityLivingBase && UPlayer.getPlayer()?.isOnSameTeam(it) == true
+            }
         ),
         typedHitbox<EntityLiving>("Mob").withChildren(
             typedHitbox<IMob>("Hostile")
@@ -41,12 +46,22 @@ open class NamedHitbox(
     private val readHitbox: HitboxProfile?
         get() = HitboxMainTree.savedMap[name]
 
-    override fun findHitbox(entity: Entity): HitboxProfile? = readHitbox?.takeIf { !it.inherit && checkEntity(entity) }
-    override fun find(index: Int) = takeIf { index == 0 }
+    private var override = false
+    private var checkbox = ConfigCheckbox(this::override.javaField, this, name, "", "", "", 1)
+
+    init {
+        checkbox.addListener {
+            if (override) HitboxMainTree.savedMap[name] = HitboxProfile()
+            else HitboxMainTree.savedMap.remove(name)
+        }
+    }
+
+    override fun findHitbox(entity: Entity): HitboxProfile? = readHitbox?.takeIf { checkEntity(entity) }
+    override fun find(index: Int): NamedHitbox? = takeIf { index == 0 }
     override fun size() = 1
 
-    override fun drawBranch(vg: Long, x: Int, y: Int, inputHandler: InputHandler) = nanoVG(vg) {
-        drawText(name, x + 14, y + BRANCH_HEIGHT / 2, 0xFFFFFFFF.toInt(), 14, Fonts.MEDIUM)
+    override fun drawBranch(vg: Long, x: Int, y: Int, inputHandler: InputHandler) {
+        checkbox.draw(vg, x + 14, y, inputHandler)
     }
 
     fun withChildren(vararg children: HitboxProvider) = ParentNamedHitbox(this, listOf(*children))

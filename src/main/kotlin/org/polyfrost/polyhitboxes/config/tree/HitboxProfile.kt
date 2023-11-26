@@ -7,9 +7,6 @@ import cc.polyfrost.oneconfig.config.annotations.Number
 import cc.polyfrost.oneconfig.config.core.OneColor
 
 open class HitboxProfile {
-    @Switch(name = "Inherit", size = 1)
-    var inherit = true
-
     @Switch(name = "Show Hitbox", size = 1)
     var showHitbox = false
 

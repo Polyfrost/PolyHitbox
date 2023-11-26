@@ -1,17 +1,17 @@
 package org.polyfrost.polyhitboxes
 
 import cc.polyfrost.oneconfig.gui.OneConfigGui
+import cc.polyfrost.oneconfig.libs.universal.UGraphics.GL
 import cc.polyfrost.oneconfig.libs.universal.UResolution
+import cc.polyfrost.oneconfig.platform.Platform
 import cc.polyfrost.oneconfig.utils.dsl.mc
-import net.minecraft.client.renderer.GlStateManager
-import net.minecraft.client.renderer.OpenGlHelper
-import net.minecraft.client.renderer.RenderHelper
 import net.minecraftforge.client.event.GuiScreenEvent
 import net.minecraftforge.common.MinecraftForge
 import net.minecraftforge.fml.common.Mod
 import net.minecraftforge.fml.common.event.FMLInitializationEvent
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent
 import org.polyfrost.polyhitboxes.config.ModConfig
+import org.polyfrost.polyhitboxes.config.tree.HitboxProfile
 
 @Mod(
     modid = PolyHitBoxes.MODID,
@@ -30,29 +30,34 @@ object PolyHitBoxes {
         MinecraftForge.EVENT_BUS.register(this)
     }
 
-    var pageRendered = false
+    var previewHitbox: HitboxProfile? = null
 
     @SubscribeEvent
     fun renderPreview(event: GuiScreenEvent.DrawScreenEvent.Post) {
-        if (!pageRendered) return
+        val hitbox = previewHitbox ?: return
         val player = mc.thePlayer ?: return
-        val unscale = 1 / UResolution.scaleFactor.toFloat()
-        GlStateManager.scale(unscale, unscale, 10f)
-        val scaleBy = OneConfigGui.getScaleFactor() / UResolution.scaleFactor.toFloat()
+        val unscaleMC = 1 / UResolution.scaleFactor
         val oneConfigX = UResolution.windowWidth / 2f - 640f
         val oneConfigY = UResolution.windowHeight / 2f - 400f
-        val pageX = oneConfigX + 224f / scaleBy
-        val pageY = oneConfigY + 72f / scaleBy
+        val oneConfigScale = OneConfigGui.getScaleFactor()
+        val mouseX = (Platform.getMousePlatform().mouseX.toFloat() - oneConfigX) / oneConfigScale
+        val mouseY = (Platform.getMousePlatform().mouseY.toFloat() - oneConfigY) / oneConfigScale
 
-        GlStateManager.enableDepth()
-        GlStateManager.color(1f, 1f, 1f, 1f)
-        renderLiving(player, pageX, pageY, scaleBy, 0)
-        RenderHelper.disableStandardItemLighting()
-        GlStateManager.disableRescaleNormal()
-        GlStateManager.setActiveTexture(OpenGlHelper.lightmapTexUnit)
-        GlStateManager.disableTexture2D()
-        GlStateManager.setActiveTexture(OpenGlHelper.defaultTexUnit)
+        GL.pushMatrix()
+        GL.scale(unscaleMC, unscaleMC, 1.0)
+        GL.translate(oneConfigX, oneConfigY, 0f)
+        GL.scale(oneConfigScale, oneConfigScale, 1f)
+        drawEntityPointingMouse(
+            hitboxConfig = hitbox,
+            entity = player,
+            x = 224 + 864,
+            y = 72 + 640,
+            scale = 100f,
+            mouseX = mouseX,
+            mouseY = mouseY
+        )
+        GL.popMatrix()
 
-        pageRendered = false
+        previewHitbox = null
     }
 }

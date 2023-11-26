@@ -11,7 +11,7 @@ import net.minecraftforge.fml.common.Mod
 import net.minecraftforge.fml.common.event.FMLInitializationEvent
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent
 import org.polyfrost.polyhitboxes.config.ModConfig
-import org.polyfrost.polyhitboxes.config.tree.HitboxProfile
+import org.polyfrost.polyhitboxes.config.HitboxProfile
 
 @Mod(
     modid = PolyHitBoxes.MODID,

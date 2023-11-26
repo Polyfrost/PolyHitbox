@@ -1,4 +1,4 @@
-package org.polyfrost.polyhitboxes.config.tree
+package org.polyfrost.polyhitboxes.config
 
 import cc.polyfrost.oneconfig.config.annotations.Switch
 import cc.polyfrost.oneconfig.config.annotations.Color
@@ -8,7 +8,7 @@ import cc.polyfrost.oneconfig.config.core.OneColor
 
 open class HitboxProfile {
     @Switch(name = "Show Hitbox", size = 1)
-    var showHitbox = false
+    var showHitbox = true
 
     @Switch(name = "Accurate Hitboxes")
     var accurate = false

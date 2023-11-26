@@ -11,9 +11,19 @@ import net.minecraft.entity.Entity
 import net.minecraft.entity.EntityLivingBase
 import net.minecraft.util.AxisAlignedBB
 import org.lwjgl.opengl.GL11
-import org.polyfrost.polyhitboxes.config.tree.HitboxProfile
+import org.polyfrost.polyhitboxes.config.ModConfig
+import org.polyfrost.polyhitboxes.config.HitboxMainTree
+import org.polyfrost.polyhitboxes.config.HitboxProfile
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo
 import kotlin.math.atan
 import net.minecraft.client.renderer.GlStateManager as GL
+
+fun injectHitbox(entity: Entity, x: Double, y: Double, z: Double, partialTicks: Float, callbackInfo: CallbackInfo) {
+    if (!ModConfig.enabled) return
+    val hitbox = HitboxMainTree.all.findHitbox(entity) ?: return
+    renderHitbox(hitbox, entity, x, y, z, partialTicks)
+    callbackInfo.cancel()
+}
 
 fun drawEntityPointingMouse(hitboxConfig: HitboxProfile, entity: EntityLivingBase, x: Int, y: Int, scale: Float, mouseX: Float, mouseY: Float) {
     val dx = x - mouseX
@@ -38,7 +48,7 @@ fun drawEntityPointingMouse(hitboxConfig: HitboxProfile, entity: EntityLivingBas
     RenderHelper.enableStandardItemLighting()
     GL.rotate(-135f, 0f, 1f, 0f)
 
-    entity.rotationYaw = atan(dx / 40f) * 40f
+    entity.rotationYaw = 0f
     entity.renderYawOffset = entity.rotationYaw
     entity.rotationYawHead = entity.rotationYaw
     entity.prevRotationYawHead = entity.rotationYaw
@@ -46,12 +56,12 @@ fun drawEntityPointingMouse(hitboxConfig: HitboxProfile, entity: EntityLivingBas
     entity.riddenByEntity = entity // cancel nametag
 
     GL.rotate(entity.rotationPitch, 1f, 0f, 0f)
-    GL.rotate(entity.rotationYaw, 0f, 1f, 0f)
+    GL.rotate(-atan(dx / 40f) * 40f, 0f, 1f, 0f)
 
     val renderManager = mc.renderManager
     renderManager.setPlayerViewY(180.0f)
     renderManager.isRenderShadow = false
-    renderManager.renderEntityWithPosYaw(entity, 0.0, 0.0, 0.0, 0f, 1f)
+    renderManager.doRenderEntity(entity, 0.0, 0.0, 0.0, 0f, 1f, true)
     renderManager.isRenderShadow = true
     renderHitbox(hitboxConfig, entity, 0.0, 0.0, 0.0, 1f)
 

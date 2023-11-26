@@ -1,5 +1,7 @@
-package org.polyfrost.polyhitboxes.config.tree
+package org.polyfrost.polyhitboxes.config
 
+import cc.polyfrost.oneconfig.config.core.ConfigUtils
+import cc.polyfrost.oneconfig.config.elements.BasicOption
 import cc.polyfrost.oneconfig.gui.elements.config.ConfigCheckbox
 import cc.polyfrost.oneconfig.libs.universal.wrappers.UPlayer
 import cc.polyfrost.oneconfig.renderer.font.Fonts
@@ -16,27 +18,30 @@ import kotlin.reflect.jvm.javaField
 
 object HitboxMainTree { // todo: finish this
     var savedMap = HashMap<String, HitboxProfile>()
-    val all = NamedHitbox("All") { true }.withChildren(
-        typedHitbox<EntityPlayer>("Player").withChildren(
-            NamedHitbox("Self") { it == UPlayer.getPlayer() },
-            NamedHitbox("Same Team") {
+    val all = NamedHitbox("All") { true }.children(
+        typed<EntityPlayer>("Player").children(
+            named("Self") {
+                it == UPlayer.getPlayer()
+            },
+            named("Same Team") {
                 it is EntityLivingBase && UPlayer.getPlayer()?.isOnSameTeam(it) == true
-            }
-        ),
-        typedHitbox<EntityLiving>("Mob").withChildren(
-            typedHitbox<IMob>("Hostile")
-        ),
-        typedHitbox<IProjectile>("Projectile").withChildren(
-            typedHitbox<EntityArrow>("Arrow")
-        ),
+            },
+            typed<EntityLiving>("Mob").children(
+                typed<IMob>("Hostile")
+            ),
+            typed<IProjectile>("Projectile").children(
+                typed<EntityArrow>("Arrow")
+            ),
+        )
     )
 }
 
-private inline fun <reified T> typedHitbox(name: String) = NamedHitbox(name) { it is T }
-
 const val BRANCH_HEIGHT = 32
 
-open class NamedHitbox(
+private fun named(name: String, check: (Entity) -> Boolean) = NamedHitbox(name, check)
+private inline fun <reified T> typed(name: String) = named(name) { it is T }
+
+class NamedHitbox(
     val name: String,
     val checkEntity: (Entity) -> Boolean,
 ) : HitboxProvider {
@@ -46,8 +51,23 @@ open class NamedHitbox(
     private val readHitbox: HitboxProfile?
         get() = HitboxMainTree.savedMap[name]
 
-    private var override = false
-    private var checkbox = ConfigCheckbox(this::override.javaField, this, name, "", "", "", 1)
+    private var override = name in HitboxMainTree.savedMap
+    private var checkbox = ConfigCheckbox(::override.javaField, this, name, "", "", "", 1)
+
+    private var _option: List<BasicOption>? = null
+    private var _lastOverride: Boolean = override
+    private val options: List<BasicOption>
+        get() = _option?.takeIf { _lastOverride == override }
+            ?: (readHitbox?.let { hitboxProfile ->
+                ConfigUtils.getClassOptions(hitboxProfile).also { basicOptions ->
+                    for (option in basicOptions) {
+                        option.addDependency("Inherited") { override }
+                    }
+                }
+            } ?: def).also {
+                _option = it
+                _lastOverride = override
+            }
 
     init {
         checkbox.addListener {
@@ -56,7 +76,7 @@ open class NamedHitbox(
         }
     }
 
-    override fun findHitbox(entity: Entity): HitboxProfile? = readHitbox?.takeIf { checkEntity(entity) }
+    override fun findHitbox(entity: Entity): HitboxProfile? = readHitbox?.takeIf { override && checkEntity(entity) }
     override fun find(index: Int): NamedHitbox? = takeIf { index == 0 }
     override fun size() = 1
 
@@ -64,7 +84,21 @@ open class NamedHitbox(
         checkbox.draw(vg, x + 14, y, inputHandler)
     }
 
-    fun withChildren(vararg children: HitboxProvider) = ParentNamedHitbox(this, listOf(*children))
+    fun children(vararg children: HitboxProvider) = ParentNamedHitbox(this, listOf(*children))
+
+    override fun drawOption(vg: Long, x: Int, y: Int, inputHandler: InputHandler) {
+        var optionY = y
+        for (option in options) {
+            option.draw(vg, x, optionY, inputHandler)
+            optionY += option.height + 16
+        }
+    }
+}
+
+private val def = ConfigUtils.getClassOptions(HitboxProfile()).also {
+    for (option in it) {
+        option.addDependency("Inherited from Default Minecraft Settings") { false }
+    }
 }
 
 class ParentNamedHitbox(
@@ -83,10 +117,10 @@ class ParentNamedHitbox(
     override fun size() = expandedList.sumOf { it.size() }
 
     override fun find(index: Int): NamedHitbox? {
-        var indexDec = index
+        var indexMut = index
         for (child in expandedList) {
-            child.find(indexDec)?.let { return it }
-            indexDec -= child.size()
+            child.find(indexMut)?.let { return it }
+            indexMut -= child.size()
         }
         return null
     }
@@ -108,18 +142,18 @@ class ParentNamedHitbox(
     }
 
     override fun findHitbox(entity: Entity): HitboxProfile? =
-        expandedList.lastNotNullOfOrNull {
+        children.firstNotNullOfOrNull {
             it.findHitbox(entity)
-        }
+        } ?: hitbox.findHitbox(entity)
 }
 
 interface HitboxProvider {
     val savedHitbox: HitboxProfile
     fun findHitbox(entity: Entity): HitboxProfile?
-
     fun drawBranch(vg: Long, x: Int, y: Int, inputHandler: InputHandler)
     fun size(): Int
     fun find(index: Int): NamedHitbox?
+    fun drawOption(vg: Long, x: Int, y: Int, inputHandler: InputHandler)
 }
 
 inline fun <T, R : Any> List<T>.lastNotNullOfOrNull(transform: (T) -> R?): R? {

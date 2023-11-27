@@ -12,6 +12,7 @@ import net.minecraftforge.fml.common.event.FMLInitializationEvent
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent
 import org.polyfrost.polyhitboxes.config.ModConfig
 import org.polyfrost.polyhitboxes.config.HitboxProfile
+import org.polyfrost.polyhitboxes.render.drawEntityPointingMouse
 
 @Mod(
     modid = PolyHitBoxes.MODID,
@@ -48,11 +49,11 @@ object PolyHitBoxes {
         GL.translate(oneConfigX, oneConfigY, 0f)
         GL.scale(oneConfigScale, oneConfigScale, 1f)
         drawEntityPointingMouse(
-            hitboxConfig = hitbox,
+            hitboxProfile = hitbox,
             entity = player,
-            x = 224 + 864,
-            y = 72 + 640,
-            scale = 100f,
+            x = 224 + 880,
+            y = 72 + 540,
+            scale = 200f,
             mouseX = mouseX,
             mouseY = mouseY
         )

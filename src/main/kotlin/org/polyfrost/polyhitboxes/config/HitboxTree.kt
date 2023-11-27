@@ -11,14 +11,19 @@ import net.minecraft.entity.Entity
 import net.minecraft.entity.EntityLiving
 import net.minecraft.entity.EntityLivingBase
 import net.minecraft.entity.IProjectile
-import net.minecraft.entity.monster.IMob
+import net.minecraft.entity.boss.EntityDragon
+import net.minecraft.entity.boss.EntityWither
+import net.minecraft.entity.effect.EntityLightningBolt
+import net.minecraft.entity.item.*
+import net.minecraft.entity.monster.*
+import net.minecraft.entity.passive.*
 import net.minecraft.entity.player.EntityPlayer
-import net.minecraft.entity.projectile.EntityArrow
+import net.minecraft.entity.projectile.*
 import kotlin.reflect.jvm.javaField
 
 object HitboxMainTree { // todo: finish this
     var savedMap = HashMap<String, HitboxProfile>()
-    val all = NamedHitbox("All") { true }.children(
+    val all = named("All") { true }.children(
         typed<EntityPlayer>("Player").children(
             named("Self") {
                 it == UPlayer.getPlayer()
@@ -26,13 +31,70 @@ object HitboxMainTree { // todo: finish this
             named("Same Team") {
                 it is EntityLivingBase && UPlayer.getPlayer()?.isOnSameTeam(it) == true
             },
-            typed<EntityLiving>("Mob").children(
-                typed<IMob>("Hostile")
+        ),
+        typed<EntityLiving>("Mob").children(
+            typed<EntityArmorStand>("ArmorStand"),
+            typed<IMob>("Hostile").children(
+                typed<EntityZombie>("Zombie"),
+                typed<EntityCreeper>("Creeper"),
+                named("Skeleton") { it is EntitySkeleton && it.skeletonType == 0 },
+                typed<EntitySpider>("Spider"),
+                typed<EntityCaveSpider>("Cave Spider"),
+                typed<EntityWitch>("Witch"),
+                typed<EntitySilverfish>("Silverfish"),
+                typed<EntitySlime>("Slime"),
+                typed<EntityGuardian>("Guardian"),
+                typed<EntityPigZombie>("Zombie Pigman"),
+                typed<EntityGhast>("Ghast"),
+                named("Wither Skeleton") { it is EntitySkeleton && it.skeletonType == 1 },
+                typed<EntityMagmaCube>("Magma Cube"),
+                typed<EntityBlaze>("Blaze"),
+                typed<EntityEnderman>("Enderman"),
+                typed<EntityDragon>("Ender Dragon"),
+                typed<EntityWither>("Wither"),
+                typed<EntityEndermite>("Endermite"),
+                typed<EntityGiantZombie>("Giant"),
             ),
+            typed<IAnimals>("Passive").children(
+                typed<EntityPig>("Pig"),
+                typed<EntitySheep>("Sheep"),
+                typed<EntityCow>("Cow"),
+                typed<EntityChicken>("Chicken"),
+                typed<EntitySquid>("Squid"),
+                typed<EntitySquid>("Squid"),
+                typed<EntityWolf>("Wolf"),
+                typed<EntityMooshroom>("Mushroom"),
+                typed<EntityIronGolem>("Iron Golem"),
+                typed<EntitySnowman>("Snowman"),
+                typed<EntityOcelot>("Ocelot"),
+                typed<EntityHorse>("Horse"),
+                typed<EntityRabbit>("Rabbit"),
+                typed<EntityVillager>("Villager"),
+            ),
+        ),
+        named("Others") { true }.children(
             typed<IProjectile>("Projectile").children(
-                typed<EntityArrow>("Arrow")
+                typed<EntityArrow>("Arrow"),
+                typed<EntityEgg>("Egg"),
+                typed<EntitySnowball>("Snowball"),
+                typed<EntityLargeFireball>("Fireball"),
+                typed<EntityEnderPearl>("Ender Pearl"),
+                typed<EntitySmallFireball>("Fire Charge"),
+                typed<EntityEnderEye>("Ender Eye"),
+                typed<EntityPotion>("Splash Potion"),
+                typed<EntityExpBottle>("XP Bottle"),
+                typed<EntityWitherSkull>("Wither Skull"),
             ),
-        )
+            typed<EntityTNTPrimed>("TNT"),
+            typed<EntityItemFrame>("Item Frame"),
+            typed<EntityPainting>("Painting"),
+            typed<EntityFallingBlock>("Falling Block"),
+            typed<EntityFireworkRocket>("Firework"),
+            typed<EntityEnderCrystal>("Ender Crystal"),
+            typed<EntityBoat>("Boat"),
+            typed<EntityMinecart>("Minecart"),
+            typed<EntityLightningBolt>("Lightning Bolt"),
+        ),
     )
 }
 

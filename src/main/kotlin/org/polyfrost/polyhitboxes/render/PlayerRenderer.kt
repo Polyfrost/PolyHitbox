@@ -11,7 +11,6 @@ import net.minecraft.entity.Entity
 import net.minecraft.entity.EntityLivingBase
 import net.minecraft.util.AxisAlignedBB
 import org.lwjgl.opengl.GL11
-import org.polyfrost.polyhitboxes.config.HitboxMainTree
 import org.polyfrost.polyhitboxes.config.HitboxProfile
 import org.polyfrost.polyhitboxes.config.ModConfig
 import kotlin.math.atan
@@ -19,7 +18,7 @@ import net.minecraft.client.renderer.GlStateManager as GL
 
 fun overrideHitbox(entity: Entity, x: Double, y: Double, z: Double, partialTicks: Float): Boolean {
     if (!ModConfig.enabled) return false
-    val hitbox = HitboxMainTree.all.findHitbox(entity) ?: return false
+    val hitbox = ModConfig.entitySelector.profileMap.getHitboxProfile(entity)
     renderHitbox(hitbox, entity, x, y, z, partialTicks)
     return true
 }
@@ -95,7 +94,7 @@ fun renderHitbox(
     z: Double,
     partialTicks: Float,
 ) {
-    if (!hitboxProfile.showHitbox) return
+    if (hitboxProfile.showHitbox == 0) return
 
     GL.depthMask(false)
     GL.disableTexture2D()
@@ -163,6 +162,7 @@ private fun drawEyeHeight(
     z: Double,
 ) {
     if (!hitboxProfile.showEyeHeight) return
+    if (entity !is EntityLivingBase) return
 
     var halfWidth = entity.width / 2.0
     if (hitboxProfile.accurate) {

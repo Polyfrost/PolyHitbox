@@ -1,4 +1,4 @@
-package org.polyfrost.hitboxes.mixin;
+package org.polyfrost.polyhitboxes.mixin;
 
 import net.minecraft.client.renderer.entity.RenderManager;
 import net.minecraft.entity.Entity;

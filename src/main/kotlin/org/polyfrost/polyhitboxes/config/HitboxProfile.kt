@@ -1,14 +1,15 @@
 package org.polyfrost.polyhitboxes.config
 
-import cc.polyfrost.oneconfig.config.annotations.Switch
-import cc.polyfrost.oneconfig.config.annotations.Color
-import cc.polyfrost.oneconfig.config.annotations.Checkbox
+import cc.polyfrost.oneconfig.config.annotations.*
 import cc.polyfrost.oneconfig.config.annotations.Number
 import cc.polyfrost.oneconfig.config.core.OneColor
 
 open class HitboxProfile {
-    @Switch(name = "Show Hitbox", size = 1)
-    var showHitbox = true
+    @Switch(name = "Overwrite Default")
+    var overwriteDefault = false
+
+    @Dropdown(name = "Show Hitbox", options = ["Always", "Toggled", "Never"])
+    var showHitbox = 1
 
     @Switch(name = "Accurate Hitboxes")
     var accurate = false
@@ -42,4 +43,5 @@ open class HitboxProfile {
 
     @Number(name = "Look Vector Thickness", min = 1f, max = 5f)
     var lookVectorThickness = 2f
+
 }

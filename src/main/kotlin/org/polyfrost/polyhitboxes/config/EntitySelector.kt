@@ -10,24 +10,23 @@ class EntitySelector(
     category: String = "General",
     subcategory: String = "",
 ) : BasicOption(null, null, "Entity Selector", description, category, subcategory, 2) {
-    val profileMap = ProfileMap()
+    private val categoryDropdown = ConfigDropdown(::selectedIndex.javaField, this, "Category", "", category, subcategory, 1, getCategoryNames())
     private val selectedIndex = 0
-    private val categoryDropdown = ConfigDropdown(::selectedIndex.javaField, this, "Category", "", category, subcategory, 2, getCategoryNames())
     private var lastHeight = 0
 
-    override fun getHeight() = lastHeight + 48
+    override fun getHeight() = lastHeight
 
     override fun draw(vg: Long, x: Int, y: Int, inputHandler: InputHandler) {
+        lastHeight = getSelectedConfig()?.draw(vg, x, y - 16, inputHandler) ?: 0
         categoryDropdown.draw(vg, x, y, inputHandler)
-        lastHeight = getSelectedConfig()?.draw(vg, x, y + 48, inputHandler) ?: 0
     }
 
-    override fun drawLast(vg: Long, x: Int, y: Int, inputHandler: InputHandler?) {
-        categoryDropdown.drawLast(vg, x, y, inputHandler)
+    override fun drawLast(vg: Long, x: Int, y: Int, inputHandler: InputHandler) {
         super.drawLast(vg, x, y, inputHandler)
+        getSelectedConfig()?.drawLast(vg, x, inputHandler)
+        categoryDropdown.drawLast(vg, x, y, inputHandler)
     }
 
-    fun getSelectedConfig() = profileMap.profiles.getOrNull(selectedIndex)
-
-    private fun getCategoryNames() = profileMap.profiles.map { config -> config.name }.toTypedArray()
+    private fun getSelectedConfig() = HitboxCategory.entries.getOrNull(selectedIndex)
+    private fun getCategoryNames() = HitboxCategory.entries.map { config -> config.display }.toTypedArray()
 }

@@ -58,8 +58,7 @@ class HitboxPreview(
             y = oneUIY + 180,
             scale = 150f,
             mouseX = mouseX,
-            mouseY = mouseY,
-            partialTicks = event.renderPartialTicks
+            mouseY = mouseY
         )
         GL11.glDisable(GL11.GL_SCISSOR_TEST)
         GL.popMatrix()
@@ -72,7 +71,6 @@ class HitboxPreview(
         scale: Float,
         mouseX: Float,
         mouseY: Float,
-        partialTicks: Float,
     ) {
         val eyeHeightOffsetY = (entity.eyeHeight - entity.height / 2) * scale
         val dx = x - mouseX
@@ -87,9 +85,7 @@ class HitboxPreview(
         GL.translate(0f, entity.height / 2, 0f)
         GL.rotate(180f, 0f, 0f, 1f)
 
-        val tempData = (entity as? EntityLivingBase)?.run {
-            TempData(rotationYaw, rotationYawHead, rotationPitch, renderYawOffset, prevRotationYawHead, riddenByEntity)
-        }
+        val tempData = (entity as? EntityLivingBase)?.let { TempData(it) }
 
         GL.rotate(135f, 0f, 1f, 0f)
         RenderHelper.enableStandardItemLighting()
@@ -98,10 +94,9 @@ class HitboxPreview(
         (entity as? EntityLivingBase)?.apply {
             rotationYaw = atan(dx / 40f) * 40f
             rotationYawHead = rotationYaw
+            renderYawOffset = rotationYaw
             rotationPitch = -atan(dy / 40f) * 20f
             riddenByEntity = this // cancel nametag
-            renderYawOffset = rotationYaw
-            prevRotationYawHead = rotationYaw
         }
 
         GL.rotate(-atan(dy / 40f) * 20f, 1f, 0f, 0f)
@@ -112,20 +107,11 @@ class HitboxPreview(
             playerViewY = 180f
             isRenderShadow = false
             doRenderEntity(entity, 0.0, 0.0, 0.0, 0f, 1f, true)
-            HitboxRenderer.renderHitbox(hitboxCategory.config, entity, 0.0, 0.0, 0.0, partialTicks)
+            HitboxRenderer.renderHitbox(hitboxCategory.config, entity, 0.0, 0.0, 0.0, 1f)
             isRenderShadow = true
         }
 
-        tempData?.let { temp ->
-            with(entity) {
-                rotationYaw = temp.yaw
-                rotationYawHead = temp.yawHead
-                rotationPitch = temp.pitch
-                renderYawOffset = temp.yawOffset
-                prevRotationYawHead = temp.prevYawHead
-                riddenByEntity = temp.riddenBy
-            }
-        }
+        tempData?.reset(entity)
 
         GL.popMatrix()
         RenderHelper.disableStandardItemLighting()
@@ -139,8 +125,23 @@ class HitboxPreview(
 private data class TempData(
     val yaw: Float,
     val yawHead: Float,
-    val pitch: Float,
     val yawOffset: Float,
-    val prevYawHead: Float,
+    val pitch: Float,
     val riddenBy: Entity?,
-)
+) {
+    constructor(entity: EntityLivingBase) : this(
+        entity.rotationYaw,
+        entity.rotationYawHead,
+        entity.renderYawOffset,
+        entity.rotationPitch,
+        entity.riddenByEntity,
+    )
+
+    fun reset(entity: EntityLivingBase) {
+        entity.rotationYaw = yaw
+        entity.rotationYawHead = yawHead
+        entity.renderYawOffset = yawOffset
+        entity.rotationPitch = pitch
+        entity.riddenByEntity = riddenBy
+    }
+}

@@ -27,17 +27,10 @@ object DummyWorld : World(null, null, WorldProviderSurface(), null, true) {
     val ARMOR_STAND = EntityArmorStand(DummyWorld).apply {
         val b = dataWatcher.getWatchableObjectByte(10).toInt() or 4
         dataWatcher.updateObject(10, b.toByte()) // show hands
-        prevRotationYawHead = rotationYawHead
     }
 
     init {
         chunkProvider = createChunkProvider()
-    }
-
-    override fun createChunkProvider() = ChunkProviderDebug(this)
-    override fun getRenderDistanceChunks() = 0
-
-    init {
         EventManager.INSTANCE.register(this)
     }
 
@@ -46,4 +39,7 @@ object DummyWorld : World(null, null, WorldProviderSurface(), null, true) {
         if (event.stage != Stage.END) return
         ITEM.hoverStart += 0.05f
     }
+
+    override fun createChunkProvider() = ChunkProviderDebug(this)
+    override fun getRenderDistanceChunks() = 0
 }

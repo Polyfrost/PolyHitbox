@@ -8,6 +8,8 @@ import cc.polyfrost.oneconfig.config.data.ModType
 import cc.polyfrost.oneconfig.config.elements.BasicOption
 import cc.polyfrost.oneconfig.config.elements.OptionPage
 import org.polyfrost.polyhitboxes.PolyHitBoxes
+import org.polyfrost.polyhitboxes.config.data.ConfigAdapter
+import org.polyfrost.polyhitboxes.config.gui.HitboxEditor
 import java.lang.reflect.Field
 
 object ModConfig : Config(Mod(PolyHitBoxes.NAME, ModType.UTIL_QOL), "${PolyHitBoxes.MODID}.json") {
@@ -25,7 +27,7 @@ object ModConfig : Config(Mod(PolyHitBoxes.NAME, ModType.UTIL_QOL), "${PolyHitBo
         mod: Mod,
         migrate: Boolean,
     ): BasicOption {
-        val option = EntitySelector()
+        val option = HitboxEditor()
         ConfigUtils.getSubCategory(page, "General", "").options.add(option)
         return option
     }

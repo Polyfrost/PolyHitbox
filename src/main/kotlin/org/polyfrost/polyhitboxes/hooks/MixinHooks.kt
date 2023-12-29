@@ -3,7 +3,7 @@ package org.polyfrost.polyhitboxes.hooks
 import cc.polyfrost.oneconfig.utils.dsl.mc
 import net.minecraft.entity.Entity
 import org.polyfrost.polyhitboxes.config.ModConfig
-import org.polyfrost.polyhitboxes.config.HitboxCategory
+import org.polyfrost.polyhitboxes.config.data.HitboxCategory
 import org.polyfrost.polyhitboxes.render.HitboxRenderer
 
 private var isHitboxToggled: Boolean? = null

@@ -1,4 +1,4 @@
-package org.polyfrost.polyhitboxes.config
+package org.polyfrost.polyhitboxes.config.data
 
 import com.google.common.collect.ImmutableMap
 

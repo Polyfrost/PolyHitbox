@@ -7,10 +7,12 @@ import net.minecraft.client.renderer.vertex.DefaultVertexFormats
 import net.minecraft.entity.Entity
 import net.minecraft.util.AxisAlignedBB
 import org.lwjgl.opengl.GL11
-import org.polyfrost.polyhitboxes.config.HitboxConfig
+import org.polyfrost.polyhitboxes.config.data.HitboxConfig
 import net.minecraft.client.renderer.GlStateManager as GL
 
 object HitboxRenderer {
+    private const val ALTERNATING_PATTERN = 0b1010101010101010.toShort()
+
     fun renderHitbox(
         config: HitboxConfig,
         entity: Entity,
@@ -29,7 +31,7 @@ object HitboxRenderer {
 
         if (config.dashedLines) {
             GL11.glPushAttrib(GL11.GL_ENABLE_BIT)
-            GL11.glLineStipple(10, ALTERNATING_PATTERN)
+            GL11.glLineStipple(config.dashFactor, ALTERNATING_PATTERN)
             GL11.glEnable(GL11.GL_LINE_STIPPLE)
             GL11.glBegin(GL11.GL_LINES)
             GL11.glEnd()
@@ -56,8 +58,6 @@ object HitboxRenderer {
         GL.disableBlend()
         GL.depthMask(true)
     }
-
-    private const val ALTERNATING_PATTERN = 0b1010101010101010.toShort()
 
     private fun drawOutline(config: HitboxConfig, hitbox: AxisAlignedBB) {
         GL11.glLineWidth(config.outlineThickness.toFloat())

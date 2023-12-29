@@ -13,7 +13,7 @@ import net.minecraftforge.client.event.GuiScreenEvent
 import net.minecraftforge.common.MinecraftForge
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent
 import org.lwjgl.opengl.GL11
-import org.polyfrost.polyhitboxes.config.HitboxCategory
+import org.polyfrost.polyhitboxes.config.data.HitboxCategory
 import kotlin.math.atan
 import net.minecraft.client.renderer.GlStateManager as GL
 
@@ -55,10 +55,11 @@ class HitboxPreview(
         drawEntityPointingMouse(
             entity = entity,
             x = oneUIX - 16 + 512,
-            y = oneUIY + 80,
+            y = oneUIY + 180,
             scale = 150f,
             mouseX = mouseX,
-            mouseY = mouseY
+            mouseY = mouseY,
+            partialTicks = event.renderPartialTicks
         )
         GL11.glDisable(GL11.GL_SCISSOR_TEST)
         GL.popMatrix()
@@ -71,9 +72,11 @@ class HitboxPreview(
         scale: Float,
         mouseX: Float,
         mouseY: Float,
+        partialTicks: Float,
     ) {
+        val eyeHeightOffsetY = (entity.eyeHeight - entity.height / 2) * scale
         val dx = x - mouseX
-        val dy = y - mouseY
+        val dy = y - eyeHeightOffsetY - mouseY
 
         GL.enableDepth()
         GL.color(1f, 1f, 1f, 1f)
@@ -81,7 +84,7 @@ class HitboxPreview(
         GL.pushMatrix()
         GL.translate(x.toFloat(), y.toFloat(), 50f)
         GL.scale(-scale, scale, scale)
-        GL.translate(0f, entity.eyeHeight, 0f)
+        GL.translate(0f, entity.height / 2, 0f)
         GL.rotate(180f, 0f, 0f, 1f)
 
         val tempData = (entity as? EntityLivingBase)?.run {
@@ -108,8 +111,8 @@ class HitboxPreview(
             playerViewX = 0f
             playerViewY = 180f
             isRenderShadow = false
-            doRenderEntity(entity, 0.0, 0.0, 0.0, 0f, 1f, false)
-            HitboxRenderer.renderHitbox(hitboxCategory.config, entity, 0.0, 0.0, 0.0, 1f)
+            doRenderEntity(entity, 0.0, 0.0, 0.0, 0f, 1f, true)
+            HitboxRenderer.renderHitbox(hitboxCategory.config, entity, 0.0, 0.0, 0.0, partialTicks)
             isRenderShadow = true
         }
 

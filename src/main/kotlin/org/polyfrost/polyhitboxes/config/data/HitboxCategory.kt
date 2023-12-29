@@ -1,7 +1,5 @@
-package org.polyfrost.polyhitboxes.config
+package org.polyfrost.polyhitboxes.config.data
 
-import cc.polyfrost.oneconfig.config.core.ConfigUtils
-import cc.polyfrost.oneconfig.config.elements.BasicOption
 import cc.polyfrost.oneconfig.config.elements.OptionSubcategory
 import cc.polyfrost.oneconfig.utils.InputHandler
 import cc.polyfrost.oneconfig.utils.dsl.mc
@@ -13,8 +11,8 @@ import net.minecraft.entity.item.EntityArmorStand
 import net.minecraft.entity.item.EntityItem
 import net.minecraft.entity.player.EntityPlayer
 import net.minecraft.entity.projectile.EntityArrow
+import org.polyfrost.polyhitboxes.config.gui.OptionWidgetGenerator
 import org.polyfrost.polyhitboxes.render.DummyWorld
-import org.polyfrost.polyhitboxes.render.HitboxPreview
 
 private const val HIGH = 0
 private const val MID = 1
@@ -30,19 +28,7 @@ enum class HitboxCategory(
         display = "Default",
         condition = { true },
         priority = LOW
-    ) {
-        override var config: HitboxConfig
-            get() = super.config
-            set(value) {
-                value.overwriteDefault = true
-                super.config = value
-            }
-
-        override fun initOptions(options: MutableList<BasicOption>) {
-            options[0] = ConfigSpacer // replace "overwrite default" with empty spacer
-            super.initOptions(options)
-        }
-    },
+    ),
     PLAYER(
         display = "Player",
         condition = { it is EntityPlayer }
@@ -91,24 +77,12 @@ enum class HitboxCategory(
                 } ?: DEFAULT).config
     }
 
-    private val hitboxPreview = HitboxPreview(this)
-    private val subcategory by lazy {
-        OptionSubcategory("", "").apply {
-            options = ConfigUtils.getClassOptions(config)
-            initOptions(options)
-        }
-    }
-    open var config = HitboxConfig()
+    private val subcategory by lazy { initCategory() }
+    var config = HitboxConfig()
 
-    open fun initOptions(options: MutableList<BasicOption>) {
-        for (option in options) {
-            if (option.name == "Overwrite Default") continue
-            option.addDependency("Overwrite Default") { config.overwriteDefault }
-            if (option.name == "Show Condition") continue
-            option.addDependency("Show Condition") { config.showCondition != 3 }
-        }
-        options.add(0, ConfigSpacer)
-        options.add(hitboxPreview)
+    private fun initCategory() = OptionSubcategory("", "").also {
+        config.category = this
+        it.options = OptionWidgetGenerator.getOptionsFor(config)
     }
 
     fun draw(vg: Long, x: Int, y: Int, inputHandler: InputHandler) = subcategory.draw(vg, x, y, inputHandler)

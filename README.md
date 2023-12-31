@@ -6,6 +6,15 @@
 
 A hitbox modification mod
 
+## Features
+
+- Toggle Keybind
+- Show Condition
+- Dashed Lines
+- Outline
+- Eye Height
+- View Ray
+
 ## Gallery
 
 ![settings-page.png](images/settings-page.png)

@@ -26,6 +26,12 @@ class HitboxConfig : SetupOptions {
     @Slider(name = "Dash Factor", min = 1f, max = 20f, step = 1)
     var dashFactor = 10
 
+    @Checkbox(name = "Sides")
+    var showSide = false
+
+    @Color(name = "Side Color")
+    var sideColor = OneColor(255, 255, 255, 63)
+
     @Checkbox(name = "Outline")
     var showOutline = true
 
@@ -65,6 +71,7 @@ class HitboxConfig : SetupOptions {
             option.dependOn(::showCondition.name) { showCondition != 3 }
         }
         ::dashFactor.name dependOn ::dashedLines.name
+        ::sideColor.name dependOn ::showSide.name
         ::outlineColor.name dependOn ::showOutline.name
         ::outlineThickness.name dependOn ::showOutline.name
         ::eyeHeightColor.name dependOn ::showEyeHeight.name

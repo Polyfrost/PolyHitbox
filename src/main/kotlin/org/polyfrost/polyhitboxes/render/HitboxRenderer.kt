@@ -3,7 +3,9 @@ package org.polyfrost.polyhitboxes.render
 import cc.polyfrost.oneconfig.config.core.OneColor
 import net.minecraft.client.renderer.RenderGlobal
 import net.minecraft.client.renderer.Tessellator
+import net.minecraft.client.renderer.WorldRenderer
 import net.minecraft.client.renderer.vertex.DefaultVertexFormats
+import net.minecraft.client.renderer.vertex.VertexFormat
 import net.minecraft.entity.Entity
 import net.minecraft.util.AxisAlignedBB
 import org.lwjgl.opengl.GL11
@@ -44,6 +46,7 @@ object HitboxRenderer {
             hitbox = hitbox.expand(border, border, border)
         }
 
+        if (config.showSide) drawSide(config, hitbox)
         if (config.showOutline) drawOutline(config, hitbox)
         if (config.showEyeHeight) drawEyeHeight(config, hitbox, eyeHeight)
         if (config.showViewRay) drawViewRay(config, entity, partialTicks)
@@ -58,6 +61,31 @@ object HitboxRenderer {
         GL.enableCull()
         GL.disableBlend()
         GL.depthMask(true)
+    }
+
+    private fun drawSide(config: HitboxConfig, hitbox: AxisAlignedBB) {
+        glColor(config.sideColor)
+        startBuilding(GL11.GL_TRIANGLE_STRIP, DefaultVertexFormats.POSITION) {
+            pos(hitbox.maxX, hitbox.maxY, hitbox.minZ).endVertex()
+            pos(hitbox.minX, hitbox.maxY, hitbox.minZ).endVertex()
+            pos(hitbox.maxX, hitbox.maxY, hitbox.maxZ).endVertex()
+            pos(hitbox.minX, hitbox.maxY, hitbox.maxZ).endVertex()
+            pos(hitbox.maxX, hitbox.minY, hitbox.maxZ).endVertex()
+            pos(hitbox.minX, hitbox.minY, hitbox.maxZ).endVertex()
+            pos(hitbox.maxX, hitbox.minY, hitbox.minZ).endVertex()
+            pos(hitbox.minX, hitbox.minY, hitbox.minZ).endVertex()
+        }
+        startBuilding(GL11.GL_TRIANGLE_STRIP, DefaultVertexFormats.POSITION) {
+            pos(hitbox.maxX, hitbox.maxY, hitbox.maxZ).endVertex()
+            pos(hitbox.maxX, hitbox.minY, hitbox.maxZ).endVertex()
+            pos(hitbox.maxX, hitbox.maxY, hitbox.minZ).endVertex()
+            pos(hitbox.maxX, hitbox.minY, hitbox.minZ).endVertex()
+            pos(hitbox.minX, hitbox.maxY, hitbox.minZ).endVertex()
+            pos(hitbox.minX, hitbox.minY, hitbox.minZ).endVertex()
+            pos(hitbox.minX, hitbox.maxY, hitbox.maxZ).endVertex()
+            pos(hitbox.minX, hitbox.minY, hitbox.maxZ).endVertex()
+        }
+        GL.color(1f, 1f, 1f, 1f)
     }
 
     private fun drawOutline(config: HitboxConfig, hitbox: AxisAlignedBB) {
@@ -77,19 +105,28 @@ object HitboxRenderer {
     private fun drawViewRay(profile: HitboxConfig, entity: Entity, partialTicks: Float) {
         val color = profile.viewRayColor
         val viewVector = entity.getLook(partialTicks)
-        val tessellator = Tessellator.getInstance()
 
         GL11.glLineWidth(profile.viewRayThickness.toFloat())
-        GL.color(color.red / 255f, color.green / 255f, color.blue / 255f, color.alpha / 255f)
-        with(tessellator.worldRenderer) {
-            begin(GL11.GL_LINES, DefaultVertexFormats.POSITION)
+        glColor(color)
+        startBuilding(GL11.GL_LINES, DefaultVertexFormats.POSITION) {
             pos(0.0, entity.eyeHeight.toDouble(), 0.0).endVertex()
             pos(viewVector.xCoord * 2.0, entity.eyeHeight + viewVector.yCoord * 2.0, viewVector.zCoord * 2.0).endVertex()
         }
-        tessellator.draw()
         GL.color(1f, 1f, 1f, 1f)
+    }
+
+    private fun glColor(oneColor: OneColor) = with(oneColor) {
+        GL.color(red / 255f, green / 255f, blue / 255f, alpha / 255f)
     }
 
     private fun drawOutlinedBoundingBox(boundingBox: AxisAlignedBB, color: OneColor) =
         RenderGlobal.drawOutlinedBoundingBox(boundingBox, color.red, color.green, color.blue, color.alpha)
+
+    private fun startBuilding(glMode: Int, format: VertexFormat, block: WorldRenderer.() -> Unit) {
+        val tessellator = Tessellator.getInstance()
+        val worldRenderer = tessellator.worldRenderer
+        worldRenderer.begin(glMode, format)
+        worldRenderer.block()
+        tessellator.draw()
+    }
 }

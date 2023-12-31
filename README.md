@@ -1,10 +1,12 @@
-# OneConfigExampleMod
-Example mod implementing OneConfig.
+<img align="right" src="src/main/resources/polynametag.svg" alt="PolyNametag Icon"/>
 
-## How to use
+# PolyHitboxes
 
-- Copy the template either by using GitHub's "Use this template" feature or downloading the repo manually.
-- **Remove the license named "LICENSE-TEMPLATE" and choose a new one.**
-- Refactor the template (specifically, the modid, version and name in the gradle.properties and most of the class names)
-  to a different name.
-- Have fun modding! :D
+![Compact Powered by OneConfig](https://polyfrost.org/img/compact_vector.svg)
+
+A hitbox modification mod
+
+## Gallery
+
+![settings-page.png](images/settings-page.png)
+

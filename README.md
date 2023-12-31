@@ -1,4 +1,4 @@
-<img align="right" src="src/main/resources/polynametag.svg" alt="PolyNametag Icon"/>
+<!-- <img align="right" src="src/main/resources/polynametag.svg" alt="PolyNametag Icon"/> -->
 
 # PolyHitboxes
 
@@ -9,7 +9,7 @@ A hitbox modification mod
 ## Features
 
 - Toggle Keybind
-- Show Condition
+- Show Condition - Always / Hovered / Toggled / Never
 - Dashed Lines
 - Outline
 - Eye Height

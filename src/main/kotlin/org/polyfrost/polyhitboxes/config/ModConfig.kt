@@ -2,17 +2,23 @@ package org.polyfrost.polyhitboxes.config
 
 import cc.polyfrost.oneconfig.config.Config
 import cc.polyfrost.oneconfig.config.annotations.CustomOption
+import cc.polyfrost.oneconfig.config.annotations.KeyBind
 import cc.polyfrost.oneconfig.config.core.ConfigUtils
+import cc.polyfrost.oneconfig.config.core.OneKeyBind
 import cc.polyfrost.oneconfig.config.data.Mod
 import cc.polyfrost.oneconfig.config.data.ModType
 import cc.polyfrost.oneconfig.config.elements.BasicOption
 import cc.polyfrost.oneconfig.config.elements.OptionPage
+import cc.polyfrost.oneconfig.libs.universal.UKeyboard
 import org.polyfrost.polyhitboxes.PolyHitBoxes
 import org.polyfrost.polyhitboxes.config.data.ConfigAdapter
 import org.polyfrost.polyhitboxes.config.gui.HitboxEditor
 import java.lang.reflect.Field
 
-object ModConfig : Config(Mod(PolyHitBoxes.NAME, ModType.UTIL_QOL), "${PolyHitBoxes.MODID}.json") {
+object ModConfig : Config(Mod("Hitbox", ModType.UTIL_QOL), "${PolyHitBoxes.MODID}.json") {
+    @KeyBind(name = "Toggle Keybind", size = 2)
+    var toggleKeyBind = OneKeyBind(UKeyboard.KEY_F3, UKeyboard.KEY_B)
+
     @CustomOption
     var configs = ConfigAdapter()
 

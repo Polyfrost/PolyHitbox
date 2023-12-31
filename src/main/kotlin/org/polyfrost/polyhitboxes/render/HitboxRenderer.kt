@@ -25,7 +25,7 @@ object HitboxRenderer {
         GL.disableTexture2D()
         GL.disableLighting()
         GL.disableCull()
-        GL.disableBlend()
+        GL.enableBlend()
         GL.pushMatrix()
         GL.translate(x, y, z)
 
@@ -51,6 +51,7 @@ object HitboxRenderer {
         if (config.dashedLines) {
             GL11.glPopAttrib()
         }
+
         GL.popMatrix()
         GL.enableTexture2D()
         GL.enableLighting()

@@ -9,7 +9,7 @@ A hitbox modification mod
 ## Features
 
 - Toggle Keybind
-- Show Condition
+- Show Condition - Always / Hovered / Toggled / Never
 - Dashed Lines
 - Outline
 - Eye Height

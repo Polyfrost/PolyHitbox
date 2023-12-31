@@ -1,4 +1,4 @@
-<!-- <img align="right" src="src/main/resources/polynametag.svg" alt="PolyNametag Icon"/> -->
+<img align="right" src="src/main/resources/polyhitboxes.svg" alt="PolyHitboxes Icon"/>
 
 # PolyHitboxes
 

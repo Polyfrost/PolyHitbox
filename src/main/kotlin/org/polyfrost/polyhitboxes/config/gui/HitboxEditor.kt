@@ -29,4 +29,9 @@ class HitboxEditor(
         selectedConfig?.drawLast(vg, x, inputHandler)
         categoryDropdown.drawLast(vg, x, y, inputHandler)
     }
+
+    override fun keyTyped(key: Char, keyCode: Int) {
+        selectedConfig?.keyTyped(key, keyCode)
+        categoryDropdown.keyTyped(key, keyCode)
+    }
 }

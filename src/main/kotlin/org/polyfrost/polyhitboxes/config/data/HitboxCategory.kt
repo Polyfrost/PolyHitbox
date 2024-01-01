@@ -87,4 +87,10 @@ enum class HitboxCategory(
 
     fun draw(vg: Long, x: Int, y: Int, inputHandler: InputHandler) = subcategory.draw(vg, x, y, inputHandler)
     fun drawLast(vg: Long, x: Int, inputHandler: InputHandler) = subcategory.drawLast(vg, x, inputHandler)
+
+    fun keyTyped(key: Char, keyCode: Int) {
+        for (option in subcategory.options) {
+            option.keyTyped(key, keyCode)
+        }
+    }
 }

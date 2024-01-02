@@ -5,6 +5,7 @@ import cc.polyfrost.oneconfig.gui.OneConfigGui
 import cc.polyfrost.oneconfig.libs.universal.UResolution
 import cc.polyfrost.oneconfig.utils.InputHandler
 import cc.polyfrost.oneconfig.utils.dsl.mc
+import net.minecraft.client.gui.FontRenderer
 import net.minecraft.client.renderer.OpenGlHelper
 import net.minecraft.client.renderer.RenderHelper
 import net.minecraft.entity.Entity
@@ -72,10 +73,6 @@ class HitboxPreview(
         mouseX: Float,
         mouseY: Float,
     ) {
-        val eyeHeightOffsetY = (entity.eyeHeight - entity.height / 2) * scale
-        val dx = x - mouseX
-        val dy = y - eyeHeightOffsetY - mouseY
-
         GL.enableDepth()
         GL.color(1f, 1f, 1f, 1f)
         GL.enableColorMaterial()
@@ -85,35 +82,45 @@ class HitboxPreview(
         GL.translate(0f, entity.height / 2, 0f)
         GL.rotate(180f, 0f, 0f, 1f)
 
-        val tempData = (entity as? EntityLivingBase)?.let { TempData(it) }
+        GL.pushMatrix()
+        try {
+            val eyeHeightOffsetY = (entity.eyeHeight - entity.height / 2) * scale
+            val dx = x - mouseX
+            val dy = y - eyeHeightOffsetY - mouseY
+            val tempData = (entity as? EntityLivingBase)?.let { TempData(it) }
 
-        GL.rotate(135f, 0f, 1f, 0f)
-        RenderHelper.enableStandardItemLighting()
-        GL.rotate(-135f, 0f, 1f, 0f)
+            GL.rotate(135f, 0f, 1f, 0f)
+            RenderHelper.enableStandardItemLighting()
+            GL.rotate(-135f, 0f, 1f, 0f)
 
-        (entity as? EntityLivingBase)?.apply {
-            rotationYaw = atan(dx / 40f) * 40f
-            rotationYawHead = rotationYaw
-            renderYawOffset = rotationYaw
-            rotationPitch = -atan(dy / 40f) * 20f
-            riddenByEntity = this // cancel nametag
+            (entity as? EntityLivingBase)?.apply {
+                rotationYaw = atan(dx / 40f) * 40f
+                rotationYawHead = rotationYaw
+                renderYawOffset = rotationYaw
+                rotationPitch = -atan(dy / 40f) * 20f
+                riddenByEntity = this // cancel nametag
+            }
+
+            GL.rotate(-atan(dy / 40f) * 20f, 1f, 0f, 0f)
+            GL.rotate(-atan(dx / 40f) * 40f, 0f, 1f, 0f)
+
+            with(mc.renderManager) {
+                playerViewX = 0f
+                playerViewY = 180f
+                isRenderShadow = false
+                doRenderEntity(entity, 0.0, 0.0, 0.0, 0f, 1f, true)
+                HitboxRenderer.renderHitbox(hitboxCategory.config, entity, 0.0, 0.0, 0.0, 1f)
+                isRenderShadow = true
+            }
+
+            tempData?.reset(entity)
+            GL.popMatrix()
+        } catch (ex: Exception) {
+            GL.popMatrix()
+            mc.fontRendererObj.drawCenteredString("Unable to draw entity", 0f, 0f, 0xFFFFFF)
+            ex.printStackTrace()
         }
 
-        GL.rotate(-atan(dy / 40f) * 20f, 1f, 0f, 0f)
-        GL.rotate(-atan(dx / 40f) * 40f, 0f, 1f, 0f)
-
-        with(mc.renderManager) {
-            playerViewX = 0f
-            playerViewY = 180f
-            isRenderShadow = false
-            doRenderEntity(entity, 0.0, 0.0, 0.0, 0f, 1f, true)
-            HitboxRenderer.renderHitbox(hitboxCategory.config, entity, 0.0, 0.0, 0.0, 1f)
-            isRenderShadow = true
-        }
-
-        tempData?.reset(entity)
-
-        GL.popMatrix()
         RenderHelper.disableStandardItemLighting()
         GL.disableRescaleNormal()
         GL.setActiveTexture(OpenGlHelper.lightmapTexUnit)
@@ -121,6 +128,10 @@ class HitboxPreview(
         GL.setActiveTexture(OpenGlHelper.defaultTexUnit)
     }
 }
+
+private fun FontRenderer.drawCenteredString(text: String, x: Float, y: Float, color: Int) =
+    drawStringWithShadow(text, x - getStringWidth(text) / 2f, y, color)
+
 
 private data class TempData(
     val yaw: Float,

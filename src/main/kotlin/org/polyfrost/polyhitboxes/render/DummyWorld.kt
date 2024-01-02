@@ -4,11 +4,13 @@ import cc.polyfrost.oneconfig.events.EventManager
 import cc.polyfrost.oneconfig.events.event.Stage
 import cc.polyfrost.oneconfig.events.event.TickEvent
 import cc.polyfrost.oneconfig.libs.eventbus.Subscribe
+import net.minecraft.block.state.IBlockState
 import net.minecraft.entity.item.EntityArmorStand
 import net.minecraft.entity.item.EntityItem
 import net.minecraft.entity.item.EntityItemFrame
 import net.minecraft.entity.projectile.EntityArrow
 import net.minecraft.entity.projectile.EntitySnowball
+import net.minecraft.init.Blocks
 import net.minecraft.init.Items
 import net.minecraft.item.ItemStack
 import net.minecraft.util.BlockPos
@@ -42,4 +44,5 @@ object DummyWorld : World(null, null, WorldProviderSurface(), null, true) {
 
     override fun createChunkProvider() = ChunkProviderDebug(this)
     override fun getRenderDistanceChunks() = 0
+    override fun getBlockState(pos: BlockPos?): IBlockState  = Blocks.air.defaultState
 }

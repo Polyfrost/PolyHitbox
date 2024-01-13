@@ -82,7 +82,6 @@ class HitboxPreview(
         GL.translate(0f, entity.height / 2, 0f)
         GL.rotate(180f, 0f, 0f, 1f)
 
-        GL.pushMatrix()
         try {
             val eyeHeightOffsetY = (entity.eyeHeight - entity.height / 2) * scale
             val dx = x - mouseX
@@ -114,12 +113,12 @@ class HitboxPreview(
             }
 
             tempData?.reset(entity)
-            GL.popMatrix()
         } catch (ex: Exception) {
-            GL.popMatrix()
             mc.fontRendererObj.drawCenteredString("Unable to draw entity", 0f, 0f, 0xFFFFFF)
             ex.printStackTrace()
         }
+
+        GL.popMatrix()
 
         RenderHelper.disableStandardItemLighting()
         GL.disableRescaleNormal()

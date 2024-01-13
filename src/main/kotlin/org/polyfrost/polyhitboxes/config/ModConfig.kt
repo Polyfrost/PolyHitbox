@@ -11,7 +11,8 @@ import cc.polyfrost.oneconfig.config.elements.BasicOption
 import cc.polyfrost.oneconfig.config.elements.OptionPage
 import cc.polyfrost.oneconfig.libs.universal.UKeyboard
 import org.polyfrost.polyhitboxes.PolyHitBoxes
-import org.polyfrost.polyhitboxes.config.data.ConfigAdapter
+import org.polyfrost.polyhitboxes.config.data.HitboxCategory
+import org.polyfrost.polyhitboxes.config.data.HitboxConfig
 import org.polyfrost.polyhitboxes.config.gui.HitboxEditor
 import java.lang.reflect.Field
 
@@ -20,10 +21,20 @@ object ModConfig : Config(Mod("Hitbox", ModType.UTIL_QOL, "/${PolyHitBoxes.MODID
     var toggleKeyBind = OneKeyBind(UKeyboard.KEY_F3, UKeyboard.KEY_B)
 
     @CustomOption
-    var configs = ConfigAdapter()
+    var configs = HashMap<HitboxCategory, HitboxConfig>()
 
     init {
         initialize()
+    }
+
+    override fun load() {
+        super.load()
+        HitboxCategory.loadConfig(configs)
+    }
+
+    override fun save() {
+        configs = HitboxCategory.saveConfig()
+        super.save()
     }
 
     override fun getCustomOption(

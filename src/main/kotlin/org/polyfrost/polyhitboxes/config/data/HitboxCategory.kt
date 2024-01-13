@@ -11,6 +11,7 @@ import net.minecraft.entity.item.EntityArmorStand
 import net.minecraft.entity.item.EntityItem
 import net.minecraft.entity.player.EntityPlayer
 import net.minecraft.entity.projectile.EntityArrow
+import net.minecraft.entity.projectile.EntityFireball
 import org.polyfrost.polyhitboxes.config.gui.OptionWidgetGenerator
 import org.polyfrost.polyhitboxes.render.DummyWorld
 
@@ -44,6 +45,11 @@ enum class HitboxCategory(
         example = DummyWorld.ARROW,
         priority = HIGH
     ),
+    FIREBALL(
+        display = "Fireball",
+        condition = { it is EntityFireball },
+        example = DummyWorld.FIREBALL
+    ),
     PROJECTILE(
         display = "Projectile",
         condition = { it is IProjectile },
@@ -75,6 +81,15 @@ enum class HitboxCategory(
                 }?.takeIf { category ->
                     category.config.overwriteDefault
                 } ?: DEFAULT).config
+
+        fun loadConfig(map: Map<HitboxCategory, HitboxConfig>) {
+            for ((category, config) in map) {
+                category.config = config
+            }
+        }
+
+        fun saveConfig(): HashMap<HitboxCategory, HitboxConfig> =
+            entries.associateWithTo(HashMap()) { category -> category.config }
     }
 
     private val subcategory by lazy { initCategory() }

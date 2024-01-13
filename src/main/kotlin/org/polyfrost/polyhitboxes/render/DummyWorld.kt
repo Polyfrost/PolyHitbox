@@ -9,6 +9,7 @@ import net.minecraft.entity.item.EntityArmorStand
 import net.minecraft.entity.item.EntityItem
 import net.minecraft.entity.item.EntityItemFrame
 import net.minecraft.entity.projectile.EntityArrow
+import net.minecraft.entity.projectile.EntityLargeFireball
 import net.minecraft.entity.projectile.EntitySnowball
 import net.minecraft.init.Blocks
 import net.minecraft.init.Items
@@ -22,6 +23,7 @@ import net.minecraft.world.gen.ChunkProviderDebug
 object DummyWorld : World(null, null, WorldProviderSurface(), null, true) {
     val ARROW = EntityArrow(DummyWorld)
     val SNOWBALL = EntitySnowball(DummyWorld, 0.0, 0.0, 0.0)
+    val FIREBALL = EntityLargeFireball(DummyWorld, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
     val ITEM_FRAME = EntityItemFrame(DummyWorld, BlockPos.ORIGIN, EnumFacing.SOUTH)
     val ITEM = EntityItem(DummyWorld, 0.0, 0.0, 0.0, ItemStack(Items.diamond)).apply {
         rotationYaw = 0f
@@ -44,5 +46,5 @@ object DummyWorld : World(null, null, WorldProviderSurface(), null, true) {
 
     override fun createChunkProvider() = ChunkProviderDebug(this)
     override fun getRenderDistanceChunks() = 0
-    override fun getBlockState(pos: BlockPos?): IBlockState  = Blocks.air.defaultState
+    override fun getBlockState(pos: BlockPos?): IBlockState = Blocks.air.defaultState
 }

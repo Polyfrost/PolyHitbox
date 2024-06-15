@@ -22,12 +22,14 @@ object HitboxRenderer {
         z: Double,
         partialTicks: Float,
     ) {
-//        GL.depthMask(false)
         GL.disableTexture2D()
         GL.disableLighting()
         GL.disableCull()
         GL.enableBlend()
+        GL.tryBlendFuncSeparate(770, 771, 1, 0)
+        GL.enableAlpha()
         GL.pushMatrix()
+        GL.depthMask(false)
         GL.translate(x, y, z)
 
         val eyeHeight = entity.eyeHeight.toDouble()
@@ -46,8 +48,10 @@ object HitboxRenderer {
         GL.enableTexture2D()
         GL.enableLighting()
         GL.enableCull()
+        GL.disableAlpha()
+        GL.depthMask(true)
+
         GL.disableBlend()
-//        GL.depthMask(true)
     }
 
     private fun drawSide(config: HitboxConfig, hitbox: AxisAlignedBB) {

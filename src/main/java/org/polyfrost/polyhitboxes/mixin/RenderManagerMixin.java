@@ -11,7 +11,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 @Mixin(RenderManager.class)
 public abstract class RenderManagerMixin {
-    @Inject(method = "doRenderEntity", at = @At("HEAD"))
+    @Inject(method = "doRenderEntity", at = @At(value = "FIELD", target = "Lnet/minecraft/client/renderer/entity/RenderManager;debugBoundingBox:Z"))
     public void polyHitbox$preRenderHitbox(CallbackInfoReturnable<Boolean> cir) {
         MixinHooksKt.preRenderHitbox();
     }

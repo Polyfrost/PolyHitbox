@@ -17,11 +17,17 @@ class HitboxConfig : SetupOptions {
     @Dropdown(name = "Show Condition", options = ["Always", "Toggled", "Hovered", "Never"], size = 2)
     var showCondition = 1
 
-    @Switch(name = "Accurate Hitbox")
+    @Switch(name = "Accurate Hitbox", size = 2)
     var accurate = false
+
+    @Switch(name = "Dashed Lines")
+    var dashedLines = false
 
     @Switch(name = "Proportioned Lines")
     var proportionedLines = false
+
+    @Slider(name = "Dash Factor", min = 1f, max = 20f, step = 1)
+    var dashFactor = 10
 
     @Checkbox(name = "Sides")
     var showSide = false
@@ -66,6 +72,21 @@ class HitboxConfig : SetupOptions {
             }
             if (option == ::showCondition.name) continue
             option.dependOn(::showCondition.name) { showCondition != 3 }
+            when (option) {
+                ::dashedLines.name -> {
+                    option.addListener {
+                        if (dashedLines) proportionedLines = false
+                    }
+                }
+                ::dashFactor.name -> {
+                    option dependOn ::dashedLines.name
+                }
+                ::proportionedLines.name -> {
+                    option.addListener {
+                        if (proportionedLines) dashedLines = false
+                    }
+                }
+            }
         }
         ::sideColor.name dependOn ::showSide.name
         ::outlineColor.name dependOn ::showOutline.name
@@ -74,6 +95,7 @@ class HitboxConfig : SetupOptions {
         ::eyeHeightThickness.name dependOn ::showEyeHeight.name
         ::viewRayColor.name dependOn ::showViewRay.name
         ::viewRayThickness.name dependOn ::showViewRay.name
+        ::dashFactor.name dependOn ::dashedLines.name
 
         options.add(0, SpacerWidget)
         val category = category ?: return

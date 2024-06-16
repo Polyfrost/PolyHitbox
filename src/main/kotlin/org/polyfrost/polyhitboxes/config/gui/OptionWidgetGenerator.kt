@@ -35,6 +35,11 @@ class OptionSetup(private val fieldOptionMap: Map<String, BasicOption>, val opti
         }
     }
 
+    infix fun String.addListener(runnable: Runnable) {
+        val option = fieldOptionMap[this] ?: return
+        option.addListener(runnable)
+    }
+
     fun String.hideIf(condition: () -> Boolean) {
         val option = fieldOptionMap[this] ?: return
         option.addHideCondition(condition)

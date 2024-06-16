@@ -14,6 +14,8 @@ import kotlin.math.sqrt
 import net.minecraft.client.renderer.GlStateManager as GL
 
 object HitboxRenderer {
+    private const val ALTERNATING_PATTERN = 0b1010101010101010.toShort()
+
     fun renderHitbox(
         config: HitboxConfig,
         entity: Entity,
@@ -32,6 +34,14 @@ object HitboxRenderer {
         GL.depthMask(false)
         GL.translate(x, y, z)
 
+        if (config.dashedLines) {
+            GL11.glPushAttrib(GL11.GL_ENABLE_BIT)
+            GL11.glLineStipple(config.dashFactor, ALTERNATING_PATTERN)
+            GL11.glEnable(GL11.GL_LINE_STIPPLE)
+            GL11.glBegin(GL11.GL_LINES)
+            GL11.glEnd()
+        }
+
         val eyeHeight = entity.eyeHeight.toDouble()
         var hitbox = entity.entityBoundingBox.offset(-entity.posX, -entity.posY, -entity.posZ)
         if (config.accurate) {
@@ -44,6 +54,10 @@ object HitboxRenderer {
         if (config.showEyeHeight) drawEyeHeight(config, hitbox, eyeHeight)
         if (config.showViewRay) drawViewRay(config, entity, partialTicks)
 
+        if (config.dashedLines) {
+            GL11.glPopAttrib()
+        }
+
         GL.popMatrix()
         GL.enableTexture2D()
         GL.enableLighting()
@@ -51,7 +65,6 @@ object HitboxRenderer {
         GL.disableAlpha()
         GL.depthMask(true)
 
-        GL.disableBlend()
     }
 
     private fun drawSide(config: HitboxConfig, hitbox: AxisAlignedBB) {

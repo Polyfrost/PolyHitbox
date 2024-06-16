@@ -9,11 +9,10 @@ import cc.polyfrost.oneconfig.config.data.Mod
 import cc.polyfrost.oneconfig.config.data.ModType
 import cc.polyfrost.oneconfig.config.elements.BasicOption
 import cc.polyfrost.oneconfig.config.elements.OptionPage
+import cc.polyfrost.oneconfig.events.EventManager
 import cc.polyfrost.oneconfig.libs.universal.UKeyboard
+import net.minecraft.entity.Entity
 import org.polyfrost.polyhitboxes.PolyHitBoxes
-import org.polyfrost.polyhitboxes.config.data.HitboxCategory
-import org.polyfrost.polyhitboxes.config.data.HitboxConfig
-import org.polyfrost.polyhitboxes.config.gui.HitboxEditor
 import java.lang.reflect.Field
 
 object ModConfig : Config(Mod("Hitbox", ModType.UTIL_QOL, "/${PolyHitBoxes.MODID}.svg"), "${PolyHitBoxes.MODID}.json") {
@@ -25,27 +24,22 @@ object ModConfig : Config(Mod("Hitbox", ModType.UTIL_QOL, "/${PolyHitBoxes.MODID
 
     init {
         initialize()
+        EventManager.INSTANCE.register(this)
     }
 
-    override fun load() {
-        super.load()
-        HitboxCategory.loadConfig(configs)
+    override fun getCustomOption(field: Field, annotation: CustomOption, page: OptionPage, mod: Mod, migrate: Boolean): BasicOption? {
+        for (category in HitboxCategory.entries) { // retain order
+            category.config = configs.computeIfAbsent(category) { HitboxConfig() }
+            ConfigUtils.getSubCategory(page, category.displayName, "").options.addAll(category.config.getOptions(category))
+        }
+        return null
     }
 
-    override fun save() {
-        configs = HitboxCategory.saveConfig()
-        super.save()
-    }
+    @Transient
+    private val sortedByPriority: List<HitboxCategory> = (HitboxCategory.entries - HitboxCategory.DEFAULT).sortedBy { it.priority }
 
-    override fun getCustomOption(
-        field: Field,
-        annotation: CustomOption,
-        page: OptionPage,
-        mod: Mod,
-        migrate: Boolean,
-    ): BasicOption {
-        val option = HitboxEditor()
-        ConfigUtils.getSubCategory(page, "General", "").options.add(option)
-        return option
-    }
+    fun getHitboxConfig(entity: Entity): HitboxConfig =
+        sortedByPriority.find { category ->
+            category.config.overwriteDefault && category.condition(entity)
+        }?.config ?: HitboxCategory.DEFAULT.config
 }

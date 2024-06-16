@@ -25,10 +25,10 @@ object DummyWorld : World(null, null, WorldProviderSurface(), null, true) {
     val SNOWBALL = EntitySnowball(DummyWorld, 0.0, 0.0, 0.0)
     val FIREBALL = EntityLargeFireball(DummyWorld, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
     val ITEM_FRAME = EntityItemFrame(DummyWorld, BlockPos.ORIGIN, EnumFacing.SOUTH)
-    val ITEM = EntityItem(DummyWorld, 0.0, 0.0, 0.0, ItemStack(Items.diamond)).apply {
-        rotationYaw = 0f
-    }
-    val ARMOR_STAND = EntityArmorStand(DummyWorld).apply {
+    val ITEM = EntityItem(DummyWorld, 0.0, 0.0, 0.0, ItemStack(Items.diamond)).apply { rotationYaw = 0f }
+    val ARMOR_STAND = object : EntityArmorStand(DummyWorld) {
+        override fun getBrightness(partialTicks: Float) = 1f
+    }.apply {
         val b = dataWatcher.getWatchableObjectByte(10).toInt() or 4
         dataWatcher.updateObject(10, b.toByte()) // show hands
     }

@@ -14,7 +14,7 @@ import net.minecraftforge.client.event.GuiScreenEvent
 import net.minecraftforge.common.MinecraftForge
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent
 import org.lwjgl.opengl.GL11
-import org.polyfrost.polyhitboxes.config.data.HitboxCategory
+import org.polyfrost.polyhitboxes.config.HitboxCategory
 import kotlin.math.atan
 import net.minecraft.client.renderer.GlStateManager as GL
 
@@ -32,7 +32,7 @@ class HitboxPreview(
         MinecraftForge.EVENT_BUS.register(this)
     }
 
-    override fun getHeight() = 300
+    override fun getHeight() = 400
 
     override fun draw(vg: Long, x: Int, y: Int, inputHandler: InputHandler) {
         drawContext = DrawContext(x, y, inputHandler.mouseX(), inputHandler.mouseY())
@@ -103,6 +103,10 @@ class HitboxPreview(
             GL.rotate(-atan(dy / 40f) * 20f, 1f, 0f, 0f)
             GL.rotate(-atan(dx / 40f) * 40f, 0f, 1f, 0f)
 
+            val i = 15728880
+            val j = i % 65536
+            val k = i / 65536
+            OpenGlHelper.setLightmapTextureCoords(OpenGlHelper.lightmapTexUnit, j.toFloat(), k.toFloat())
             with(mc.renderManager) {
                 playerViewX = 0f
                 playerViewY = 180f

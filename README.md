@@ -1,6 +1,6 @@
 <img align="right" src="src/main/resources/polyhitboxes.svg" alt="PolyHitboxes Icon"/>
 
-# PolyHitboxes
+# PolyHitbox
 
 ![Compact Powered by OneConfig](https://polyfrost.org/img/compact_vector.svg)
 

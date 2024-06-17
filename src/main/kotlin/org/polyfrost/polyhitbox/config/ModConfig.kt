@@ -1,4 +1,4 @@
-package org.polyfrost.polyhitboxes.config
+package org.polyfrost.polyhitbox.config
 
 import cc.polyfrost.oneconfig.config.Config
 import cc.polyfrost.oneconfig.config.annotations.CustomOption
@@ -12,10 +12,10 @@ import cc.polyfrost.oneconfig.config.elements.OptionPage
 import cc.polyfrost.oneconfig.events.EventManager
 import cc.polyfrost.oneconfig.libs.universal.UKeyboard
 import net.minecraft.entity.Entity
-import org.polyfrost.polyhitboxes.PolyHitBoxes
+import org.polyfrost.polyhitbox.PolyHitbox
 import java.lang.reflect.Field
 
-object ModConfig : Config(Mod("Hitbox", ModType.UTIL_QOL, "/${PolyHitBoxes.MODID}.svg"), "${PolyHitBoxes.MODID}.json") {
+object ModConfig : Config(Mod("Hitbox", ModType.UTIL_QOL, "/${PolyHitbox.MODID}.svg"), "${PolyHitbox.MODID}.json") {
     @KeyBind(name = "Toggle Keybind", size = 2)
     var toggleKeyBind = OneKeyBind(UKeyboard.KEY_F3, UKeyboard.KEY_B)
 

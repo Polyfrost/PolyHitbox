@@ -1,4 +1,4 @@
-package org.polyfrost.polyhitboxes.config
+package org.polyfrost.polyhitbox.config
 
 import cc.polyfrost.oneconfig.utils.dsl.mc
 import net.minecraft.client.entity.EntityPlayerSP
@@ -10,7 +10,7 @@ import net.minecraft.entity.item.EntityItem
 import net.minecraft.entity.player.EntityPlayer
 import net.minecraft.entity.projectile.EntityArrow
 import net.minecraft.entity.projectile.EntityFireball
-import org.polyfrost.polyhitboxes.render.DummyWorld
+import org.polyfrost.polyhitbox.render.DummyWorld
 
 private const val HIGH = 0
 private const val MID = 1

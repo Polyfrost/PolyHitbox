@@ -1,10 +1,10 @@
-package org.polyfrost.polyhitboxes.config
+package org.polyfrost.polyhitbox.config
 
 import cc.polyfrost.oneconfig.config.annotations.*
 import cc.polyfrost.oneconfig.config.core.ConfigUtils
 import cc.polyfrost.oneconfig.config.core.OneColor
 import cc.polyfrost.oneconfig.config.elements.BasicOption
-import org.polyfrost.polyhitboxes.render.HitboxPreview
+import org.polyfrost.polyhitbox.render.HitboxPreview
 
 class HitboxConfig {
     @Switch(name = "Enable", size = 2)

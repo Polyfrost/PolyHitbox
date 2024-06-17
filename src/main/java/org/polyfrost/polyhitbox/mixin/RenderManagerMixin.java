@@ -1,8 +1,8 @@
-package org.polyfrost.polyhitboxes.mixin;
+package org.polyfrost.polyhitbox.mixin;
 
 import net.minecraft.client.renderer.entity.RenderManager;
 import net.minecraft.entity.Entity;
-import org.polyfrost.polyhitboxes.hooks.MixinHooksKt;
+import org.polyfrost.polyhitbox.hooks.MixinHooksKt;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;

@@ -1,4 +1,4 @@
-package org.polyfrost.polyhitboxes
+package org.polyfrost.polyhitbox
 
 import cc.polyfrost.oneconfig.events.EventManager
 import cc.polyfrost.oneconfig.events.event.KeyInputEvent
@@ -8,15 +8,15 @@ import cc.polyfrost.oneconfig.libs.eventbus.Subscribe
 import cc.polyfrost.oneconfig.utils.dsl.mc
 import net.minecraftforge.fml.common.Mod
 import net.minecraftforge.fml.common.event.FMLInitializationEvent
-import org.polyfrost.polyhitboxes.config.ModConfig
+import org.polyfrost.polyhitbox.config.ModConfig
 
 @Mod(
-    modid = PolyHitBoxes.MODID,
-    name = PolyHitBoxes.NAME,
-    version = PolyHitBoxes.VERSION,
+    modid = PolyHitbox.MODID,
+    name = PolyHitbox.NAME,
+    version = PolyHitbox.VERSION,
     modLanguageAdapter = "cc.polyfrost.oneconfig.utils.KotlinLanguageAdapter"
 )
-object PolyHitBoxes {
+object PolyHitbox {
     const val MODID = "@ID@"
     const val NAME = "@NAME@"
     const val VERSION = "@VER@"

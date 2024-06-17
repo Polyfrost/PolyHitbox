@@ -1,4 +1,4 @@
-<img align="right" src="src/main/resources/polyhitboxes.svg" alt="PolyHitboxes Icon"/>
+<img align="right" src="src/main/resources/polyhitbox.svg" alt="PolyHitbox Icon"/>
 
 # PolyHitbox
 

@@ -1,4 +1,4 @@
-package org.polyfrost.polyhitboxes.render
+package org.polyfrost.polyhitbox.render
 
 import cc.polyfrost.oneconfig.events.EventManager
 import cc.polyfrost.oneconfig.events.event.Stage

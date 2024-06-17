@@ -1,4 +1,4 @@
-package org.polyfrost.polyhitboxes.render
+package org.polyfrost.polyhitbox.render
 
 import cc.polyfrost.oneconfig.config.core.OneColor
 import net.minecraft.client.renderer.Tessellator
@@ -7,7 +7,7 @@ import net.minecraft.client.renderer.vertex.DefaultVertexFormats
 import net.minecraft.entity.Entity
 import net.minecraft.util.AxisAlignedBB
 import org.lwjgl.opengl.GL11
-import org.polyfrost.polyhitboxes.config.HitboxConfig
+import org.polyfrost.polyhitbox.config.HitboxConfig
 import kotlin.math.atan2
 import kotlin.math.sqrt
 import net.minecraft.client.renderer.GlStateManager as GL

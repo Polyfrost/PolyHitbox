@@ -11,13 +11,10 @@ import cc.polyfrost.oneconfig.config.data.ModType
 import cc.polyfrost.oneconfig.config.elements.BasicOption
 import cc.polyfrost.oneconfig.config.elements.OptionPage
 import cc.polyfrost.oneconfig.events.EventManager
-import cc.polyfrost.oneconfig.libs.caffeine.cache.Cache
-import cc.polyfrost.oneconfig.libs.caffeine.cache.Caffeine
 import cc.polyfrost.oneconfig.libs.universal.UKeyboard
 import net.minecraft.entity.Entity
 import org.polyfrost.polyhitbox.PolyHitbox
 import java.lang.reflect.Field
-import java.util.concurrent.TimeUnit
 
 object ModConfig : Config(Mod("Hitbox", ModType.UTIL_QOL, "/${PolyHitbox.MODID}.svg"), "${PolyHitbox.MODID}.json") {
     @KeyBind(name = "Toggle Keybind")
@@ -58,15 +55,7 @@ object ModConfig : Config(Mod("Hitbox", ModType.UTIL_QOL, "/${PolyHitbox.MODID}.
     private val sortedByPriority: List<HitboxCategory> =
         (HitboxCategory.entries - HitboxCategory.DEFAULT).sortedBy { it.priority }
 
-    @Transient
-    private val entityCache: Cache<Entity, HitboxConfig> =
-        Caffeine.newBuilder().expireAfterAccess(5, TimeUnit.MINUTES).maximumSize(5000).build()
-
-    fun getHitboxConfig(entity: Entity): HitboxConfig {
-        return entityCache.get(entity) { getHitboxConfigUncached(entity) }
-    }
-
-    fun getHitboxConfigUncached(entity: Entity): HitboxConfig =
+    fun getHitboxConfig(entity: Entity): HitboxConfig =
         sortedByPriority.find { category ->
             category.config.overwriteDefault && category.condition(entity)
         }?.config ?: HitboxCategory.DEFAULT.config

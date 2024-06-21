@@ -14,7 +14,7 @@ class HitboxConfig {
     var showCondition = 1
 
     @Switch(name = "Accurate Hitbox", size = 2)
-    var accurate = false
+    var accurate = true
 
     @Dropdown(name = "Line Style", options = ["Normal", "Proportioned", "Dashed"], size = 2)
     var lineStyle = 0

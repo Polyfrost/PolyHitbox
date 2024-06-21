@@ -18,5 +18,5 @@ fun overrideHitbox(entity: Entity, x: Double, y: Double, z: Double, partialTicks
     if (condition) {
         HitboxRenderer.renderHitbox(config, entity, x, y, z, partialTicks)
     }
-    return condition
+    return true
 }

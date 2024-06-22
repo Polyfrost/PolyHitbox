@@ -8,9 +8,11 @@ import net.minecraft.block.state.IBlockState
 import net.minecraft.entity.item.EntityArmorStand
 import net.minecraft.entity.item.EntityItem
 import net.minecraft.entity.item.EntityItemFrame
+import net.minecraft.entity.item.EntityXPOrb
 import net.minecraft.entity.projectile.EntityArrow
 import net.minecraft.entity.projectile.EntityLargeFireball
 import net.minecraft.entity.projectile.EntitySnowball
+import net.minecraft.entity.projectile.EntityWitherSkull
 import net.minecraft.init.Blocks
 import net.minecraft.init.Items
 import net.minecraft.item.ItemStack
@@ -32,6 +34,11 @@ object DummyWorld : World(null, null, WorldProviderSurface(), null, true) {
         val b = dataWatcher.getWatchableObjectByte(10).toInt() or 4
         dataWatcher.updateObject(10, b.toByte()) // show hands
     }
+    val XP_ORB = object : EntityXPOrb(DummyWorld, 0.0, 0.0, 0.0, 2477) {
+        override fun getBrightness(partialTicks: Float) = 1f
+        override fun getBrightnessForRender(partialTicks: Float) = 15728880
+    }
+    val WITHER_SKULL = EntityWitherSkull(DummyWorld).apply { rotationYaw = 180f }
 
     init {
         chunkProvider = createChunkProvider()

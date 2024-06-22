@@ -19,6 +19,7 @@ public class EntityMixin implements EntityHook {
             for (HitboxCategory config : ModConfig.INSTANCE.getSortedByPriority()) {
                 if (config.getCondition().invoke((Entity) (Object) this)) {
                     polyHitbox$hitboxConfig = config.getConfig();
+                    break;
                 }
             }
             polyHitbox$hitboxConfigChecked = true;

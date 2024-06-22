@@ -7,7 +7,8 @@ import org.polyfrost.polyhitbox.config.ModConfig
 import org.polyfrost.polyhitbox.render.HitboxRenderer
 
 fun overrideHitbox(entity: Entity, x: Double, y: Double, z: Double, partialTicks: Float): Boolean {
-    val config = ModConfig.getHitboxConfig(entity)
+    if (entity !is EntityHook) return false
+    val config = entity.`polyHitbox$getHitboxConfig`()
     if (!ModConfig.enabled) return false
     val condition = when (config.showCondition) {
         0 -> true

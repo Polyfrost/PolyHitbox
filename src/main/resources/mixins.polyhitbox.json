@@ -5,6 +5,7 @@
   "refmap": "mixins.polyhitbox.refmap.json",
   "verbose": true,
   "client": [
+    "EntityMixin",
     "RenderManagerMixin"
   ]
 }

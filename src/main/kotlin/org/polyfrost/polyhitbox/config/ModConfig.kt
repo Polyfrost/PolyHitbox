@@ -12,7 +12,6 @@ import cc.polyfrost.oneconfig.config.elements.BasicOption
 import cc.polyfrost.oneconfig.config.elements.OptionPage
 import cc.polyfrost.oneconfig.events.EventManager
 import cc.polyfrost.oneconfig.libs.universal.UKeyboard
-import net.minecraft.entity.Entity
 import org.polyfrost.polyhitbox.PolyHitbox
 import java.lang.reflect.Field
 
@@ -52,11 +51,6 @@ object ModConfig : Config(Mod("Hitbox", ModType.UTIL_QOL, "/${PolyHitbox.MODID}.
     }
 
     @Transient
-    private val sortedByPriority: List<HitboxCategory> =
+    val sortedByPriority: List<HitboxCategory> =
         (HitboxCategory.entries - HitboxCategory.DEFAULT).sortedBy { it.priority }
-
-    fun getHitboxConfig(entity: Entity): HitboxConfig =
-        sortedByPriority.find { category ->
-            category.config.overwriteDefault && category.condition(entity)
-        }?.config ?: HitboxCategory.DEFAULT.config
 }

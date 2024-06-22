@@ -1,6 +1,7 @@
 package org.polyfrost.polyhitbox.render
 
 import cc.polyfrost.oneconfig.config.core.OneColor
+import cc.polyfrost.oneconfig.utils.dsl.mc
 import net.minecraft.client.renderer.Tessellator
 import net.minecraft.client.renderer.WorldRenderer
 import net.minecraft.client.renderer.vertex.DefaultVertexFormats
@@ -46,10 +47,12 @@ object HitboxRenderer {
             hitbox = hitbox.expand(border, border, border)
         }
 
-        if (config.showSide) drawSide(config, hitbox)
-        if (config.showOutline) drawBoxOutline(config, hitbox, config.outlineColor, config.outlineThickness)
-        if (config.showEyeHeight) drawEyeHeight(config, hitbox, eyeHeight)
-        if (config.showViewRay) drawViewRay(config, entity, partialTicks)
+        val hovered = config.hoverColor && entity == mc.pointedEntity
+
+        if (config.showSide) drawSide(config, hitbox, hovered)
+        if (config.showOutline) drawBoxOutline(config, hitbox, if (hovered) config.outlineHoverColor else config.outlineColor, config.outlineThickness)
+        if (config.showEyeHeight) drawEyeHeight(config, hitbox, eyeHeight, hovered)
+        if (config.showViewRay) drawViewRay(config, entity, hovered, partialTicks)
 
         if (config.lineStyle == 2) {
             GL11.glPopAttrib()
@@ -64,8 +67,12 @@ object HitboxRenderer {
 
     }
 
-    private fun drawSide(config: HitboxConfig, hitbox: AxisAlignedBB) {
-        glColor(config.sideColor)
+    private fun drawSide(config: HitboxConfig, hitbox: AxisAlignedBB, hovered: Boolean) {
+        val color = if (hovered) config.sideHoverColor else config.sideColor
+        if (color.alpha != 255) {
+            GL.enableAlpha()
+        }
+        glColor(color)
         buildAndDraw(GL11.GL_TRIANGLE_STRIP) {
             pos(hitbox.maxX, hitbox.maxY, hitbox.minZ).endVertex()
             pos(hitbox.minX, hitbox.maxY, hitbox.minZ).endVertex()
@@ -85,20 +92,23 @@ object HitboxRenderer {
             pos(hitbox.minX, hitbox.minY, hitbox.minZ).endVertex()
             pos(hitbox.minX, hitbox.maxY, hitbox.maxZ).endVertex()
             pos(hitbox.minX, hitbox.minY, hitbox.maxZ).endVertex()
+        }
+        if (color.alpha != 255) {
+            GL.disableAlpha()
         }
         GL.color(1f, 1f, 1f, 1f)
     }
 
-    private fun drawEyeHeight(config: HitboxConfig, hitbox: AxisAlignedBB, eyeHeight: Double) {
+    private fun drawEyeHeight(config: HitboxConfig, hitbox: AxisAlignedBB, eyeHeight: Double, hovered: Boolean) {
         val eyeHeightBox = AxisAlignedBB(
             hitbox.minX - 0.01, eyeHeight - 0.01, hitbox.minZ - 0.01,
             hitbox.maxX + 0.01, eyeHeight + 0.01, hitbox.maxZ + 0.01,
         )
-        drawBoxOutline(config, eyeHeightBox, config.eyeHeightColor, config.eyeHeightThickness)
+        drawBoxOutline(config, eyeHeightBox, if (hovered) config.eyeHeightHoverColor else config.eyeHeightColor, config.eyeHeightThickness)
     }
 
-    private fun drawViewRay(profile: HitboxConfig, entity: Entity, partialTicks: Float) {
-        val color = profile.viewRayColor
+    private fun drawViewRay(profile: HitboxConfig, entity: Entity, hovered: Boolean, partialTicks: Float) {
+        val color = if (hovered) profile.viewRayHoverColor else profile.viewRayColor
         val viewVector = entity.getLook(partialTicks)
         drawLine(
             profile,
@@ -128,11 +138,17 @@ object HitboxRenderer {
     }
 
     private fun drawLine(config: HitboxConfig, xFrom: Double, yFrom: Double, zFrom: Double, xTo: Double, yTo: Double, zTo: Double, color: OneColor, thinkness: Float) {
+        if (color.alpha != 255) {
+            GL.enableAlpha()
+        }
         glColor(color)
         if (config.lineStyle == 1) {
             drawProportionedLine(xFrom, yFrom, zFrom, xTo, yTo, zTo, thinkness)
         } else {
             drawGLLine(xFrom, yFrom, zFrom, xTo, yTo, zTo, thinkness)
+        }
+        if (color.alpha != 255) {
+            GL.disableAlpha()
         }
         GL.color(1f, 1f, 1f, 1f)
     }

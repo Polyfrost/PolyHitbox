@@ -14,7 +14,7 @@ fun overrideHitbox(entity: Entity, x: Double, y: Double, z: Double, partialTicks
     val condition = when (config.showCondition) {
         0 -> true
         1 -> if (ModConfig.retainToggleState) ModConfig.toggleState else PolyHitbox.keybindToggled
-        2 -> mc.objectMouseOver.typeOfHit == MovingObjectType.ENTITY && entity == mc.objectMouseOver.entityHit
+        2 -> mc.objectMouseOver != null && MovingObjectType.ENTITY == mc.objectMouseOver.typeOfHit && entity == mc.objectMouseOver.entityHit
         else -> false
     }
     if (condition) {

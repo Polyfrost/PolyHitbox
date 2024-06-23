@@ -88,7 +88,7 @@ object HitboxRenderer {
             hitbox = hitbox.expand(border, border, border)
         }
 
-        val hovered = config.hoverColor && mc.objectMouseOver.typeOfHit == MovingObjectPosition.MovingObjectType.ENTITY && entity == mc.objectMouseOver.entityHit
+        val hovered = config.hoverColor && mc.objectMouseOver != null && MovingObjectPosition.MovingObjectType.ENTITY == mc.objectMouseOver.typeOfHit && entity == mc.objectMouseOver.entityHit
 
         if (config.showSide) drawSide(config, hitbox, hovered)
         if (config.showOutline) drawBoxOutline(config, hitbox, if (hovered) config.outlineHoverColor else config.outlineColor, config.outlineThickness)

@@ -2,19 +2,57 @@ package org.polyfrost.polyhitbox.render
 
 import cc.polyfrost.oneconfig.config.core.OneColor
 import cc.polyfrost.oneconfig.utils.dsl.mc
-import net.minecraft.client.renderer.Tessellator
-import net.minecraft.client.renderer.WorldRenderer
+import net.minecraft.client.renderer.*
 import net.minecraft.client.renderer.vertex.DefaultVertexFormats
 import net.minecraft.entity.Entity
 import net.minecraft.util.AxisAlignedBB
+import net.minecraftforge.client.event.RenderWorldLastEvent
+import net.minecraftforge.common.MinecraftForge
+import net.minecraftforge.fml.common.eventhandler.SubscribeEvent
 import org.lwjgl.opengl.GL11
 import org.polyfrost.polyhitbox.config.HitboxConfig
+import org.polyfrost.polyhitbox.config.ModConfig
 import kotlin.math.atan2
 import kotlin.math.sqrt
 import net.minecraft.client.renderer.GlStateManager as GL
 
 object HitboxRenderer {
     private const val ALTERNATING_PATTERN = 0b1010101010101010.toShort()
+
+    data class RenderInfo(val config: HitboxConfig, val entity: Entity, val x: Double, val y: Double, val z: Double, val partialTicks: Float)
+
+    private val renderQueue = ArrayList<RenderInfo>()
+
+    var drawingWorld = false
+
+    init {
+        MinecraftForge.EVENT_BUS.register(this)
+    }
+
+    @SubscribeEvent
+    fun onRender(event: RenderWorldLastEvent) {
+        if (!ModConfig.enabled) return
+        if (renderQueue.isEmpty()) return
+        GL.pushMatrix()
+        for (info in renderQueue) {
+            with(info) {
+                renderHitbox(config, entity, x, y, z, partialTicks)
+            }
+        }
+        renderQueue.clear()
+        GL.popMatrix()
+        RenderHelper.disableStandardItemLighting()
+        GL.disableRescaleNormal()
+        GL.disableBlend()
+    }
+
+    fun tryAddToQueue(config: HitboxConfig, entity: Entity, x: Double, y: Double, z: Double, partialTicks: Float) {
+        if (drawingWorld) {
+            renderQueue.add(RenderInfo(config, entity, x, y, z, partialTicks))
+        } else {
+            renderHitbox(config, entity, x, y, z, partialTicks)
+        }
+    }
 
     fun renderHitbox(
         config: HitboxConfig,
@@ -28,7 +66,9 @@ object HitboxRenderer {
         GL.disableTexture2D()
         GL.disableLighting()
         GL.disableCull()
+        GL.alphaFunc(516, 0.1f)
         GL.enableBlend()
+        GL.tryBlendFuncSeparate(770, 771, 1, 0)
         GL.pushMatrix()
         GL.translate(x, y, z)
 
@@ -69,9 +109,6 @@ object HitboxRenderer {
 
     private fun drawSide(config: HitboxConfig, hitbox: AxisAlignedBB, hovered: Boolean) {
         val color = if (hovered) config.sideHoverColor else config.sideColor
-        if (color.alpha != 255) {
-            GL.enableAlpha()
-        }
         glColor(color)
         buildAndDraw(GL11.GL_TRIANGLE_STRIP) {
             pos(hitbox.maxX, hitbox.maxY, hitbox.minZ).endVertex()
@@ -92,9 +129,6 @@ object HitboxRenderer {
             pos(hitbox.minX, hitbox.minY, hitbox.minZ).endVertex()
             pos(hitbox.minX, hitbox.maxY, hitbox.maxZ).endVertex()
             pos(hitbox.minX, hitbox.minY, hitbox.maxZ).endVertex()
-        }
-        if (color.alpha != 255) {
-            GL.disableAlpha()
         }
         GL.color(1f, 1f, 1f, 1f)
     }

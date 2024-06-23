@@ -17,7 +17,7 @@ fun overrideHitbox(entity: Entity, x: Double, y: Double, z: Double, partialTicks
         else -> false
     }
     if (condition) {
-        HitboxRenderer.renderHitbox(config, entity, x, y, z, partialTicks)
+        HitboxRenderer.tryAddToQueue(config, entity, x, y, z, partialTicks)
     }
     return true
 }

@@ -6,6 +6,7 @@ import net.minecraft.client.renderer.*
 import net.minecraft.client.renderer.vertex.DefaultVertexFormats
 import net.minecraft.entity.Entity
 import net.minecraft.util.AxisAlignedBB
+import net.minecraft.util.MovingObjectPosition
 import net.minecraftforge.client.event.RenderWorldLastEvent
 import net.minecraftforge.common.MinecraftForge
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent
@@ -87,7 +88,7 @@ object HitboxRenderer {
             hitbox = hitbox.expand(border, border, border)
         }
 
-        val hovered = config.hoverColor && entity == mc.pointedEntity
+        val hovered = config.hoverColor && mc.objectMouseOver.typeOfHit == MovingObjectPosition.MovingObjectType.ENTITY && entity == mc.objectMouseOver.entityHit
 
         if (config.showSide) drawSide(config, hitbox, hovered)
         if (config.showOutline) drawBoxOutline(config, hitbox, if (hovered) config.outlineHoverColor else config.outlineColor, config.outlineThickness)

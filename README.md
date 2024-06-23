@@ -14,6 +14,7 @@ A hitbox modification mod
 - Outline
 - Eye Height
 - View Ray
+- Different color when hovered
 
 ## Gallery
 

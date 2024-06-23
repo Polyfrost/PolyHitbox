@@ -2,10 +2,7 @@ package org.polyfrost.polyhitbox.render
 
 import cc.polyfrost.oneconfig.config.core.OneColor
 import cc.polyfrost.oneconfig.utils.dsl.mc
-import net.minecraft.client.renderer.GlStateManager
-import net.minecraft.client.renderer.RenderHelper
-import net.minecraft.client.renderer.Tessellator
-import net.minecraft.client.renderer.WorldRenderer
+import net.minecraft.client.renderer.*
 import net.minecraft.client.renderer.vertex.DefaultVertexFormats
 import net.minecraft.entity.Entity
 import net.minecraft.util.AxisAlignedBB
@@ -36,17 +33,17 @@ object HitboxRenderer {
     fun onRender(event: RenderWorldLastEvent) {
         if (!ModConfig.enabled) return
         if (renderQueue.isEmpty()) return
-        GlStateManager.pushMatrix()
+        GL.pushMatrix()
         for (info in renderQueue) {
             with(info) {
                 renderHitbox(config, entity, x, y, z, partialTicks)
             }
         }
         renderQueue.clear()
-        GlStateManager.popMatrix()
+        GL.popMatrix()
         RenderHelper.disableStandardItemLighting()
-        GlStateManager.disableRescaleNormal()
-        GlStateManager.disableBlend()
+        GL.disableRescaleNormal()
+        GL.disableBlend()
     }
 
     fun tryAddToQueue(config: HitboxConfig, entity: Entity, x: Double, y: Double, z: Double, partialTicks: Float) {

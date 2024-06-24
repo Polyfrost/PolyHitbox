@@ -1,19 +1,59 @@
-package org.polyfrost.polyhitboxes.render
+package org.polyfrost.polyhitbox.render
 
 import cc.polyfrost.oneconfig.config.core.OneColor
-import net.minecraft.client.renderer.Tessellator
-import net.minecraft.client.renderer.WorldRenderer
+import cc.polyfrost.oneconfig.utils.dsl.mc
+import net.minecraft.client.renderer.*
 import net.minecraft.client.renderer.vertex.DefaultVertexFormats
 import net.minecraft.entity.Entity
 import net.minecraft.util.AxisAlignedBB
+import net.minecraft.util.MovingObjectPosition
+import net.minecraftforge.client.event.RenderWorldLastEvent
+import net.minecraftforge.common.MinecraftForge
+import net.minecraftforge.fml.common.eventhandler.SubscribeEvent
 import org.lwjgl.opengl.GL11
-import org.polyfrost.polyhitboxes.config.HitboxConfig
+import org.polyfrost.polyhitbox.config.HitboxConfig
+import org.polyfrost.polyhitbox.config.ModConfig
 import kotlin.math.atan2
 import kotlin.math.sqrt
 import net.minecraft.client.renderer.GlStateManager as GL
 
 object HitboxRenderer {
     private const val ALTERNATING_PATTERN = 0b1010101010101010.toShort()
+
+    data class RenderInfo(val config: HitboxConfig, val entity: Entity, val x: Double, val y: Double, val z: Double, val partialTicks: Float)
+
+    private val renderQueue = ArrayList<RenderInfo>()
+
+    var drawingWorld = false
+
+    init {
+        MinecraftForge.EVENT_BUS.register(this)
+    }
+
+    @SubscribeEvent
+    fun onRender(event: RenderWorldLastEvent) {
+        if (!ModConfig.enabled) return
+        if (renderQueue.isEmpty()) return
+        GL.pushMatrix()
+        for (info in renderQueue) {
+            with(info) {
+                renderHitbox(config, entity, x, y, z, partialTicks)
+            }
+        }
+        renderQueue.clear()
+        GL.popMatrix()
+        RenderHelper.disableStandardItemLighting()
+        GL.disableRescaleNormal()
+        GL.disableBlend()
+    }
+
+    fun tryAddToQueue(config: HitboxConfig, entity: Entity, x: Double, y: Double, z: Double, partialTicks: Float) {
+        if (drawingWorld) {
+            renderQueue.add(RenderInfo(config, entity, x, y, z, partialTicks))
+        } else {
+            renderHitbox(config, entity, x, y, z, partialTicks)
+        }
+    }
 
     fun renderHitbox(
         config: HitboxConfig,
@@ -23,14 +63,14 @@ object HitboxRenderer {
         z: Double,
         partialTicks: Float,
     ) {
+        GL.depthMask(false)
         GL.disableTexture2D()
         GL.disableLighting()
         GL.disableCull()
+        GL.alphaFunc(516, 0.1f)
         GL.enableBlend()
         GL.tryBlendFuncSeparate(770, 771, 1, 0)
-        GL.enableAlpha()
         GL.pushMatrix()
-        GL.depthMask(false)
         GL.translate(x, y, z)
 
         if (config.lineStyle == 2) {
@@ -48,10 +88,12 @@ object HitboxRenderer {
             hitbox = hitbox.expand(border, border, border)
         }
 
-        if (config.showSide) drawSide(config, hitbox)
-        if (config.showOutline) drawBoxOutline(config, hitbox, config.outlineColor, config.outlineThickness)
-        if (config.showEyeHeight) drawEyeHeight(config, hitbox, eyeHeight)
-        if (config.showViewRay) drawViewRay(config, entity, partialTicks)
+        val hovered = config.hoverColor && mc.objectMouseOver != null && MovingObjectPosition.MovingObjectType.ENTITY == mc.objectMouseOver.typeOfHit && entity == mc.objectMouseOver.entityHit
+
+        if (config.showSide) drawSide(config, hitbox, hovered)
+        if (config.showOutline) drawBoxOutline(config, hitbox, if (hovered) config.outlineHoverColor else config.outlineColor, config.outlineThickness)
+        if (config.showEyeHeight) drawEyeHeight(config, hitbox, eyeHeight, hovered)
+        if (config.showViewRay) drawViewRay(config, entity, hovered, partialTicks)
 
         if (config.lineStyle == 2) {
             GL11.glPopAttrib()
@@ -61,13 +103,14 @@ object HitboxRenderer {
         GL.enableTexture2D()
         GL.enableLighting()
         GL.enableCull()
-        GL.disableAlpha()
+        GL.disableBlend()
         GL.depthMask(true)
 
     }
 
-    private fun drawSide(config: HitboxConfig, hitbox: AxisAlignedBB) {
-        glColor(config.sideColor)
+    private fun drawSide(config: HitboxConfig, hitbox: AxisAlignedBB, hovered: Boolean) {
+        val color = if (hovered) config.sideHoverColor else config.sideColor
+        glColor(color)
         buildAndDraw(GL11.GL_TRIANGLE_STRIP) {
             pos(hitbox.maxX, hitbox.maxY, hitbox.minZ).endVertex()
             pos(hitbox.minX, hitbox.maxY, hitbox.minZ).endVertex()
@@ -91,16 +134,16 @@ object HitboxRenderer {
         GL.color(1f, 1f, 1f, 1f)
     }
 
-    private fun drawEyeHeight(config: HitboxConfig, hitbox: AxisAlignedBB, eyeHeight: Double) {
+    private fun drawEyeHeight(config: HitboxConfig, hitbox: AxisAlignedBB, eyeHeight: Double, hovered: Boolean) {
         val eyeHeightBox = AxisAlignedBB(
             hitbox.minX - 0.01, eyeHeight - 0.01, hitbox.minZ - 0.01,
             hitbox.maxX + 0.01, eyeHeight + 0.01, hitbox.maxZ + 0.01,
         )
-        drawBoxOutline(config, eyeHeightBox, config.eyeHeightColor, config.eyeHeightThickness)
+        drawBoxOutline(config, eyeHeightBox, if (hovered) config.eyeHeightHoverColor else config.eyeHeightColor, config.eyeHeightThickness)
     }
 
-    private fun drawViewRay(profile: HitboxConfig, entity: Entity, partialTicks: Float) {
-        val color = profile.viewRayColor
+    private fun drawViewRay(profile: HitboxConfig, entity: Entity, hovered: Boolean, partialTicks: Float) {
+        val color = if (hovered) profile.viewRayHoverColor else profile.viewRayColor
         val viewVector = entity.getLook(partialTicks)
         drawLine(
             profile,
@@ -130,11 +173,17 @@ object HitboxRenderer {
     }
 
     private fun drawLine(config: HitboxConfig, xFrom: Double, yFrom: Double, zFrom: Double, xTo: Double, yTo: Double, zTo: Double, color: OneColor, thinkness: Float) {
+        if (color.alpha != 255) {
+            GL.enableAlpha()
+        }
         glColor(color)
         if (config.lineStyle == 1) {
             drawProportionedLine(xFrom, yFrom, zFrom, xTo, yTo, zTo, thinkness)
         } else {
             drawGLLine(xFrom, yFrom, zFrom, xTo, yTo, zTo, thinkness)
+        }
+        if (color.alpha != 255) {
+            GL.disableAlpha()
         }
         GL.color(1f, 1f, 1f, 1f)
     }

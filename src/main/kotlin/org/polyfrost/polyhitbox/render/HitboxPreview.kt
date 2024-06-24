@@ -1,4 +1,4 @@
-package org.polyfrost.polyhitboxes.render
+package org.polyfrost.polyhitbox.render
 
 import cc.polyfrost.oneconfig.config.elements.BasicOption
 import cc.polyfrost.oneconfig.gui.OneConfigGui
@@ -14,7 +14,7 @@ import net.minecraftforge.client.event.GuiScreenEvent
 import net.minecraftforge.common.MinecraftForge
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent
 import org.lwjgl.opengl.GL11
-import org.polyfrost.polyhitboxes.config.HitboxCategory
+import org.polyfrost.polyhitbox.config.HitboxCategory
 import kotlin.math.atan
 import net.minecraft.client.renderer.GlStateManager as GL
 

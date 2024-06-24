@@ -15,7 +15,7 @@ import cc.polyfrost.oneconfig.libs.universal.UKeyboard
 import org.polyfrost.polyhitbox.PolyHitbox
 import java.lang.reflect.Field
 
-object ModConfig : Config(Mod("Hitbox", ModType.UTIL_QOL, "/${PolyHitbox.MODID}.svg"), "${PolyHitbox.MODID}.json") {
+object ModConfig : Config(Mod("Hitbox", ModType.PVP, "/${PolyHitbox.MODID}.svg"), "${PolyHitbox.MODID}.json") {
     @KeyBind(name = "Toggle Keybind")
     var toggleKeyBind = OneKeyBind(UKeyboard.KEY_F3, UKeyboard.KEY_B)
 

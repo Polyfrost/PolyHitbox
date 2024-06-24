@@ -10,7 +10,9 @@ A hitbox modification mod
 
 - Toggle Keybind
 - Show Condition - Always / Hovered / Toggled / Never
-- Dashed Lines
+- Line Style - Normal / Proportioned / Dashed
+- Hovered Color
+- Sides
 - Outline
 - Eye Height
 - View Ray
@@ -18,4 +20,5 @@ A hitbox modification mod
 ## Gallery
 
 ![settings-page.png](images/settings-page.png)
+![settings-page-2.png](images/settings-page-2.png)
 

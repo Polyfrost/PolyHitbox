@@ -26,25 +26,23 @@ object HitboxRenderer {
 
     var drawingWorld = false
 
-    init {
-        MinecraftForge.EVENT_BUS.register(this)
-    }
-
-    @SubscribeEvent
-    fun onRender(event: RenderWorldLastEvent) {
+    fun onRender() {
         if (!ModConfig.enabled) return
         if (renderQueue.isEmpty()) return
         GL.pushMatrix()
+        mc.entityRenderer.enableLightmap()
         for (info in renderQueue) {
             with(info) {
+                val i = if (entity.isBurning) 15728880 else entity.getBrightnessForRender(partialTicks)
+                val j = i % 65536
+                val k = i / 65536
+                OpenGlHelper.setLightmapTextureCoords(OpenGlHelper.lightmapTexUnit, j.toFloat() / 1.0f, k.toFloat() / 1.0f)
                 renderHitbox(config, entity, x, y, z, partialTicks)
             }
         }
         renderQueue.clear()
+        mc.entityRenderer.disableLightmap()
         GL.popMatrix()
-        RenderHelper.disableStandardItemLighting()
-        GL.disableRescaleNormal()
-        GL.disableBlend()
     }
 
     fun tryAddToQueue(config: HitboxConfig, entity: Entity, x: Double, y: Double, z: Double, partialTicks: Float) {

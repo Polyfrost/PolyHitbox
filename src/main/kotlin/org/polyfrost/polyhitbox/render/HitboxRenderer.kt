@@ -23,7 +23,7 @@ object HitboxRenderer {
 
     var drawingWorld = false
 
-    var drawingLayer = false
+    var shouldCancel = false
 
     fun onRender() {
         if (!ModConfig.enabled) return
@@ -45,7 +45,7 @@ object HitboxRenderer {
     }
 
     fun tryAddToQueue(config: HitboxConfig, entity: Entity, x: Double, y: Double, z: Double, partialTicks: Float) {
-        if (drawingWorld && !drawingLayer) {
+        if (drawingWorld && !shouldCancel) {
             renderQueue.add(RenderInfo(config, entity, x, y, z, partialTicks))
         } else {
             renderHitbox(config, entity, x, y, z, partialTicks)

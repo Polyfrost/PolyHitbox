@@ -1,10 +1,10 @@
 [
   {
-    "modid": "${id}",
-    "name": "${name}",
+    "modid": "${mod_id}",
+    "name": "${mod_name}",
     "description": "",
-    "version": "${version}",
-    "mcversion": "1.8.9",
+    "version": "${mod_version}",
+    "mcversion": "${mc_version}",
     "url": "",
     "updateUrl": "",
     "authorList": [

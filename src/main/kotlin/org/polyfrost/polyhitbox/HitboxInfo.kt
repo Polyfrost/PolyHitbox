@@ -7,8 +7,12 @@ class HitboxInfo {
     var showEyeline = true
     var showViewRay = true
     var showOutline = true
-    var showSides = true
+    var showSides = false
+
     var accurate = false
+    var useDistanceBasedWidth = true
+    private var widthFactor = 4f
+
     var isDashed = false
     var dashFactor = 10
 
@@ -27,12 +31,18 @@ class HitboxInfo {
     private var viewRayColorHover = rgba(0, 0, 255, 0.9f)
     private var sidesColorHover = rgba(255, 255, 255, 0.3f)
 
-    var isTargetted = false
+    var isTargeted = false
+    var sqrDistance = 1f
 
     fun getOutlineColor(hover: Boolean) = if (hover && differentColorOnHover) outlineColorHover else outlineColorNormal
     fun getEyelineColor(hover: Boolean) = if (hover && differentColorOnHover) eyelineColorHover else eyelineColorNormal
     fun getViewRayColor(hover: Boolean) = if (hover && differentColorOnHover) viewRayColorHover else viewRayColorNormal
     fun getSidesColor(hover: Boolean) = if (hover && differentColorOnHover) sidesColorHover else sidesColorNormal
+
+    fun adjustWidth(width: Float) = if (useDistanceBasedWidth) {
+        width * (widthFactor / sqrDistance)
+    } else width
+
 
     enum class ShowMode {
         ALWAYS,

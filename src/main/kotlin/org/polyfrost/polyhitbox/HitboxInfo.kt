@@ -1,52 +1,83 @@
 package org.polyfrost.polyhitbox
 
+import org.polyfrost.oneconfig.api.config.v1.Properties.ktProperty
+import org.polyfrost.oneconfig.api.config.v1.Tree
+import org.polyfrost.oneconfig.api.config.v1.Visualizer
+import org.polyfrost.polyui.color.PolyColor
+import org.polyfrost.polyui.color.argb
+import org.polyfrost.polyui.color.mutable
 import org.polyfrost.polyui.color.rgba
 
-class HitboxInfo {
-    var showMode = ShowMode.ALWAYS
-    var showEyeline = true
-    var showViewRay = true
-    var showOutline = true
-    var showSides = false
+class HitboxInfo(private val id: String) {
+    var showMode = 0
+        private set
+    val eyeline = ElementInfo(true, rgba(255, 0, 0, 1f), "Eyeline")
+    val viewRay = ElementInfo(true, rgba(0, 0, 255, 1f), "View Ray")
+    val outline = ElementInfo(true, rgba(255, 255, 255, 1f), "Outline")
+    val sides = ElementInfo(false, rgba(255, 255, 255, 0.2f), "Sides")
 
-    var accurate = false
+    var isAccurate = false
+        private set
     var useDistanceBasedWidth = true
-    private var widthFactor = 4f
-
-    var isDashed = false
+        private set
+    private var distanceFactor = 4f
     var dashFactor = 10
+        private set
 
-    var outlineWidth = 1f
-    var eyelineWidth = 1f
-    var viewRayWidth = 1f
-
-    private var outlineColorNormal = rgba(255, 255, 255, 1f)
-    private var eyelineColorNormal = rgba(255, 0, 0, 1f)
-    private var viewRayColorNormal = rgba(0, 0, 255, 1f)
-    private var sidesColorNormal = rgba(255, 255, 255, 0.2f)
-
-    private var differentColorOnHover = false
-    private var outlineColorHover = rgba(255, 255, 255, 0.9f)
-    private var eyelineColorHover = rgba(255, 0, 0, 0.9f)
-    private var viewRayColorHover = rgba(0, 0, 255, 0.9f)
-    private var sidesColorHover = rgba(255, 255, 255, 0.3f)
+    private var differentColorOnHover = true
 
     var isTargeted = false
     var sqrDistance = 1f
 
-    fun getOutlineColor(hover: Boolean) = if (hover && differentColorOnHover) outlineColorHover else outlineColorNormal
-    fun getEyelineColor(hover: Boolean) = if (hover && differentColorOnHover) eyelineColorHover else eyelineColorNormal
-    fun getViewRayColor(hover: Boolean) = if (hover && differentColorOnHover) viewRayColorHover else viewRayColorNormal
-    fun getSidesColor(hover: Boolean) = if (hover && differentColorOnHover) sidesColorHover else sidesColorNormal
+    private var _tree: Tree? = null
 
-    fun adjustWidth(width: Float) = if (useDistanceBasedWidth) {
-        width * (widthFactor / sqrDistance)
-    } else width
+    var tree: Tree
+        get() = _tree ?: Tree.tree(id).apply {
+            _tree = this
+            put(ktProperty(::showMode, "Show Mode").apply {
+                addMetadata("visualizer", Visualizer.RadioVisualizer::class.java)
+                addMetadata("options", arrayOf("Always", "When Targeted", "Never"))
+            })
+            put(ktProperty(::isAccurate, "Accurate").apply { addMetadata("visualizer", Visualizer.SwitchVisualizer::class.java) })
+            put(ktProperty(::useDistanceBasedWidth, "Distance Based Width").apply { addMetadata("visualizer", Visualizer.SwitchVisualizer::class.java) })
+            put(ktProperty(::distanceFactor, "Distance Factor").apply { addMetadata("visualizer", Visualizer.SliderVisualizer::class.java) })
+            put(ktProperty(::dashFactor, "Dash Factor").apply { addMetadata("visualizer", Visualizer.NumberVisualizer::class.java) })
+            put(ktProperty(::differentColorOnHover, "Different Color on Hover").apply { addMetadata("visualizer", Visualizer.SwitchVisualizer::class.java) })
+            put(eyeline.tree)
+            put(viewRay.tree)
+            put(outline.tree)
+            put(sides.tree)
+        }
+        set(value) {
+            _tree = value
+        }
 
 
-    enum class ShowMode {
-        ALWAYS,
-        HOVERED,
-        NEVER
+
+    inner class ElementInfo(isShown: Boolean, initialColor: PolyColor, private val id: String) {
+        var isShown = isShown
+            private set
+        var isDashed = false
+            private set
+        var width = 1f
+            get() = if (useDistanceBasedWidth) field * (distanceFactor / sqrDistance) else field
+            private set
+        var colorNormal = initialColor
+            private set
+        var colorHovered: PolyColor = argb(initialColor.argb).mutable().apply { alpha -= 0.2f }
+            private set
+        fun getColor() = if (isTargeted && differentColorOnHover) colorHovered else colorNormal
+
+        private var _tree: Tree? = null
+
+        val tree: Tree
+            get() = _tree ?: Tree(id, id, null, null).apply {
+                _tree = this
+                put(ktProperty(::isShown, "Enabled").apply { addMetadata("visualizer", Visualizer.SwitchVisualizer::class.java) })
+                put(ktProperty(::isDashed, "Dashed").apply { addMetadata("visualizer", Visualizer.SwitchVisualizer::class.java) })
+                put(ktProperty(::width, "Width").apply { addMetadata("visualizer", Visualizer.SliderVisualizer::class.java) })
+                put(ktProperty(::colorNormal, "Color").apply { addMetadata("visualizer", Visualizer.ColorVisualizer::class.java) })
+                put(ktProperty(::colorHovered, "Hovered Color").apply { addMetadata("visualizer", Visualizer.ColorVisualizer::class.java) })
+            }
     }
 }

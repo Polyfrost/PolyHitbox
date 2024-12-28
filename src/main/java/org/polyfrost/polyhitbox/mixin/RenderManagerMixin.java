@@ -11,7 +11,6 @@ import net.minecraft.client.renderer.entity.RenderManager;
 import net.minecraft.client.renderer.vertex.DefaultVertexFormats;
 import net.minecraft.entity.Entity;
 import net.minecraft.util.AxisAlignedBB;
-import org.lwjgl.opengl.GL11;
 import org.polyfrost.polyhitbox.HitboxInfo;
 import org.polyfrost.polyhitbox.PolyHitbox;
 import org.polyfrost.polyui.color.PolyColor;
@@ -21,6 +20,8 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
+import static org.lwjgl.opengl.GL11.*;
+
 @Mixin(RenderManager.class)
 public abstract class RenderManagerMixin {
 
@@ -28,30 +29,27 @@ public abstract class RenderManagerMixin {
     public void checkAndSetup(Entity entity, double x, double y, double z, float yaw, float partialTicks, CallbackInfo ci, @Share("info") LocalRef<HitboxInfo> infoRef) {
         HitboxInfo info = PolyHitbox.INSTANCE.getHitboxInfo(entity);
         switch (info.getShowMode()) {
-            case NEVER:
+            case 2: // NEVER
                 ci.cancel();
                 return;
-            case HOVERED:
+            case 1: // ONLY TARGETED
                 if (entity != Minecraft.getMinecraft().pointedEntity) {
                     ci.cancel();
                     return;
                 } else info.setTargeted(true);
                 break;
-            case ALWAYS:
+            case 0: // ALWAYS
                 info.setTargeted(entity == Minecraft.getMinecraft().pointedEntity);
                 break;
         }
         if (info.getUseDistanceBasedWidth()) info.setSqrDistance((float) (x * x + y * y + z * z));
-        if (info.isDashed()) {
-            GL11.glLineStipple(info.getDashFactor(), (short) 0b1010101010101010);
-            GL11.glEnable(GL11.GL_LINE_STIPPLE);
-        }
+        glLineStipple(info.getDashFactor(), (short) 0b1010101010101010);
         infoRef.set(info);
     }
 
     @Inject(method = "renderDebugBoundingBox", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/Tessellator;getInstance()Lnet/minecraft/client/renderer/Tessellator;"), cancellable = true)
     private void renderViewRayCheck(Entity entity, double x, double y, double z, float yaw, float partialTicks, CallbackInfo ci, @Share("info") LocalRef<HitboxInfo> infoRef) {
-        if (!infoRef.get().getShowViewRay()) {
+        if (!infoRef.get().getViewRay().isShown()) {
             GlStateManager.enableTexture2D();
             GlStateManager.enableLighting();
             GlStateManager.enableCull();
@@ -65,22 +63,26 @@ public abstract class RenderManagerMixin {
     @Redirect(method = "renderDebugBoundingBox", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/RenderGlobal;drawOutlinedBoundingBox(Lnet/minecraft/util/AxisAlignedBB;IIII)V", ordinal = 0))
     private void renderHitboxModifyColorAndSides(AxisAlignedBB bb, int r, int g, int b, int a, Entity entity, @Share("info") LocalRef<HitboxInfo> infoRef) {
         HitboxInfo info = infoRef.get();
-        if (info.getAccurate()) {
+        if (info.isAccurate()) {
             double offset = entity.getCollisionBorderSize();
             bb = bb.expand(offset, offset, offset);
         }
-        if (info.getShowOutline()) {
-            PolyColor color = info.getOutlineColor(info.isTargeted());
-            GL11.glLineWidth(info.adjustWidth(info.getOutlineWidth()));
+        HitboxInfo.ElementInfo outline = info.getOutline();
+        if (outline.isShown()) {
+            PolyColor color = outline.getColor();
+            if (outline.isDashed()) glEnable(GL_LINE_STIPPLE);
+            glLineWidth(outline.getWidth());
             RenderGlobal.drawOutlinedBoundingBox(bb, color.red(), color.green(), color.blue(), color.alpha());
+            glDisable(GL_LINE_STIPPLE);
         }
-        if (info.getShowSides()) {
-            PolyColor color = info.getSidesColor(info.isTargeted());
+        HitboxInfo.ElementInfo sides = info.getSides();
+        if (sides.isShown()) {
+            PolyColor color = sides.getColor();
             Tessellator tessellator = Tessellator.getInstance();
             WorldRenderer wr = tessellator.getWorldRenderer();
             GlStateManager.color(color.red() / 255f, color.green() / 255f, color.blue() / 255f, color.getAlpha());
             GlStateManager.enableBlend();
-            wr.begin(GL11.GL_QUADS, DefaultVertexFormats.POSITION);
+            wr.begin(GL_QUADS, DefaultVertexFormats.POSITION);
             // back
             wr.pos(bb.minX, bb.minY, bb.maxZ).endVertex();
             wr.pos(bb.maxX, bb.minY, bb.maxZ).endVertex();
@@ -120,34 +122,37 @@ public abstract class RenderManagerMixin {
     @Redirect(method = "renderDebugBoundingBox", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/RenderGlobal;drawOutlinedBoundingBox(Lnet/minecraft/util/AxisAlignedBB;IIII)V", ordinal = 1))
     private void renderEyelineModifyColor(AxisAlignedBB boundingBox, int red, int green, int blue, int alpha, Entity entity, @Share("info") LocalRef<HitboxInfo> infoRef) {
         HitboxInfo info = infoRef.get();
-        if (!info.getShowEyeline()) return;
-        if (info.getAccurate()) {
+        HitboxInfo.ElementInfo eyeline = info.getEyeline();
+        if (!eyeline.isShown()) return;
+        if (info.isAccurate()) {
             double offset = entity.getCollisionBorderSize();
             boundingBox = boundingBox.expand(offset, 0.0, offset);
         }
-        PolyColor color = info.getEyelineColor(info.isTargeted());
-        GL11.glLineWidth(info.adjustWidth(info.getEyelineWidth()));
+        PolyColor color = eyeline.getColor();
+        if (eyeline.isDashed()) glEnable(GL_LINE_STIPPLE);
+        glLineWidth(eyeline.getWidth());
         RenderGlobal.drawOutlinedBoundingBox(boundingBox, color.red(), color.green(), color.blue(), color.alpha());
+        glDisable(GL_LINE_STIPPLE);
     }
 
     @Inject(method = "renderDebugBoundingBox", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/WorldRenderer;begin(ILnet/minecraft/client/renderer/vertex/VertexFormat;)V"))
     private void renderViewRayModifyWidth(Entity entity, double x, double y, double z, float yaw, float partialTicks, CallbackInfo ci, @Share("info") LocalRef<HitboxInfo> infoRef) {
-        HitboxInfo info = infoRef.get();
-        GL11.glLineWidth(info.adjustWidth(info.getViewRayWidth()));
+        HitboxInfo.ElementInfo viewRay = infoRef.get().getViewRay();
+        if (viewRay.isDashed()) glEnable(GL_LINE_STIPPLE);
+        glLineWidth(viewRay.getWidth());
     }
 
     @Redirect(method = "renderDebugBoundingBox", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/WorldRenderer;color(IIII)Lnet/minecraft/client/renderer/WorldRenderer;"))
     private WorldRenderer renderViewRayModifyColor(WorldRenderer worldRenderer, int red, int green, int blue, int alpha, Entity entity, @Share("info") LocalRef<HitboxInfo> infoRef) {
-        HitboxInfo info = infoRef.get();
-        PolyColor color = info.getViewRayColor(info.isTargeted());
+        PolyColor color = infoRef.get().getViewRay().getColor();
         worldRenderer.color(color.red(), color.green(), color.blue(), color.alpha());
         return worldRenderer;
     }
 
     @Inject(method = "renderDebugBoundingBox", at = @At(value = "RETURN"))
     private void restoreState(Entity entity, double x, double y, double z, float yaw, float partialTicks, CallbackInfo ci) {
-        GL11.glLineWidth(1f);
-        GL11.glDisable(GL11.GL_LINE_STIPPLE);
+        glLineWidth(1f);
+        glDisable(GL_LINE_STIPPLE);
     }
 
 }

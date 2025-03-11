@@ -15,9 +15,9 @@ import org.polyfrost.oneconfig.api.config.v1.ConfigManager
     modLanguageAdapter = "org.polyfrost.oneconfig.utils.v1.forge.KotlinLanguageAdapter"
 )
 object PolyHitbox {
-    const val MODID = "@ID@"
-    const val NAME = "@NAME@"
-    const val VERSION = "@VER@"
+    const val MODID = "@MOD_ID@"
+    const val NAME = "@MOD_NAME@"
+    const val VERSION = "@MOD_VERSION@"
     private val LOGGER = LogManager.getLogger("PolyHitbox")
     private val hitboxInfo = HitboxInfo("hitbox.yaml")
     private val hitboxMap = HashMap<Class<out Entity>, HitboxInfo>()
@@ -31,7 +31,7 @@ object PolyHitbox {
     @Mod.EventHandler
     fun onFMLInit(event: FMLInitializationEvent) {
         hitboxInfo.tree.title = "PolyHitbox"
-        hitboxInfo.tree = ConfigManager.active().register(hitboxInfo.tree)
+        hitboxInfo.tree = ConfigManager.active().register(hitboxInfo.tree).tree
         var enabled = false
         ConfigManager.active().gatherAll("hitbox").forEach {
             val name = it.id.substringBeforeLast('.').substringAfterLast('/')

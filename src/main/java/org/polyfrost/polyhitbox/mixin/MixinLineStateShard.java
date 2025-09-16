@@ -3,19 +3,29 @@ package org.polyfrost.polyhitbox.mixin;
 import org.spongepowered.asm.mixin.Mixin;
 
 //#if MC >=1.21.5
-@Mixin(net.minecraft.client.render.RenderPhase.LineWidth.class)
+import net.minecraft.client.render.RenderPhase;
+import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+import java.util.OptionalDouble;
 //#else
-//$$ @Mixin(net.minecraft.client.Minecraft.class)
+//$$ import net.minecraft.client.Minecraft;
+//#endif
+
+//#if MC >=1.21.5
+@Mixin(RenderPhase.LineWidth.class)
+//#else
+//$$ @Mixin(Minecraft.class)
 //#endif
 public abstract class MixinLineStateShard {
     //#if MC >=1.21.5
-    @org.spongepowered.asm.mixin.injection.Inject(method = "method_23553", at = @org.spongepowered.asm.mixin.injection.At("HEAD"), cancellable = true)
-    private static void polyhitbox$overrideLineWidth(java.util.OptionalDouble optionalDouble, org.spongepowered.asm.mixin.injection.callback.CallbackInfo ci) {
+    @Inject(method = "method_23553", at = @At("HEAD"), cancellable = true)
+    private static void polyhitbox$overrideLineWidth(OptionalDouble optionalDouble, CallbackInfo ci) {
         ci.cancel();
     }
 
-    @org.spongepowered.asm.mixin.injection.Inject(method = "method_23554", at = @org.spongepowered.asm.mixin.injection.At("HEAD"), cancellable = true)
-    private static void polyhitbox$overrideLineWidth2(java.util.OptionalDouble optionalDouble, org.spongepowered.asm.mixin.injection.callback.CallbackInfo ci) {
+    @Inject(method = "method_23554", at = @At("HEAD"), cancellable = true)
+    private static void polyhitbox$overrideLineWidth2(OptionalDouble optionalDouble, CallbackInfo ci) {
         ci.cancel();
     }
     //#endif

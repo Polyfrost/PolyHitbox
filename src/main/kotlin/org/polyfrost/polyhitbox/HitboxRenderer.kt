@@ -15,6 +15,10 @@ import dev.deftu.omnicore.common.offsetBy
 import net.minecraft.util.math.Box
 import org.polyfrost.polyui.color.PolyColor
 
+//#if MC <=1.16.5
+//$$ import org.lwjgl.opengl.GL11
+//#endif
+
 const val Z_FIGHTING_OFFSET = 0.01 // (to prevent z-fighting)
 
 val BOX_PIPELINE: OmniRenderPipeline = OmniRenderPipeline.builderWithDefaultShader(
@@ -70,7 +74,7 @@ fun renderHitbox(stack: OmniMatrixStack, hitbox: HitboxState) {
     }
 
     //#if MC <=1.16.5
-    //$$ org.lwjgl.opengl.GL11.glLineStipple(info.dashFactor, 0xAAAA.toShort())
+    //$$ GL11.glLineStipple(info.dashFactor, 0xAAAA.toShort())
     //#endif
     OmniRenderState.disableTexture2D()
     OmniRenderState.disableLighting() // TODO: Figure out why mobs lighting is affected
@@ -80,16 +84,14 @@ fun renderHitbox(stack: OmniMatrixStack, hitbox: HitboxState) {
     if (outline.isShown) {
         //#if MC <=1.16.5
         //$$ if (outline.isDashed) {
-        //$$     org.lwjgl.opengl.GL11.glEnable(org.lwjgl.opengl.GL11.GL_LINE_STIPPLE)
+        //$$     GL11.glEnable(GL11.GL_LINE_STIPPLE)
         //$$ }
         //#endif
-
         setLineWidth(outline.width)
         renderOutlineBox(OUTLINE_BOX_PIPELINE, stack, entityBoundingBox, outline.getColor())
-
         //#if MC <=1.16.5
         //$$ if (outline.isDashed) {
-        //$$     org.lwjgl.opengl.GL11.glDisable(org.lwjgl.opengl.GL11.GL_LINE_STIPPLE)
+        //$$     GL11.glDisable(GL11.GL_LINE_STIPPLE)
         //$$ }
         //#endif
     }
@@ -121,16 +123,14 @@ fun renderHitbox(stack: OmniMatrixStack, hitbox: HitboxState) {
 
             //#if MC <=1.16.5
             //$$ if (eyeline.isDashed) {
-            //$$     org.lwjgl.opengl.GL11.glEnable(org.lwjgl.opengl.GL11.GL_LINE_STIPPLE)
+            //$$     GL11.glEnable(GL11.GL_LINE_STIPPLE)
             //$$ }
             //#endif
-
             setLineWidth(eyeline.width)
             renderOutlineBox(OUTLINE_BOX_PIPELINE, stack, boundingBox, eyeline.getColor())
-
             //#if MC <=1.16.5
             //$$ if (eyeline.isDashed) {
-            //$$     org.lwjgl.opengl.GL11.glDisable(org.lwjgl.opengl.GL11.GL_LINE_STIPPLE)
+            //$$     GL11.glDisable(GL11.GL_LINE_STIPPLE)
             //$$ }
             //#endif
         }
@@ -141,10 +141,9 @@ fun renderHitbox(stack: OmniMatrixStack, hitbox: HitboxState) {
     if (viewRay.isShown) {
         //#if MC <=1.16.5
         //$$ if (viewRay.isDashed) {
-        //$$     org.lwjgl.opengl.GL11.glEnable(org.lwjgl.opengl.GL11.GL_LINE_STIPPLE)
+        //$$     GL11.glEnable(GL11.GL_LINE_STIPPLE)
         //$$ }
         //#endif
-
         setLineWidth(viewRay.width)
         renderViewRay(
             VIEW_RAY_PIPELINE,
@@ -154,10 +153,9 @@ fun renderHitbox(stack: OmniMatrixStack, hitbox: HitboxState) {
             hitbox.eyeHeight,
             viewRay.getColor()
         )
-
         //#if MC <=1.16.5
         //$$ if (viewRay.isDashed) {
-        //$$     org.lwjgl.opengl.GL11.glDisable(org.lwjgl.opengl.GL11.GL_LINE_STIPPLE)
+        //$$     GL11.glDisable(GL11.GL_LINE_STIPPLE)
         //$$ }
         //#endif
     }
@@ -318,6 +316,6 @@ private fun setLineWidth(width: Float) {
     //#if MC >=1.16.5
     com.mojang.blaze3d.systems.RenderSystem.lineWidth(width)
     //#else
-    //$$ org.lwjgl.opengl.GL11.glLineWidth(width)
+    //$$ GL11.glLineWidth(width)
     //#endif
 }

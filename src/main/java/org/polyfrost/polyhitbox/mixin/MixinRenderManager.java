@@ -1,5 +1,7 @@
 package org.polyfrost.polyhitbox.mixin;
 
+import com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod;
+import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import dev.deftu.omnicore.client.OmniClient;
 import dev.deftu.omnicore.client.render.OmniMatrixStack;
 import net.minecraft.client.render.entity.EntityRenderDispatcher;
@@ -13,37 +15,42 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
+//#if MC >=1.21.5
+import org.spongepowered.asm.mixin.Unique;
+import net.minecraft.client.util.math.MatrixStack;
+import net.minecraft.client.render.VertexConsumer;
+import net.minecraft.client.render.VertexConsumerProvider;
+import net.minecraft.client.render.entity.state.EntityHitbox;
+//#endif
+
 @Mixin(EntityRenderDispatcher.class)
 public abstract class MixinRenderManager {
     //#if MC >=1.21.5
-    @org.spongepowered.asm.mixin.Unique
+    @Unique
     private static ThreadLocal<Entity> polyhitbox$entity = ThreadLocal.withInitial(() -> null);
     //#endif
 
-    @Inject(
+    @WrapMethod(
             //#if MC >=1.16.5
-            method = "renderHitbox",
+            method = "renderHitbox"
             //#else
-            //$$ method = "renderDebugBoundingBox",
+            //$$ method = "renderDebugBoundingBox"
             //#endif
-            at = @At("HEAD"),
-            cancellable = true
     )
     //#if MC >=1.16.5
     private static void polyhitbox$customRendering(
-         net.minecraft.client.util.math.MatrixStack matrixStack,
-         net.minecraft.client.render.VertexConsumer vertexConsumer,
+         MatrixStack matrixStack,
+         VertexConsumer vertexConsumer,
     //#if MC >=1.21.5
-         net.minecraft.client.render.entity.state.EntityHitbox entityHitbox,
+         EntityHitbox entityHitbox,
     //#else
     //$$     Entity entity,
     //$$     float tickDelta,
     //#endif
-         CallbackInfo ci) {
+         Operation<Void> operation) {
     //#else
     //$$ private void polyhitbox$customRendering(Entity entity, double offsetX, double offsetY, double offsetZ, float yaw, float tickDelta, CallbackInfo ci) {
     //#endif
-        ci.cancel(); // Cancel Minecraft's Rendering
         OmniMatrixStack stack = OmniMatrixStack.vanilla(
                 //#if MC >=1.16.5
                 matrixStack
@@ -99,8 +106,8 @@ public abstract class MixinRenderManager {
     private static void polyhitbox$storeEntity(
             Entity entity,
             double x, double y, double z, float tickDelta,
-            net.minecraft.client.util.math.MatrixStack matrixStack,
-            net.minecraft.client.render.VertexConsumerProvider vertexConsumerProvider,
+            MatrixStack matrixStack,
+            VertexConsumerProvider vertexConsumerProvider,
             int i,
             CallbackInfo ci
     ) {

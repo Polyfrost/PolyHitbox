@@ -1,56 +1,97 @@
 package org.polyfrost.polyhitbox
 
-import net.minecraft.client.Minecraft
-import net.minecraft.entity.Entity
-import net.minecraft.entity.EntityList
-import net.minecraftforge.fml.common.Mod
-import net.minecraftforge.fml.common.event.FMLInitializationEvent
+//#if FABRIC
+import net.fabricmc.api.ClientModInitializer
+//#elseif FORGE
+//#if MC >= 1.16.5
+//$$ import net.minecraftforge.eventbus.api.IEventBus
+//$$ import net.minecraftforge.fml.common.Mod
+//$$ import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent
+//$$ import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext
+//#else
+//$$ import net.minecraftforge.fml.common.Mod
+//$$ import net.minecraftforge.fml.common.event.FMLInitializationEvent
+//#endif
+//#endif
+
+import dev.deftu.omnicore.api.client.client
 import org.apache.logging.log4j.LogManager
 import org.polyfrost.oneconfig.api.config.v1.ConfigManager
 
-@Mod(
-    modid = PolyHitbox.MODID,
-    name = PolyHitbox.NAME,
-    version = PolyHitbox.VERSION,
-    modLanguageAdapter = "org.polyfrost.oneconfig.utils.v1.forge.KotlinLanguageAdapter"
-)
-object PolyHitbox {
-    const val MODID = "@MOD_ID@"
-    const val NAME = "@MOD_NAME@"
-    const val VERSION = "@MOD_VERSION@"
+//#if FORGE-LIKE
+//#if MC >= 1.16.5
+//$$ @Mod(PolyHitboxConstants.ID)
+//#else
+//$$ @Mod(modid = PolyHitboxConstants.ID, version = PolyHitboxConstants.VERSION)
+//#endif
+//#endif
+object PolyHitbox
+//#if FABRIC
+    : ClientModInitializer
+//#endif
+{
     private val LOGGER = LogManager.getLogger("PolyHitbox")
     private val hitboxInfo = HitboxInfo("hitbox.yaml")
-    private val hitboxMap = HashMap<Class<out Entity>, HitboxInfo>()
 
     private var hitboxesEnabled: Boolean
-        get() = Minecraft.getMinecraft().renderManager.isDebugBoundingBox
+        get() {
+            //#if MC < 1.14
+            //$$ return client.renderManager.isDebugBoundingBox
+            //#else
+            return client.entityRenderDispatcher.shouldRenderHitboxes()
+            //#endif
+        }
         set(value) {
-            Minecraft.getMinecraft().renderManager.isDebugBoundingBox = value
+            //#if MC < 1.14
+            //$$ client.renderManager.isDebugBoundingBox = value
+            //#else
+            client.entityRenderDispatcher.setRenderHitboxes(value)
+            //#endif
         }
 
-    @Mod.EventHandler
-    fun onFMLInit(event: FMLInitializationEvent) {
+    //#if FABRIC
+    override
+    //#elseif FORGE && MC <= 1.12.2
+    //$$ @Mod.EventHandler
+    //#endif
+    fun onInitializeClient(
+        //#if FORGE-LIKE
+        //#if MC >= 1.16.5
+        //$$ event: FMLClientSetupEvent
+        //#else
+        //$$ event: FMLInitializationEvent
+        //#endif
+        //#endif
+    ) {
         hitboxInfo.tree.title = "PolyHitbox"
         hitboxInfo.tree = ConfigManager.active().register(hitboxInfo.tree).tree
         var enabled = false
-        ConfigManager.active().gatherAll("hitbox").forEach {
-            val name = it.id.substringBeforeLast('.').substringAfterLast('/')
-            val cls = EntityList.stringToClassMapping[name]
-            if (cls == null) {
-                LOGGER.warn("Unknown entity class for name $name")
-                return@forEach
-            }
-            val info = HitboxInfo(it.id)
-            info.tree.overwrite(it)
-            if (info.showMode != 2 /* NEVER */) enabled = true
-            hitboxMap[cls] = info
+        if (hitboxInfo.showMode != 2) {
+            enabled = true
         }
-        if (hitboxInfo.showMode != 2) enabled = true
-        hitboxesEnabled = enabled
+
+        //#if FABRIC && MC > 1.14
+        net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents.CLIENT_STARTED.register { tick ->
+            hitboxesEnabled = enabled
+        }
+        //#else
+        //hitboxesEnabled = enabled
+        //#endif
     }
 
-    fun getHitboxInfo(entity: Entity): HitboxInfo {
-        val cls = entity::class.java
-        return hitboxMap[cls] ?: hitboxMap[cls.superclass] ?: hitboxInfo
+    //#if FORGE && MC >= 1.16.5
+    //$$ init {
+    //$$     setupForgeEvents(FMLJavaModLoadingContext.get().modEventBus)
+    //$$ }
+    //#endif
+
+    //#if FORGE-LIKE && MC >= 1.16.5
+    //$$ private fun setupForgeEvents(modEventBus: IEventBus) {
+    //$$     modEventBus.addListener(this::onInitializeClient)
+    //$$ }
+    //#endif
+
+    fun getHitboxInfo(): HitboxInfo {
+        return hitboxInfo
     }
 }

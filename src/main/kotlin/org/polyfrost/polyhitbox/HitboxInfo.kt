@@ -1,5 +1,6 @@
 package org.polyfrost.polyhitbox
 
+import dev.deftu.omnicore.api.color.OmniColor
 import org.polyfrost.oneconfig.api.config.v1.Properties.ktProperty
 import org.polyfrost.oneconfig.api.config.v1.Tree
 import org.polyfrost.oneconfig.api.config.v1.Visualizer
@@ -90,7 +91,10 @@ class HitboxInfo(private val id: String) {
         var colorHovered: PolyColor = argb(initialColor.argb).asMutable().apply { alpha -= 0.2F }
             private set
 
-        fun getColor() = if (isTargeted && differentColorOnHover) colorHovered else colorNormal
+        fun getColor() = if (isTargeted && differentColorOnHover)
+            OmniColor(colorHovered.rgba)
+        else
+            OmniColor(colorNormal.rgba)
 
         private var _tree: Tree? = null
 

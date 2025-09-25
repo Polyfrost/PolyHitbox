@@ -1,58 +1,57 @@
 package org.polyfrost.polyhitbox
 
-import dev.deftu.omnicore.client.render.OmniMatrixStack
-import dev.deftu.omnicore.client.render.OmniRenderState
-import dev.deftu.omnicore.client.render.pipeline.DrawModes
-import dev.deftu.omnicore.client.render.pipeline.OmniRenderPipeline
-import dev.deftu.omnicore.client.render.pipeline.VertexFormats
-import dev.deftu.omnicore.client.render.state.DepthFunction
-import dev.deftu.omnicore.client.render.state.OmniManagedBlendState
-import dev.deftu.omnicore.client.render.state.OmniManagedDepthState
-import dev.deftu.omnicore.client.render.vertex.OmniBufferBuilder
-import dev.deftu.omnicore.common.OmniBox
-import dev.deftu.omnicore.common.OmniIdentifier
-import dev.deftu.omnicore.common.offsetBy
-import net.minecraft.util.math.Box
-import org.polyfrost.polyui.color.PolyColor
+import dev.deftu.omnicore.api.client.render.DefaultVertexFormats
+import dev.deftu.omnicore.api.client.render.DrawMode
+import dev.deftu.omnicore.api.client.render.OmniShapeRenderer
+import dev.deftu.omnicore.api.client.render.OmniTextureUnit
+import dev.deftu.omnicore.api.client.render.pipeline.OmniRenderPipeline
+import dev.deftu.omnicore.api.client.render.pipeline.OmniRenderPipelineSnippets
+import dev.deftu.omnicore.api.client.render.pipeline.OmniRenderPipelines
+import dev.deftu.omnicore.api.client.render.pipeline.RenderPassEncoder
+import dev.deftu.omnicore.api.client.render.stack.OmniMatrixStack
+import dev.deftu.omnicore.api.client.render.state.OmniBlendState
+import dev.deftu.omnicore.api.client.render.vertex.OmniVertexConsumer
+import dev.deftu.omnicore.api.color.OmniColor
+import dev.deftu.omnicore.api.data.aabb.OmniAABB
+import dev.deftu.omnicore.api.data.shape.OmniVoxelShape
+import dev.deftu.omnicore.api.data.shape.OmniVoxelShapes
+import dev.deftu.omnicore.api.data.vec.OmniVec3d
+import dev.deftu.omnicore.api.identifierOrThrow
+import dev.deftu.omnicore.api.math.OmniVector3f
+import kotlin.math.abs
 
 //#if MC <=1.16.5
 //$$ import org.lwjgl.opengl.GL11
 //#endif
 
-const val Z_FIGHTING_OFFSET = 0.01 // (to prevent z-fighting)
-
-val BOX_PIPELINE: OmniRenderPipeline = OmniRenderPipeline.builderWithDefaultShader(
-    OmniIdentifier.create(PolyHitbox.MODID, "box"),
-    VertexFormats.POSITION_COLOR,
-    DrawModes.QUADS
-).run {
-    depthState = OmniManagedDepthState.asEnabled(DepthFunction.LESS_OR_EQUAL)
-    blendState = OmniManagedBlendState.NORMAL
-    isCullFace = false
+val HITBOX_SNIPPET: OmniRenderPipeline.Snippet = OmniRenderPipelineSnippets.builder().run {
+    setDepthTest(OmniRenderPipeline.DepthTest.LESS_OR_EQUAL)
+    setBlendState(OmniBlendState.NORMAL)
+    setCulling(false)
+    configureLegacyEffects {
+        lighting = false
+        OmniTextureUnit.TEXTURE0 equals false
+    }
     build()
 }
 
-val OUTLINE_BOX_PIPELINE: OmniRenderPipeline = OmniRenderPipeline.builderWithDefaultShader(
-    OmniIdentifier.create(PolyHitbox.MODID, "outline_box"),
-    VertexFormats.POSITION_COLOR,
-    DrawModes.LINES
-).run {
-    depthState = OmniManagedDepthState.asEnabled(DepthFunction.LESS_OR_EQUAL)
-    blendState = OmniManagedBlendState.NORMAL
-    isCullFace = false
-    build()
-}
+val BOX_PIPELINE: OmniRenderPipeline = OmniRenderPipelines.builderWithDefaultShader(
+    identifierOrThrow(PolyHitbox.MODID, "pipeline/box"),
+    DefaultVertexFormats.POSITION_COLOR,
+    DrawMode.QUADS
+).applySnippet(HITBOX_SNIPPET).build()
 
-val VIEW_RAY_PIPELINE: OmniRenderPipeline = OmniRenderPipeline.builderWithDefaultShader(
-    OmniIdentifier.create(PolyHitbox.MODID, "view_ray"),
-    VertexFormats.POSITION_COLOR,
-    DrawModes.LINE_STRIP
-).run {
-    depthState = OmniManagedDepthState.asEnabled(DepthFunction.LESS_OR_EQUAL)
-    blendState = OmniManagedBlendState.NORMAL
-    isCullFace = false
-    build()
-}
+val OUTLINE_BOX_PIPELINE: OmniRenderPipeline = OmniRenderPipelines.builderWithDefaultShader(
+    identifierOrThrow(PolyHitbox.MODID, "pipeline/outline_box"),
+    DefaultVertexFormats.POSITION_COLOR_NORMAL,
+    DrawMode.LINES
+).applySnippet(HITBOX_SNIPPET).build()
+
+val VIEW_RAY_PIPELINE: OmniRenderPipeline = OmniRenderPipelines.builderWithDefaultShader(
+    identifierOrThrow(PolyHitbox.MODID, "pipeline/view_ray"),
+    DefaultVertexFormats.POSITION_COLOR_NORMAL,
+    DrawMode.LINES
+).applySnippet(HITBOX_SNIPPET).build()
 
 fun renderHitbox(stack: OmniMatrixStack, hitbox: HitboxState) {
     val info = PolyHitbox.getHitboxInfo()
@@ -67,17 +66,19 @@ fun renderHitbox(stack: OmniMatrixStack, hitbox: HitboxState) {
     //     info.sqrDistance = (hitbox.offsetX * hitbox.offsetX + hitbox.offsetY * hitbox.offsetY + hitbox.offsetZ * hitbox.offsetZ).toFloat()
     // }
 
-    var entityBoundingBox = hitbox.boundingBox.offsetBy(-hitbox.entityX + hitbox.offsetX, -hitbox.entityY + hitbox.offsetY, -hitbox.entityZ + hitbox.offsetZ)
+    var entityBoundingBox = hitbox.boundingBox.offset(
+        -hitbox.entityX + hitbox.offsetX,
+        -hitbox.entityY + hitbox.offsetY,
+        -hitbox.entityZ + hitbox.offsetZ
+    )
     if (info.isAccurate) {
         val offset = hitbox.collisionSize
-        entityBoundingBox = entityBoundingBox.offsetBy(offset, offset, offset)
+        entityBoundingBox = entityBoundingBox.offset(offset, offset, offset)
     }
 
     //#if MC <=1.16.5
     //$$ GL11.glLineStipple(info.dashFactor, 0xAAAA.toShort())
     //#endif
-    OmniRenderState.disableTexture2D()
-    OmniRenderState.disableLighting() // TODO: Figure out why mobs lighting is affected
 
     // Outline
     val outline = info.outline
@@ -87,8 +88,9 @@ fun renderHitbox(stack: OmniMatrixStack, hitbox: HitboxState) {
         //$$     GL11.glEnable(GL11.GL_LINE_STIPPLE)
         //$$ }
         //#endif
-        setLineWidth(outline.width)
-        renderOutlineBox(OUTLINE_BOX_PIPELINE, stack, entityBoundingBox, outline.getColor())
+        renderOutlineBox(OUTLINE_BOX_PIPELINE, stack, entityBoundingBox, outline.getColor()) {
+            setLineWidth(outline.width)
+        }
         //#if MC <=1.16.5
         //$$ if (outline.isDashed) {
         //$$     GL11.glDisable(GL11.GL_LINE_STIPPLE)
@@ -99,13 +101,13 @@ fun renderHitbox(stack: OmniMatrixStack, hitbox: HitboxState) {
     // Sides
     val sides = info.sides
     if (sides.isShown) {
-        renderBox(BOX_PIPELINE, stack, entityBoundingBox, sides.getColor())
+        OmniShapeRenderer.renderBox(BOX_PIPELINE, stack, entityBoundingBox, 0.0, 0.0, 0.0, sides.getColor())
     }
 
     // Eye Line
     if (hitbox.isLiving) {
         val halfWidth = hitbox.width / 2.0F
-        var boundingBox = OmniBox.from(
+        var boundingBox = OmniAABB(
             hitbox.offsetX - halfWidth,
             hitbox.offsetY + hitbox.eyeHeight - 0.01,
             hitbox.offsetZ - halfWidth,
@@ -118,7 +120,7 @@ fun renderHitbox(stack: OmniMatrixStack, hitbox: HitboxState) {
         if (eyeline.isShown) {
             if (info.isAccurate) {
                 val offset = hitbox.collisionSize
-                boundingBox = boundingBox.offsetBy(offset, 0.0, offset)
+                boundingBox = boundingBox.offset(offset, 0.0, offset)
             }
 
             //#if MC <=1.16.5
@@ -126,8 +128,9 @@ fun renderHitbox(stack: OmniMatrixStack, hitbox: HitboxState) {
             //$$     GL11.glEnable(GL11.GL_LINE_STIPPLE)
             //$$ }
             //#endif
-            setLineWidth(eyeline.width)
-            renderOutlineBox(OUTLINE_BOX_PIPELINE, stack, boundingBox, eyeline.getColor())
+            renderOutlineBox(OUTLINE_BOX_PIPELINE, stack, boundingBox, eyeline.getColor()) {
+                setLineWidth(eyeline.width)
+            }
             //#if MC <=1.16.5
             //$$ if (eyeline.isDashed) {
             //$$     GL11.glDisable(GL11.GL_LINE_STIPPLE)
@@ -144,7 +147,6 @@ fun renderHitbox(stack: OmniMatrixStack, hitbox: HitboxState) {
         //$$     GL11.glEnable(GL11.GL_LINE_STIPPLE)
         //$$ }
         //#endif
-        setLineWidth(viewRay.width)
         renderViewRay(
             VIEW_RAY_PIPELINE,
             stack,
@@ -152,17 +154,15 @@ fun renderHitbox(stack: OmniMatrixStack, hitbox: HitboxState) {
             hitbox.lookVecX, hitbox.lookVecY, hitbox.lookVecZ,
             hitbox.eyeHeight,
             viewRay.getColor()
-        )
+        ) {
+            setLineWidth(viewRay.width)
+        }
         //#if MC <=1.16.5
         //$$ if (viewRay.isDashed) {
         //$$     GL11.glDisable(GL11.GL_LINE_STIPPLE)
         //$$ }
         //#endif
     }
-
-    setLineWidth(1.0F)
-    OmniRenderState.enableLighting()
-    OmniRenderState.enableTexture2D()
 }
 
 private fun renderViewRay(
@@ -170,152 +170,76 @@ private fun renderViewRay(
     stack: OmniMatrixStack,
     offsetX: Double, offsetY: Double, offsetZ: Double,
     lookVecX: Double, lookVecY: Double, lookVecZ: Double,
-    eyeHeight: Double,
-    color: PolyColor,
+    eyeHeight: Float,
+    color: OmniColor,
+    builder: RenderPassEncoder.() -> Unit = {},
 ) {
-    //#if MC >=1.21.5
-    val buffer = dev.deftu.omnicore.client.OmniClient.getInstance().bufferBuilders.entityVertexConsumers.getBuffer(net.minecraft.client.render.RenderLayer.LINES)
-    val pose = stack.toVanillaStack().peek()
-    buffer
-        .vertex(pose, offsetX.toFloat(), (offsetY + eyeHeight).toFloat(), offsetZ.toFloat())
-        .normal(pose, 0.0F, 0.0F, 0.0F)
-        .color(color.argb)
-    buffer
-        .vertex(pose, (offsetX + lookVecX * 2.0).toFloat(), (offsetY + eyeHeight + lookVecY * 2.0).toFloat(), (offsetZ + lookVecZ * 2.0).toFloat())
-        .normal(pose, 0.0F, 0.0F, 0.0F)
-        .color(color.argb)
-    dev.deftu.omnicore.client.OmniClient.getInstance().bufferBuilders.entityVertexConsumers.draw()
-    //#else
-    //$$ OmniBufferBuilder.create(DrawModes.LINES, VertexFormats.POSITION_COLOR).run {
-    //$$     vertex(stack, offsetX, offsetY + eyeHeight, offsetZ)
-    //$$         .color(color.argb)
-    //$$         .next()
-    //$$     vertex(stack, offsetX + lookVecX * 2.0, offsetY + eyeHeight + lookVecY * 2.0, offsetZ + lookVecZ * 2.0)
-    //$$         .color(color.argb)
-    //$$         .next()
-    //$$     build()?.drawWithCleanup(pipeline) {}
-    //$$ }
-    //#endif
-}
-
-private fun renderBox(
-    pipeline: OmniRenderPipeline,
-    stack: OmniMatrixStack,
-    boundingBox: Box,
-    color: PolyColor,
-) {
-    OmniBufferBuilder.create(DrawModes.QUADS, VertexFormats.POSITION_COLOR).run {
-        // back
-        vertex(stack, boundingBox.minX, boundingBox.minY, boundingBox.maxZ)
-            .color(color.argb)
+    val dir = OmniVector3f(lookVecX.toFloat(), lookVecY.toFloat(), lookVecZ.toFloat()).normalized()
+    val up = if (abs(dir.y) > 0.99) OmniVector3f.UNIT_X else OmniVector3f.UNIT_Y
+    val normal = dir.cross(up).normalized()
+    pipeline.createBufferBuilder().run {
+        vertex(stack, offsetX, offsetY + eyeHeight, offsetZ)
+            .color(color)
+            .normal(stack, normal.x, normal.y, normal.z)
             .next()
-        vertex(stack, boundingBox.maxX, boundingBox.minY, boundingBox.maxZ)
-            .color(color.argb)
+        vertex(stack, offsetX + lookVecX * 2.0, offsetY + eyeHeight + lookVecY * 2.0, offsetZ + lookVecZ * 2.0)
+            .color(color)
+            .normal(stack, normal.x, normal.y, normal.z)
             .next()
-        vertex(stack, boundingBox.maxX, boundingBox.maxY, boundingBox.maxZ)
-            .color(color.argb)
-            .next()
-        vertex(stack, boundingBox.minX, boundingBox.maxY, boundingBox.maxZ)
-            .color(color.argb)
-            .next()
-        // front
-        vertex(stack, boundingBox.maxX, boundingBox.minY, boundingBox.minZ)
-            .color(color.argb)
-            .next()
-        vertex(stack, boundingBox.minX, boundingBox.minY, boundingBox.minZ)
-            .color(color.argb)
-            .next()
-        vertex(stack, boundingBox.minX, boundingBox.maxY, boundingBox.minZ)
-            .color(color.argb)
-            .next()
-        vertex(stack, boundingBox.maxX, boundingBox.maxY, boundingBox.minZ)
-            .color(color.argb)
-            .next()
-        // left
-        vertex(stack, boundingBox.minX, boundingBox.minY, boundingBox.minZ)
-            .color(color.argb)
-            .next()
-        vertex(stack, boundingBox.minX, boundingBox.minY, boundingBox.maxZ)
-            .color(color.argb)
-            .next()
-        vertex(stack, boundingBox.minX, boundingBox.maxY, boundingBox.maxZ)
-            .color(color.argb)
-            .next()
-        vertex(stack, boundingBox.minX, boundingBox.maxY, boundingBox.minZ)
-            .color(color.argb)
-            .next()
-        // right
-        vertex(stack, boundingBox.maxX, boundingBox.minY, boundingBox.maxZ)
-            .color(color.argb)
-            .next()
-        vertex(stack, boundingBox.maxX, boundingBox.minY, boundingBox.minZ)
-            .color(color.argb)
-            .next()
-        vertex(stack, boundingBox.maxX, boundingBox.maxY, boundingBox.minZ)
-            .color(color.argb)
-            .next()
-        vertex(stack, boundingBox.maxX, boundingBox.maxY, boundingBox.maxZ)
-            .color(color.argb)
-            .next()
-        // top
-        vertex(stack, boundingBox.minX, boundingBox.maxY, boundingBox.maxZ)
-            .color(color.argb)
-            .next()
-        vertex(stack, boundingBox.maxX, boundingBox.maxY, boundingBox.maxZ)
-            .color(color.argb)
-            .next()
-        vertex(stack, boundingBox.maxX, boundingBox.maxY, boundingBox.minZ)
-            .color(color.argb)
-            .next()
-        vertex(stack, boundingBox.minX, boundingBox.maxY, boundingBox.minZ)
-            .color(color.argb)
-            .next()
-        // bottom
-        vertex(stack, boundingBox.minX, boundingBox.minY + Z_FIGHTING_OFFSET, boundingBox.minZ)
-            .color(color.argb)
-            .next()
-        vertex(stack, boundingBox.maxX, boundingBox.minY + Z_FIGHTING_OFFSET, boundingBox.minZ)
-            .color(color.argb)
-            .next()
-        vertex(stack, boundingBox.maxX, boundingBox.minY + Z_FIGHTING_OFFSET, boundingBox.maxZ)
-            .color(color.argb)
-            .next()
-        vertex(stack, boundingBox.minX, boundingBox.minY + Z_FIGHTING_OFFSET, boundingBox.maxZ)
-            .color(color.argb)
-            .next()
-        build()?.drawWithCleanup(pipeline) {}
+        buildOrNull()?.drawAndClose(pipeline, builder)
     }
 }
 
 private fun renderOutlineBox(
     pipeline: OmniRenderPipeline,
     stack: OmniMatrixStack,
-    boundingBox: Box,
-    color: PolyColor,
+    boundingBox: OmniAABB,
+    color: OmniColor,
+    builder: RenderPassEncoder.() -> Unit = {},
 ) {
-    //#if MC >=1.16.5
-    val buffer = dev.deftu.omnicore.client.OmniClient.getInstance().bufferBuilders.entityVertexConsumers.getBuffer(net.minecraft.client.render.RenderLayer.LINES)
-    net.minecraft.client.render.VertexRendering.drawOutline(
-        stack.toVanillaStack(),
+    val buffer = pipeline.createBufferBuilder()
+    renderOutlineExt(
+        stack,
         buffer,
-        net.minecraft.util.shape.VoxelShapes.cuboid(boundingBox).simplify(),
+        OmniVoxelShapes.cuboid(boundingBox).simplify(),
         0.0, 0.0, 0.0,
-        color.argb
+        color
     )
-    dev.deftu.omnicore.client.OmniClient.getInstance().bufferBuilders.entityVertexConsumers.draw()
-    //#else
-    //$$ stack.runWithGlobalState {
-    //$$     pipeline.bind()
-    //$$     net.minecraft.client.renderer.RenderGlobal.drawOutlinedBoundingBox(boundingBox, color.r, color.g, color.b, color.a)
-    //$$     pipeline.unbind()
-    //$$ }
-    //#endif
+    buffer.buildOrNull()?.drawAndClose(pipeline, builder)
 }
 
-private fun setLineWidth(width: Float) {
-    //#if MC >=1.16.5
-    com.mojang.blaze3d.systems.RenderSystem.lineWidth(width)
-    //#else
-    //$$ GL11.glLineWidth(width)
-    //#endif
+fun renderOutlineExt(
+    matrices: OmniMatrixStack,
+    vertexConsumer: OmniVertexConsumer,
+    shape: OmniVoxelShape,
+    x: Double,
+    y: Double,
+    z: Double,
+    color: OmniColor,
+) {
+    shape.forEachEdge { box ->
+        val startX = box.minX;
+        val startY = box.minY;
+        val startZ = box.minZ
+        val endX = box.maxX;
+        val endY = box.maxY;
+        val endZ = box.maxZ
+
+        val normal = OmniVector3f(
+            (endX - startX).toFloat(),
+            (endY - startY).toFloat(),
+            (endZ - startZ).toFloat()
+        ).normalized()
+
+        vertexConsumer
+            .vertex(matrices, startX + x, startY + y, startZ + z)
+            .color(color)
+            .normal(matrices, normal.x, normal.y, normal.z)
+            .next()
+        vertexConsumer
+            .vertex(matrices, endX + x, endY + y, endZ + z)
+            .color(color)
+            .normal(matrices, normal.x, normal.y, normal.z)
+            .next()
+    }
 }

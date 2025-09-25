@@ -1,6 +1,6 @@
 package org.polyfrost.polyhitbox
 
-import dev.deftu.omnicore.client.OmniClient
+import dev.deftu.omnicore.api.client.client
 import org.apache.logging.log4j.LogManager
 import org.polyfrost.oneconfig.api.config.v1.ConfigManager
 
@@ -26,16 +26,16 @@ object PolyHitbox
     private var hitboxesEnabled: Boolean
         get() {
             //#if MC < 1.14
-            //$$ return OmniClient.getInstance().renderManager.isDebugBoundingBox
+            //$$ return client.renderManager.isDebugBoundingBox
             //#else
-            return OmniClient.getInstance().entityRenderDispatcher.shouldRenderHitboxes()
+            return client.entityRenderDispatcher.shouldRenderHitboxes()
             //#endif
         }
         set(value) {
             //#if MC < 1.14
-            //$$ OmniClient.getInstance().renderManager.isDebugBoundingBox = value
+            //$$ client.renderManager.isDebugBoundingBox = value
             //#else
-            OmniClient.getInstance().entityRenderDispatcher.setRenderHitboxes(value)
+            client.entityRenderDispatcher.setRenderHitboxes(value)
             //#endif
         }
 

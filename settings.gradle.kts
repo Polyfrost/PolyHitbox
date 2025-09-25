@@ -36,15 +36,16 @@ rootProject.buildFileName = "root.gradle.kts"
 listOf(
     "1.8.9-forge",
     "1.8.9-fabric",
-    "1.12.2-fabric",
     "1.12.2-forge",
+    "1.12.2-fabric",
     "1.16.5-forge",
     "1.16.5-fabric",
+    "1.20.1-fabric",
+    "1.20.4-fabric",
     "1.21.1-fabric",
-    "1.21.2-fabric",
-    "1.21.3-fabric",
     "1.21.4-fabric",
-    "1.21.5-fabric"
+    "1.21.5-fabric",
+    "1.21.8-fabric"
 ).forEach { version ->
     include(":$version")
     project(":$version").apply {

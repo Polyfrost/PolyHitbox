@@ -1,13 +1,13 @@
 package org.polyfrost.polyhitbox.mixin;
 
-import com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod;
-import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
-import dev.deftu.omnicore.client.OmniClient;
-import dev.deftu.omnicore.client.render.OmniMatrixStack;
+import dev.deftu.omnicore.api.client.OmniClient;
+import dev.deftu.omnicore.api.client.render.stack.OmniMatrixStack;
+import dev.deftu.omnicore.api.client.render.stack.OmniMatrixStacks;
+import dev.deftu.omnicore.api.data.aabb.OmniAABB;
+import dev.deftu.omnicore.api.data.vec.OmniVec3d;
 import net.minecraft.client.render.entity.EntityRenderDispatcher;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.LivingEntity;
-import net.minecraft.util.math.Vec3d;
 import org.polyfrost.polyhitbox.HitboxRendererKt;
 import org.polyfrost.polyhitbox.HitboxState;
 import org.spongepowered.asm.mixin.Mixin;
@@ -16,11 +16,11 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 //#if MC >=1.21.5
-import org.spongepowered.asm.mixin.Unique;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.client.render.VertexConsumer;
 import net.minecraft.client.render.VertexConsumerProvider;
 import net.minecraft.client.render.entity.state.EntityHitbox;
+import org.spongepowered.asm.mixin.Unique;
 //#endif
 
 @Mixin(EntityRenderDispatcher.class)
@@ -30,28 +30,31 @@ public abstract class MixinRenderManager {
     private static ThreadLocal<Entity> polyhitbox$entity = ThreadLocal.withInitial(() -> null);
     //#endif
 
-    @WrapMethod(
+    @Inject(
             //#if MC >=1.16.5
-            method = "renderHitbox"
+            method = "renderHitbox",
             //#else
-            //$$ method = "renderDebugBoundingBox"
+            //$$ method = "renderDebugBoundingBox",
             //#endif
+            at = @At("HEAD"),
+            cancellable = true
     )
     //#if MC >=1.16.5
     private static void polyhitbox$customRendering(
-         MatrixStack matrixStack,
-         VertexConsumer vertexConsumer,
-    //#if MC >=1.21.5
-         EntityHitbox entityHitbox,
-    //#else
-    //$$     Entity entity,
-    //$$     float tickDelta,
-    //#endif
-         Operation<Void> operation) {
-    //#else
-    //$$ private void polyhitbox$customRendering(Entity entity, double offsetX, double offsetY, double offsetZ, float yaw, float tickDelta, CallbackInfo ci) {
-    //#endif
-        OmniMatrixStack stack = OmniMatrixStack.vanilla(
+            MatrixStack matrixStack,
+            VertexConsumer vertexConsumer,
+            //#if MC >=1.21.5
+            EntityHitbox entityHitbox,
+            //#else
+            //$$     Entity entity,
+            //$$     float tickDelta,
+            //#endif
+            CallbackInfo ci) {
+        //#else
+        //$$ private void polyhitbox$customRendering(Entity entity, double offsetX, double offsetY, double offsetZ, float yaw, float tickDelta, CallbackInfo ci) {
+        //#endif
+        ci.cancel();
+        OmniMatrixStack stack = OmniMatrixStacks.vanilla(
                 //#if MC >=1.16.5
                 matrixStack
                 //#endif
@@ -62,30 +65,30 @@ public abstract class MixinRenderManager {
         float offsetX = entityHitbox.comp_3855();
         float offsetY = entityHitbox.comp_3856();
         float offsetZ = entityHitbox.comp_3857();
-        float collisionBorderSize = 0.0F;
+        float collisionBorderSize = 0.0F; /// TODO/NOTE: Doesn't exist?
         float width = entity.getWidth();
         //#else
         //$$ float collisionBorderSize = entity.getCollisionBorderSize();
         //$$ float width = entity.width;
         //#endif
-        Vec3d lookVec = entity.getRotationVector();
+        OmniVec3d lookVec = new OmniVec3d(entity.getRotationVector());
 
         HitboxRendererKt.renderHitbox(
                 stack,
                 new HitboxState(
                         offsetX, offsetY, offsetZ,
+                        //#if MC >=1.16.5
                         entity.getX(), entity.getY(), entity.getZ(),
-                        //#if MC >=1.21.5
-                        lookVec.x, lookVec.y, lookVec.z,
                         //#else
-                        //$$ lookVec.xCoord, lookVec.yCoord, lookVec.zCoord,
+                        //$$ entity.x, entity.y, entity.z,
                         //#endif
+                        lookVec.getX(), lookVec.getY(), lookVec.getZ(),
                         entity.getStandingEyeHeight(),
                         entity instanceof LivingEntity,
-                        entity == OmniClient.getInstance().targetedEntity,
+                        entity == OmniClient.get().targetedEntity,
                         width,
                         collisionBorderSize,
-                        entity.getBoundingBox()
+                        new OmniAABB(entity.getBoundingBox())
                 )
         );
     }
@@ -93,11 +96,11 @@ public abstract class MixinRenderManager {
     //#if MC >=1.21.5
     @com.llamalad7.mixinextras.injector.v2.WrapWithCondition(method = "renderHitboxes(Lnet/minecraft/client/util/math/MatrixStack;Lnet/minecraft/client/render/entity/state/EntityHitboxAndView;Lnet/minecraft/client/render/VertexConsumer;F)V", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/render/VertexRendering;drawVector(Lnet/minecraft/client/util/math/MatrixStack;Lnet/minecraft/client/render/VertexConsumer;Lorg/joml/Vector3f;Lnet/minecraft/util/math/Vec3d;I)V"))
     private static boolean polyhitbox$removeViewRay(
-        net.minecraft.client.util.math.MatrixStack matrixStack,
-        net.minecraft.client.render.VertexConsumer vertexConsumer,
-        org.joml.Vector3f vector3f,
-        net.minecraft.util.math.Vec3d vec3d,
-        int i
+            net.minecraft.client.util.math.MatrixStack matrixStack,
+            net.minecraft.client.render.VertexConsumer vertexConsumer,
+            org.joml.Vector3f vector3f,
+            net.minecraft.util.math.Vec3d vec3d,
+            int i
     ) {
         return false;
     }

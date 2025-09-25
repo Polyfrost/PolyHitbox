@@ -47,14 +47,13 @@ object PolyHitbox
             enabled = true
         }
 
-        // TODO: FIX
-        // //#if FABRIC && MC > 1.14
-        // //$$ net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents.CLIENT_STARTED.register { tick ->
-        // //$$     hitboxesEnabled = enabled
-        // //$$ }
-        // //#else
-        // //hitboxesEnabled = enabled
-        // //#endif
+        //#if FABRIC && MC > 1.14
+        net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents.CLIENT_STARTED.register { tick ->
+            hitboxesEnabled = enabled
+        }
+        //#else
+        //hitboxesEnabled = enabled
+        //#endif
     }
 
     //#if FORGE

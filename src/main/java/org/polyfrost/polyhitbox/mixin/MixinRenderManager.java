@@ -91,11 +91,10 @@ public abstract class MixinRenderManager {
                 entity == OmniClient.get().targetedEntity,
                 //#if MC >=1.16.5
                 entity.getWidth(),
-                0.0F, // TODO/NOTE: Doesn't exist?
                 //#else
                 //$$ entity.width,
-                //$$ entity.getCollisionBorderSize(),
                 //#endif
+                entity.getTargetingMargin(),
                 entityAABB
         );
     }

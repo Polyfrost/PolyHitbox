@@ -42,7 +42,11 @@ public abstract class MixinRenderManager {
             cancellable = true
     )
     //#if MC >=1.16.5
-    private static void polyhitbox$customRendering(
+    private
+    //#if MC >=1.20.1
+    static
+    //#endif
+    void polyhitbox$customRendering(
             MatrixStack matrixStack,
             VertexConsumer vertexConsumer,
             //#if MC >=1.21.5
@@ -76,6 +80,8 @@ public abstract class MixinRenderManager {
         OmniVec3d entityPosition = new OmniVec3d(
                 //#if MC >=1.16.5
                 entity.getX(), entity.getY(), entity.getZ()
+                //#elseif MC >=1.12.2
+                //$$ entity.posX, entity.posY, entity.posZ
                 //#else
                 //$$ entity.x, entity.y, entity.z
                 //#endif

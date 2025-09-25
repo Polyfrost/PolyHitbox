@@ -6,10 +6,14 @@ import org.polyfrost.oneconfig.api.config.v1.ConfigManager
 
 //#if FORGE
 //$$ @net.minecraftforge.fml.common.Mod(
+//#if MC >=1.20.1 || MC <=1.12.2
 //$$     modid = PolyHitbox.MODID,
 //$$     name = PolyHitbox.NAME,
 //$$     version = PolyHitbox.VERSION,
 //$$     modLanguageAdapter = "org.polyfrost.oneconfig.utils.v1.forge.KotlinLanguageAdapter"
+//#else
+//$$     value = PolyHitbox.MODID
+//#endif
 //$$ )
 //#endif
 object PolyHitbox
@@ -56,6 +60,7 @@ object PolyHitbox
         //#endif
     }
 
+    // TODO: Fix 1.16.5 Forge (idk what changed)
     //#if FORGE
     //$$ @net.minecraftforge.fml.common.Mod.EventHandler
     //$$ fun onFMLInit(event: net.minecraftforge.fml.common.event.FMLInitializationEvent) {

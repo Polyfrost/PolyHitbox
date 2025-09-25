@@ -15,16 +15,19 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 //#if MC >=1.21.5
+import net.minecraft.client.render.entity.state.EntityHitbox;
+//#endif
+
+//#if MC >=1.16.5
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.client.render.VertexConsumer;
 import net.minecraft.client.render.VertexConsumerProvider;
-import net.minecraft.client.render.entity.state.EntityHitbox;
 import org.spongepowered.asm.mixin.Unique;
 //#endif
 
 @Mixin(EntityRenderDispatcher.class)
 public abstract class MixinRenderManager {
-    //#if MC >=1.21.5
+    //#if MC >=1.21.4
     @Unique
     private static ThreadLocal<Entity> polyhitbox$entity = ThreadLocal.withInitial(() -> null);
     //#endif
@@ -45,10 +48,14 @@ public abstract class MixinRenderManager {
             //#if MC >=1.21.5
             EntityHitbox entityHitbox,
             //#else
-            //$$     Entity entity,
-            //$$     float tickDelta,
+            //$$ Entity entity,
+            //$$ float tickDelta,
             //#endif
-            CallbackInfo ci) {
+            //#if MC >=1.21.1
+            //$$ float offsetX, float offsetY, float offsetZ,
+            //#endif
+            CallbackInfo ci
+    ) {
     //#else
     //$$ private void polyhitbox$customRendering(Entity entity, double offsetX, double offsetY, double offsetZ, float yaw, float tickDelta, CallbackInfo ci) {
     //#endif
@@ -61,34 +68,37 @@ public abstract class MixinRenderManager {
 
         //#if MC >=1.21.5
         Entity entity = polyhitbox$entity.get();
-        float offsetX = entityHitbox.comp_3855();
-        float offsetY = entityHitbox.comp_3856();
-        float offsetZ = entityHitbox.comp_3857();
-        float collisionBorderSize = 0.0F; /// TODO/NOTE: Doesn't exist?
-        float width = entity.getWidth();
+        OmniVec3d offset = new OmniVec3d(entityHitbox.comp_3855(), entityHitbox.comp_3856(), entityHitbox.comp_3857());
         //#else
-        //$$ float collisionBorderSize = entity.getCollisionBorderSize();
-        //$$ float width = entity.width;
+        //$$ OmniVec3d offset = OmniVec3d.ZERO;
         //#endif
+
+        OmniVec3d entityPosition = new OmniVec3d(
+                //#if MC >=1.16.5
+                entity.getX(), entity.getY(), entity.getZ()
+                //#else
+                //$$ entity.x, entity.y, entity.z
+                //#endif
+        );
         OmniVec3d lookVec = new OmniVec3d(entity.getRotationVector());
+        OmniAABB entityAABB = new OmniAABB(entity.getBoundingBox());
 
         HitboxRendererKt.renderHitbox(
                 stack,
-                new OmniVec3d(offsetX, offsetY, offsetZ),
-                new OmniVec3d(
-                        //#if MC >=1.16.5
-                        entity.getX(), entity.getY(), entity.getZ()
-                        //#else
-                        //$$ entity.x, entity.y, entity.z
-                        //#endif
-                ),
+                offset,
+                entityPosition,
                 lookVec,
                 entity.getStandingEyeHeight(),
                 entity instanceof LivingEntity,
                 entity == OmniClient.get().targetedEntity,
-                width,
-                collisionBorderSize,
-                new OmniAABB(entity.getBoundingBox())
+                //#if MC >=1.16.5
+                entity.getWidth(),
+                0.0F, // TODO/NOTE: Doesn't exist?
+                //#else
+                //$$ entity.width,
+                //$$ entity.getCollisionBorderSize(),
+                //#endif
+                entityAABB
         );
     }
 

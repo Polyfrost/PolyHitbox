@@ -9,7 +9,6 @@ import net.minecraft.client.render.entity.EntityRenderDispatcher;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.LivingEntity;
 import org.polyfrost.polyhitbox.HitboxRendererKt;
-import org.polyfrost.polyhitbox.HitboxState;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -50,9 +49,9 @@ public abstract class MixinRenderManager {
             //$$     float tickDelta,
             //#endif
             CallbackInfo ci) {
-        //#else
-        //$$ private void polyhitbox$customRendering(Entity entity, double offsetX, double offsetY, double offsetZ, float yaw, float tickDelta, CallbackInfo ci) {
-        //#endif
+    //#else
+    //$$ private void polyhitbox$customRendering(Entity entity, double offsetX, double offsetY, double offsetZ, float yaw, float tickDelta, CallbackInfo ci) {
+    //#endif
         ci.cancel();
         OmniMatrixStack stack = OmniMatrixStacks.vanilla(
                 //#if MC >=1.16.5
@@ -75,21 +74,21 @@ public abstract class MixinRenderManager {
 
         HitboxRendererKt.renderHitbox(
                 stack,
-                new HitboxState(
-                        offsetX, offsetY, offsetZ,
+                new OmniVec3d(offsetX, offsetY, offsetZ),
+                new OmniVec3d(
                         //#if MC >=1.16.5
-                        entity.getX(), entity.getY(), entity.getZ(),
+                        entity.getX(), entity.getY(), entity.getZ()
                         //#else
-                        //$$ entity.x, entity.y, entity.z,
+                        //$$ entity.x, entity.y, entity.z
                         //#endif
-                        lookVec.getX(), lookVec.getY(), lookVec.getZ(),
-                        entity.getStandingEyeHeight(),
-                        entity instanceof LivingEntity,
-                        entity == OmniClient.get().targetedEntity,
-                        width,
-                        collisionBorderSize,
-                        new OmniAABB(entity.getBoundingBox())
-                )
+                ),
+                lookVec,
+                entity.getStandingEyeHeight(),
+                entity instanceof LivingEntity,
+                entity == OmniClient.get().targetedEntity,
+                width,
+                collisionBorderSize,
+                new OmniAABB(entity.getBoundingBox())
         );
     }
 

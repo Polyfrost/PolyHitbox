@@ -20,9 +20,7 @@ import dev.deftu.omnicore.api.identifierOrThrow
 import dev.deftu.omnicore.api.math.OmniVector3f
 import kotlin.math.abs
 
-//#if MC <=1.16.5
-//$$ import org.lwjgl.opengl.GL11
-//#endif
+// val STRIPPLE_PATTERN: Short = 0xAAAA.toShort()
 
 val HITBOX_SNIPPET: OmniRenderPipeline.Snippet = OmniRenderPipelineSnippets.builder().run {
     setDepthTest(OmniRenderPipeline.DepthTest.LESS_OR_EQUAL)
@@ -47,55 +45,60 @@ val OUTLINE_BOX_PIPELINE: OmniRenderPipeline = OmniRenderPipelines.builderWithDe
     DrawMode.LINES
 ).applySnippet(HITBOX_SNIPPET).build()
 
+// val OUTLINE_STRIPPLE_BOX_PIPELINE: OmniRenderPipeline = OUTLINE_BOX_PIPELINE.newBuilder().configureLegacyEffects {
+//     // lineStripple = true
+// }.build()
+
 val VIEW_RAY_PIPELINE: OmniRenderPipeline = OmniRenderPipelines.builderWithDefaultShader(
     identifierOrThrow(PolyHitbox.MODID, "pipeline/view_ray"),
     DefaultVertexFormats.POSITION_COLOR_NORMAL,
     DrawMode.LINES
 ).applySnippet(HITBOX_SNIPPET).build()
 
-fun renderHitbox(stack: OmniMatrixStack, hitbox: HitboxState) {
+// val VIEW_RAY_STRIPPLE_PIPELINE: OmniRenderPipeline = VIEW_RAY_PIPELINE.newBuilder().configureLegacyEffects {
+//     // lineStripple = true
+// }.build()
+
+fun renderHitbox(
+    stack: OmniMatrixStack,
+    offset: OmniVec3d,
+    entityPos: OmniVec3d,
+    lookVec: OmniVec3d,
+    eyeHeight: Float,
+    isLiving: Boolean,
+    isTargeted: Boolean,
+    width: Double,
+    collisionSize: Double,
+    boundingBox: OmniAABB,
+) {
     val info = PolyHitbox.getHitboxInfo()
     when (info.showMode) {
-        0 -> info.isTargeted = hitbox.isTargeted
-        1 -> if (!hitbox.isTargeted) return else info.isTargeted = true
+        0 -> info.isTargeted = isTargeted
+        1 -> if (!isTargeted) return else info.isTargeted = true
         2 -> return
     }
 
-    // TODO/FIX
-    // if (info.useDistanceBasedWidth) {
-    //     info.sqrDistance = (hitbox.offsetX * hitbox.offsetX + hitbox.offsetY * hitbox.offsetY + hitbox.offsetZ * hitbox.offsetZ).toFloat()
-    // }
-
-    var entityBoundingBox = hitbox.boundingBox.offset(
-        -hitbox.entityX + hitbox.offsetX,
-        -hitbox.entityY + hitbox.offsetY,
-        -hitbox.entityZ + hitbox.offsetZ
-    )
-    if (info.isAccurate) {
-        val offset = hitbox.collisionSize
-        entityBoundingBox = entityBoundingBox.offset(offset, offset, offset)
+    if (info.useDistanceBasedWidth) {
+        info.sqrDistance = (offset.x * offset.x + offset.y * offset.y + offset.z * offset.z).toFloat()
     }
 
-    //#if MC <=1.16.5
-    //$$ GL11.glLineStipple(info.dashFactor, 0xAAAA.toShort())
-    //#endif
+    var entityBoundingBox =
+        boundingBox.offset(-entityPos.x + offset.x, -entityPos.y + offset.y, -entityPos.z + offset.z)
+    if (info.isAccurate) {
+        val offset = collisionSize
+        entityBoundingBox = entityBoundingBox.offset(offset, offset, offset)
+    }
 
     // Outline
     val outline = info.outline
     if (outline.isShown) {
-        //#if MC <=1.16.5
-        //$$ if (outline.isDashed) {
-        //$$     GL11.glEnable(GL11.GL_LINE_STIPPLE)
-        //$$ }
-        //#endif
-        renderOutlineBox(OUTLINE_BOX_PIPELINE, stack, entityBoundingBox, outline.getColor()) {
-            setLineWidth(outline.width)
+        val pipeline =
+            //if (outline.isDashed) OUTLINE_STRIPPLE_BOX_PIPELINE else
+            OUTLINE_BOX_PIPELINE
+        renderOutlineBox(pipeline, stack, entityBoundingBox, outline.getColor()) {
+            // setLineWidth(outline.width)
+            // setLineStripple(info.dashFactor, STRIPPLE_PATTERN)
         }
-        //#if MC <=1.16.5
-        //$$ if (outline.isDashed) {
-        //$$     GL11.glDisable(GL11.GL_LINE_STIPPLE)
-        //$$ }
-        //#endif
     }
 
     // Sides
@@ -105,84 +108,65 @@ fun renderHitbox(stack: OmniMatrixStack, hitbox: HitboxState) {
     }
 
     // Eye Line
-    if (hitbox.isLiving) {
-        val halfWidth = hitbox.width / 2.0F
+    if (isLiving) {
+        val halfWidth = width / 2.0F
         var boundingBox = OmniAABB(
-            hitbox.offsetX - halfWidth,
-            hitbox.offsetY + hitbox.eyeHeight - 0.01,
-            hitbox.offsetZ - halfWidth,
-            hitbox.offsetX + halfWidth,
-            hitbox.offsetY + hitbox.eyeHeight + 0.01,
-            hitbox.offsetZ + halfWidth
+            offset.x - halfWidth,
+            offset.y + eyeHeight - 0.01,
+            offset.z - halfWidth,
+            offset.x + halfWidth,
+            offset.y + eyeHeight + 0.01,
+            offset.z + halfWidth
         )
 
         val eyeline = info.eyeline
         if (eyeline.isShown) {
             if (info.isAccurate) {
-                val offset = hitbox.collisionSize
+                val offset = collisionSize
                 boundingBox = boundingBox.offset(offset, 0.0, offset)
             }
 
-            //#if MC <=1.16.5
-            //$$ if (eyeline.isDashed) {
-            //$$     GL11.glEnable(GL11.GL_LINE_STIPPLE)
-            //$$ }
-            //#endif
-            renderOutlineBox(OUTLINE_BOX_PIPELINE, stack, boundingBox, eyeline.getColor()) {
-                setLineWidth(eyeline.width)
+            val pipeline =
+                // if (eyeline.isDashed) OUTLINE_STRIPPLE_BOX_PIPELINE else
+                OUTLINE_BOX_PIPELINE
+            renderOutlineBox(pipeline, stack, boundingBox, eyeline.getColor()) {
+                // setLineWidth(eyeline.width)
+                // setLineStripple(info.dashFactor, STRIPPLE_PATTERN)
             }
-            //#if MC <=1.16.5
-            //$$ if (eyeline.isDashed) {
-            //$$     GL11.glDisable(GL11.GL_LINE_STIPPLE)
-            //$$ }
-            //#endif
         }
     }
 
     // View Ray
     val viewRay = info.viewRay
     if (viewRay.isShown) {
-        //#if MC <=1.16.5
-        //$$ if (viewRay.isDashed) {
-        //$$     GL11.glEnable(GL11.GL_LINE_STIPPLE)
-        //$$ }
-        //#endif
-        renderViewRay(
-            VIEW_RAY_PIPELINE,
-            stack,
-            hitbox.offsetX, hitbox.offsetY, hitbox.offsetZ,
-            hitbox.lookVecX, hitbox.lookVecY, hitbox.lookVecZ,
-            hitbox.eyeHeight,
-            viewRay.getColor()
-        ) {
-            setLineWidth(viewRay.width)
+        val pipeline =
+            //if (viewRay.isDashed) VIEW_RAY_STRIPPLE_PIPELINE else
+            VIEW_RAY_PIPELINE
+        renderViewRay(pipeline, stack, offset, lookVec, eyeHeight, viewRay.getColor()) {
+            // setLineWidth(viewRay.width)
+            // setLineStripple(info.dashFactor, STRIPPLE_PATTERN)
         }
-        //#if MC <=1.16.5
-        //$$ if (viewRay.isDashed) {
-        //$$     GL11.glDisable(GL11.GL_LINE_STIPPLE)
-        //$$ }
-        //#endif
     }
 }
 
 private fun renderViewRay(
     pipeline: OmniRenderPipeline,
     stack: OmniMatrixStack,
-    offsetX: Double, offsetY: Double, offsetZ: Double,
-    lookVecX: Double, lookVecY: Double, lookVecZ: Double,
+    offset: OmniVec3d,
+    lookVec: OmniVec3d,
     eyeHeight: Float,
     color: OmniColor,
     builder: RenderPassEncoder.() -> Unit = {},
 ) {
-    val dir = OmniVector3f(lookVecX.toFloat(), lookVecY.toFloat(), lookVecZ.toFloat()).normalized()
+    val dir = OmniVector3f(lookVec.x.toFloat(), lookVec.y.toFloat(), lookVec.z.toFloat()).normalized()
     val up = if (abs(dir.y) > 0.99) OmniVector3f.UNIT_X else OmniVector3f.UNIT_Y
     val normal = dir.cross(up).normalized()
     pipeline.createBufferBuilder().run {
-        vertex(stack, offsetX, offsetY + eyeHeight, offsetZ)
+        vertex(stack, offset.x, offset.y + eyeHeight, offset.z)
             .color(color)
             .normal(stack, normal.x, normal.y, normal.z)
             .next()
-        vertex(stack, offsetX + lookVecX * 2.0, offsetY + eyeHeight + lookVecY * 2.0, offsetZ + lookVecZ * 2.0)
+        vertex(stack, offset.x + lookVec.x * 2.0, offset.y + eyeHeight + lookVec.y * 2.0, offset.z + lookVec.z * 2.0)
             .color(color)
             .normal(stack, normal.x, normal.y, normal.z)
             .next()

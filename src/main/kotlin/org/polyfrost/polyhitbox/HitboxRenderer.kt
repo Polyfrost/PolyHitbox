@@ -83,8 +83,7 @@ fun renderHitbox(
     var entityBoundingBox =
         boundingBox.offset(-entityPos.x + offset.x, -entityPos.y + offset.y, -entityPos.z + offset.z)
     if (info.isAccurate) {
-        val offset = collisionSize
-        entityBoundingBox = entityBoundingBox.offset(offset, offset, offset)
+        entityBoundingBox = entityBoundingBox.offset(collisionSize)
     }
 
     // Outline
@@ -120,8 +119,7 @@ fun renderHitbox(
         val eyeline = info.eyeline
         if (eyeline.isShown) {
             if (info.isAccurate) {
-                val offset = collisionSize
-                boundingBox = boundingBox.offset(offset, 0.0, offset)
+                boundingBox = boundingBox.offset(collisionSize, 0.0, collisionSize)
             }
 
             val pipeline = if (eyeline.isDashed) OUTLINE_STRIPPLE_BOX_PIPELINE else OUTLINE_BOX_PIPELINE

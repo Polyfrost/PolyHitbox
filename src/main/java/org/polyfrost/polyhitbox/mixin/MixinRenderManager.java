@@ -54,9 +54,9 @@ public abstract class MixinRenderManager {
             //#else
             //$$ Entity entity,
             //$$ float tickDelta,
-            //#endif
             //#if MC >=1.21.1
             //$$ float offsetX, float offsetY, float offsetZ,
+            //#endif
             //#endif
             CallbackInfo ci
     ) {
@@ -77,15 +77,7 @@ public abstract class MixinRenderManager {
         //$$ OmniVec3d offset = OmniVec3d.ZERO;
         //#endif
 
-        OmniVec3d entityPosition = new OmniVec3d(
-                //#if MC >=1.16.5
-                entity.getX(), entity.getY(), entity.getZ()
-                //#elseif MC >=1.12.2
-                //$$ entity.posX, entity.posY, entity.posZ
-                //#else
-                //$$ entity.x, entity.y, entity.z
-                //#endif
-        );
+        OmniVec3d entityPosition = new OmniVec3d(entity.getPos());
         OmniVec3d lookVec = new OmniVec3d(entity.getRotationVector());
         OmniAABB entityAABB = new OmniAABB(entity.getBoundingBox());
 

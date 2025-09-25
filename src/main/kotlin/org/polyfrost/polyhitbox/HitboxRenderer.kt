@@ -10,17 +10,15 @@ import dev.deftu.omnicore.api.client.render.pipeline.OmniRenderPipelines
 import dev.deftu.omnicore.api.client.render.pipeline.RenderPassEncoder
 import dev.deftu.omnicore.api.client.render.stack.OmniMatrixStack
 import dev.deftu.omnicore.api.client.render.state.OmniBlendState
-import dev.deftu.omnicore.api.client.render.vertex.OmniVertexConsumer
 import dev.deftu.omnicore.api.color.OmniColor
 import dev.deftu.omnicore.api.data.aabb.OmniAABB
-import dev.deftu.omnicore.api.data.shape.OmniVoxelShape
 import dev.deftu.omnicore.api.data.shape.OmniVoxelShapes
 import dev.deftu.omnicore.api.data.vec.OmniVec3d
 import dev.deftu.omnicore.api.identifierOrThrow
 import dev.deftu.omnicore.api.math.OmniVector3f
 import kotlin.math.abs
 
-// val STRIPPLE_PATTERN: Short = 0xAAAA.toShort()
+val STRIPPLE_PATTERN: Short = 0xAAAA.toShort()
 
 val HITBOX_SNIPPET: OmniRenderPipeline.Snippet = OmniRenderPipelineSnippets.builder().run {
     setDepthTest(OmniRenderPipeline.DepthTest.LESS_OR_EQUAL)
@@ -45,9 +43,9 @@ val OUTLINE_BOX_PIPELINE: OmniRenderPipeline = OmniRenderPipelines.builderWithDe
     DrawMode.LINES
 ).applySnippet(HITBOX_SNIPPET).build()
 
-// val OUTLINE_STRIPPLE_BOX_PIPELINE: OmniRenderPipeline = OUTLINE_BOX_PIPELINE.newBuilder().configureLegacyEffects {
-//     // lineStripple = true
-// }.build()
+val OUTLINE_STRIPPLE_BOX_PIPELINE: OmniRenderPipeline = OUTLINE_BOX_PIPELINE.newBuilder().configureLegacyEffects {
+    lineStipple = true
+}.build()
 
 val VIEW_RAY_PIPELINE: OmniRenderPipeline = OmniRenderPipelines.builderWithDefaultShader(
     identifierOrThrow(PolyHitbox.MODID, "pipeline/view_ray"),
@@ -55,9 +53,9 @@ val VIEW_RAY_PIPELINE: OmniRenderPipeline = OmniRenderPipelines.builderWithDefau
     DrawMode.LINES
 ).applySnippet(HITBOX_SNIPPET).build()
 
-// val VIEW_RAY_STRIPPLE_PIPELINE: OmniRenderPipeline = VIEW_RAY_PIPELINE.newBuilder().configureLegacyEffects {
-//     // lineStripple = true
-// }.build()
+val VIEW_RAY_STRIPPLE_PIPELINE: OmniRenderPipeline = VIEW_RAY_PIPELINE.newBuilder().configureLegacyEffects {
+    lineStipple = true
+}.build()
 
 fun renderHitbox(
     stack: OmniMatrixStack,
@@ -92,19 +90,19 @@ fun renderHitbox(
     // Outline
     val outline = info.outline
     if (outline.isShown) {
-        val pipeline =
-            //if (outline.isDashed) OUTLINE_STRIPPLE_BOX_PIPELINE else
-            OUTLINE_BOX_PIPELINE
+        val pipeline = if (outline.isDashed) OUTLINE_STRIPPLE_BOX_PIPELINE else OUTLINE_BOX_PIPELINE
         renderOutlineBox(pipeline, stack, entityBoundingBox, outline.getColor()) {
-            // setLineWidth(outline.width)
-            // setLineStripple(info.dashFactor, STRIPPLE_PATTERN)
+            setLineWidth(outline.width)
+            if (outline.isDashed) {
+                setLineStipple(info.dashFactor, STRIPPLE_PATTERN)
+            }
         }
     }
 
     // Sides
     val sides = info.sides
     if (sides.isShown) {
-        OmniShapeRenderer.renderBox(BOX_PIPELINE, stack, entityBoundingBox, 0.0, 0.0, 0.0, sides.getColor())
+        OmniShapeRenderer.FILLED_BOX.render(BOX_PIPELINE, stack, entityBoundingBox, sides.getColor())
     }
 
     // Eye Line
@@ -126,12 +124,12 @@ fun renderHitbox(
                 boundingBox = boundingBox.offset(offset, 0.0, offset)
             }
 
-            val pipeline =
-                // if (eyeline.isDashed) OUTLINE_STRIPPLE_BOX_PIPELINE else
-                OUTLINE_BOX_PIPELINE
+            val pipeline = if (eyeline.isDashed) OUTLINE_STRIPPLE_BOX_PIPELINE else OUTLINE_BOX_PIPELINE
             renderOutlineBox(pipeline, stack, boundingBox, eyeline.getColor()) {
-                // setLineWidth(eyeline.width)
-                // setLineStripple(info.dashFactor, STRIPPLE_PATTERN)
+                setLineWidth(eyeline.width)
+                if (eyeline.isDashed) {
+                    setLineStipple(info.dashFactor, STRIPPLE_PATTERN)
+                }
             }
         }
     }
@@ -139,12 +137,12 @@ fun renderHitbox(
     // View Ray
     val viewRay = info.viewRay
     if (viewRay.isShown) {
-        val pipeline =
-            //if (viewRay.isDashed) VIEW_RAY_STRIPPLE_PIPELINE else
-            VIEW_RAY_PIPELINE
+        val pipeline = if (viewRay.isDashed) VIEW_RAY_STRIPPLE_PIPELINE else VIEW_RAY_PIPELINE
         renderViewRay(pipeline, stack, offset, lookVec, eyeHeight, viewRay.getColor()) {
-            // setLineWidth(viewRay.width)
-            // setLineStripple(info.dashFactor, STRIPPLE_PATTERN)
+            setLineWidth(viewRay.width)
+            if (viewRay.isDashed) {
+                setLineStipple(info.dashFactor, STRIPPLE_PATTERN)
+            }
         }
     }
 }
@@ -182,48 +180,6 @@ private fun renderOutlineBox(
     builder: RenderPassEncoder.() -> Unit = {},
 ) {
     val buffer = pipeline.createBufferBuilder()
-    renderOutlineExt(
-        stack,
-        buffer,
-        OmniVoxelShapes.cuboid(boundingBox).simplify(),
-        0.0, 0.0, 0.0,
-        color
-    )
+    OmniShapeRenderer.SHAPE_OUTLINE.render(buffer, stack, OmniVoxelShapes.cuboid(boundingBox).simplify(), color)
     buffer.buildOrNull()?.drawAndClose(pipeline, builder)
-}
-
-fun renderOutlineExt(
-    matrices: OmniMatrixStack,
-    vertexConsumer: OmniVertexConsumer,
-    shape: OmniVoxelShape,
-    x: Double,
-    y: Double,
-    z: Double,
-    color: OmniColor,
-) {
-    shape.forEachEdge { box ->
-        val startX = box.minX;
-        val startY = box.minY;
-        val startZ = box.minZ
-        val endX = box.maxX;
-        val endY = box.maxY;
-        val endZ = box.maxZ
-
-        val normal = OmniVector3f(
-            (endX - startX).toFloat(),
-            (endY - startY).toFloat(),
-            (endZ - startZ).toFloat()
-        ).normalized()
-
-        vertexConsumer
-            .vertex(matrices, startX + x, startY + y, startZ + z)
-            .color(color)
-            .normal(matrices, normal.x, normal.y, normal.z)
-            .next()
-        vertexConsumer
-            .vertex(matrices, endX + x, endY + y, endZ + z)
-            .color(color)
-            .normal(matrices, normal.x, normal.y, normal.z)
-            .next()
-    }
 }

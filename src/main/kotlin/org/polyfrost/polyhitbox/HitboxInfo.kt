@@ -11,14 +11,14 @@ import org.polyfrost.polyui.color.asMutable
 class HitboxInfo(private val id: String) {
     var showMode = 0
         private set
-    val eyeline = ElementInfo(true, argb(0xFFFF0000.toInt()), "Eyeline")
-    val viewRay = ElementInfo(true, argb(0xFF0000FF.toInt()), "View Ray")
-    val outline = ElementInfo(true, argb(0xFFFFFFFF.toInt()), "Outline")
-    val sides = ElementInfo(false, argb(0x14FFFFFF), "Sides")
+    val eyeline = ElementInfo(true, argb(0xFFFF0000.toInt()), true, "Eyeline")
+    val viewRay = ElementInfo(true, argb(0xFF0000FF.toInt()), true, "View Ray")
+    val outline = ElementInfo(true, argb(0xFFFFFFFF.toInt()), true, "Outline")
+    val sides = ElementInfo(false, argb(0x14FFFFFF), false, "Sides")
 
     var isAccurate = false
         private set
-    var useDistanceBasedWidth = true
+    var useDistanceBasedWidth = false
         private set
     private var distanceFactor = 4.0F
     var dashFactor = 10
@@ -78,13 +78,24 @@ class HitboxInfo(private val id: String) {
         }
 
 
-    inner class ElementInfo(isShown: Boolean, initialColor: PolyColor, private val id: String) {
+    inner class ElementInfo(
+        isShown: Boolean,
+        initialColor: PolyColor,
+        val isLines: Boolean,
+        private val id: String,
+    ) {
         var isShown = isShown
             private set
         var isDashed = false
             private set
         var width = 1.0F
-            get() = if (useDistanceBasedWidth) field * (distanceFactor / sqrDistance) else field
+            get() = if (isLines)
+                if (useDistanceBasedWidth)
+                    field * (distanceFactor / sqrDistance)
+                else
+                    field
+            else
+                0.0F
             private set
         var colorNormal = initialColor
             private set
@@ -107,18 +118,20 @@ class HitboxInfo(private val id: String) {
                         Visualizer.SwitchVisualizer::class.java
                     )
                 })
-                put(ktProperty(::isDashed, "Dashed").apply {
-                    addMetadata(
-                        "visualizer",
-                        Visualizer.SwitchVisualizer::class.java
-                    )
-                })
-                put(ktProperty(::width, "Width").apply {
-                    addMetadata(
-                        "visualizer",
-                        Visualizer.SliderVisualizer::class.java
-                    )
-                })
+                if (isLines) {
+                    put(ktProperty(::isDashed, "Dashed").apply {
+                        addMetadata(
+                            "visualizer",
+                            Visualizer.SwitchVisualizer::class.java
+                        )
+                    })
+                    put(ktProperty(::width, "Width").apply {
+                        addMetadata(
+                            "visualizer",
+                            Visualizer.SliderVisualizer::class.java
+                        )
+                    })
+                }
                 put(ktProperty(::colorNormal, "Color").apply {
                     addMetadata(
                         "visualizer",

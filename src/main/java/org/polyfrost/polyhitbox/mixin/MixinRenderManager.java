@@ -3,8 +3,8 @@ package org.polyfrost.polyhitbox.mixin;
 import dev.deftu.omnicore.api.client.OmniClient;
 import dev.deftu.omnicore.api.client.render.stack.OmniMatrixStack;
 import dev.deftu.omnicore.api.client.render.stack.OmniMatrixStacks;
-import dev.deftu.omnicore.api.data.aabb.OmniAABB;
 import dev.deftu.omnicore.api.data.vec.OmniVec3d;
+import dev.deftu.omnicore.api.entity.OmniEntities;
 import net.minecraft.client.render.entity.EntityRenderDispatcher;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.LivingEntity;
@@ -77,21 +77,11 @@ public abstract class MixinRenderManager {
         //$$ OmniVec3d offset = OmniVec3d.ZERO;
         //#endif
 
-        OmniVec3d entityPosition = new OmniVec3d(
-                //#if MC >=1.16.5
-                entity.getPos()
-                //#else
-                //$$ entity.posX, entity.posY, entity.posZ
-                //#endif
-        );
-        OmniVec3d lookVec = new OmniVec3d(entity.getRotationVector());
-        OmniAABB entityAABB = new OmniAABB(entity.getBoundingBox());
-
         HitboxRendererKt.renderHitbox(
                 stack,
                 offset,
-                entityPosition,
-                lookVec,
+                OmniEntities.getCurrentPos(entity),
+                new OmniVec3d(entity.getRotationVector()),
                 entity.getStandingEyeHeight(),
                 entity instanceof LivingEntity,
                 entity == OmniClient.get().targetedEntity,
@@ -101,7 +91,7 @@ public abstract class MixinRenderManager {
                 //$$ entity.width,
                 //#endif
                 entity.getTargetingMargin(),
-                entityAABB
+                OmniEntities.getRenderBoundingBox(entity)
         );
     }
 

@@ -19,7 +19,7 @@ import dev.deftu.omnicore.api.math.OmniVector3f
 import net.minecraft.entity.Entity
 import kotlin.math.abs
 
-val STRIPPLE_PATTERN: Short = 0xAAAA.toShort()
+val STIPPLE_PATTERN: Short = 0xAAAA.toShort()
 
 val HITBOX_SNIPPET: OmniRenderPipeline.Snippet = OmniRenderPipelineSnippets.builder().run {
     setDepthTest(OmniRenderPipeline.DepthTest.LESS_OR_EQUAL)
@@ -44,7 +44,7 @@ val OUTLINE_BOX_PIPELINE: OmniRenderPipeline = OmniRenderPipelines.builderWithDe
     DrawMode.LINES
 ).applySnippet(HITBOX_SNIPPET).build()
 
-val OUTLINE_STRIPPLE_BOX_PIPELINE: OmniRenderPipeline = OUTLINE_BOX_PIPELINE.newBuilder().configureLegacyEffects {
+val OUTLINE_STIPPLE_BOX_PIPELINE: OmniRenderPipeline = OUTLINE_BOX_PIPELINE.newBuilder().configureLegacyEffects {
     lineStipple = true
 }.build()
 
@@ -54,7 +54,7 @@ val VIEW_RAY_PIPELINE: OmniRenderPipeline = OmniRenderPipelines.builderWithDefau
     DrawMode.LINES
 ).applySnippet(HITBOX_SNIPPET).build()
 
-val VIEW_RAY_STRIPPLE_PIPELINE: OmniRenderPipeline = VIEW_RAY_PIPELINE.newBuilder().configureLegacyEffects {
+val VIEW_RAY_STIPPLE_PIPELINE: OmniRenderPipeline = VIEW_RAY_PIPELINE.newBuilder().configureLegacyEffects {
     lineStipple = true
 }.build()
 
@@ -90,11 +90,11 @@ fun renderHitbox(
     // Outline
     val outline = info.outline
     if (outline.isShown) {
-        val pipeline = if (outline.isDashed) OUTLINE_STRIPPLE_BOX_PIPELINE else OUTLINE_BOX_PIPELINE
+        val pipeline = if (outline.isDashed) OUTLINE_STIPPLE_BOX_PIPELINE else OUTLINE_BOX_PIPELINE
         renderOutlineBox(pipeline, stack, entityBoundingBox, outline.getColor()) {
             setLineWidth(outline.width)
             if (outline.isDashed) {
-                setLineStipple(info.dashFactor, STRIPPLE_PATTERN)
+                setLineStipple(info.dashFactor, STIPPLE_PATTERN)
             }
         }
     }
@@ -123,11 +123,11 @@ fun renderHitbox(
                 boundingBox = boundingBox.offset(collisionSize, 0.0, collisionSize)
             }
 
-            val pipeline = if (eyeline.isDashed) OUTLINE_STRIPPLE_BOX_PIPELINE else OUTLINE_BOX_PIPELINE
+            val pipeline = if (eyeline.isDashed) OUTLINE_STIPPLE_BOX_PIPELINE else OUTLINE_BOX_PIPELINE
             renderOutlineBox(pipeline, stack, boundingBox, eyeline.getColor()) {
                 setLineWidth(eyeline.width)
                 if (eyeline.isDashed) {
-                    setLineStipple(info.dashFactor, STRIPPLE_PATTERN)
+                    setLineStipple(info.dashFactor, STIPPLE_PATTERN)
                 }
             }
         }
@@ -136,11 +136,11 @@ fun renderHitbox(
     // View Ray
     val viewRay = info.viewRay
     if (viewRay.isShown) {
-        val pipeline = if (viewRay.isDashed) VIEW_RAY_STRIPPLE_PIPELINE else VIEW_RAY_PIPELINE
+        val pipeline = if (viewRay.isDashed) VIEW_RAY_STIPPLE_PIPELINE else VIEW_RAY_PIPELINE
         renderViewRay(pipeline, stack, offset, lookVec, eyeHeight, viewRay.getColor()) {
             setLineWidth(viewRay.width)
             if (viewRay.isDashed) {
-                setLineStipple(info.dashFactor, STRIPPLE_PATTERN)
+                setLineStipple(info.dashFactor, STIPPLE_PATTERN)
             }
         }
     }

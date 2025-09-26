@@ -27,7 +27,7 @@ import org.spongepowered.asm.mixin.Unique;
 
 @Mixin(EntityRenderDispatcher.class)
 public abstract class MixinRenderManager {
-    //#if MC >=1.21.4
+    //#if MC >=1.21.5
     @Unique
     private static ThreadLocal<Entity> polyhitbox$entity = ThreadLocal.withInitial(() -> null);
     //#endif

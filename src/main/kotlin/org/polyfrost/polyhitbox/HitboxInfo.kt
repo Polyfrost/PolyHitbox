@@ -77,7 +77,6 @@ class HitboxInfo(private val id: String) {
             _tree = value
         }
 
-
     inner class ElementInfo(
         isShown: Boolean,
         initialColor: PolyColor,

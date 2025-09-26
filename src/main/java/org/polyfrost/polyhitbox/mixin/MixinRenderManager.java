@@ -77,7 +77,13 @@ public abstract class MixinRenderManager {
         //$$ OmniVec3d offset = OmniVec3d.ZERO;
         //#endif
 
-        OmniVec3d entityPosition = new OmniVec3d(entity.getPos());
+        OmniVec3d entityPosition = new OmniVec3d(
+                //#if MC >=1.16.5
+                entity.getPos()
+                //#else
+                //$$ entity.posX, entity.posY, entity.posZ
+                //#endif
+        );
         OmniVec3d lookVec = new OmniVec3d(entity.getRotationVector());
         OmniAABB entityAABB = new OmniAABB(entity.getBoundingBox());
 

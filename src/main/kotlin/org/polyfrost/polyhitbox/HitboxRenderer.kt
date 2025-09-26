@@ -16,6 +16,7 @@ import dev.deftu.omnicore.api.data.shape.OmniVoxelShapes
 import dev.deftu.omnicore.api.data.vec.OmniVec3d
 import dev.deftu.omnicore.api.identifierOrThrow
 import dev.deftu.omnicore.api.math.OmniVector3f
+import net.minecraft.entity.Entity
 import kotlin.math.abs
 
 val STRIPPLE_PATTERN: Short = 0xAAAA.toShort()
@@ -180,4 +181,14 @@ private fun renderOutlineBox(
     val buffer = pipeline.createBufferBuilder()
     OmniShapeRenderer.SHAPE_OUTLINE.render(buffer, stack, OmniVoxelShapes.cuboid(boundingBox).simplify(), color)
     buffer.buildOrNull()?.drawAndClose(pipeline, builder)
+}
+
+private fun getEntityId(entity: Entity): String? {
+    //#if MC >= 1.16.5
+    val entityType = entity.type.toString()
+    val type = entityType.substring(entityType.lastIndexOf("."), entityType.length).replace(".", "")
+    //#else
+    //$$ val type = EntityList.getEntityString(entity) ?: return null
+    //#endif
+    return type
 }

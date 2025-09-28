@@ -16,20 +16,18 @@ plugins {
 
 toolkitLoomHelper {
     useOneConfig {
-        version = "1.0.0-alpha.70"
-        loaderVersion = "1.1.0-alpha.44"
-
+        version = "1.0.0-alpha.153"
+        loaderVersion = "1.1.0-alpha.49"
         usePolyMixin = true
-        polyMixinVersion = "0.8.4+build.2"
-
+        polyMixinVersion = "0.8.4+build.6"
         applyLoaderTweaker = true
-
         for (module in arrayOf("commands", "config", "config-impl", "events", "internal", "ui", "utils")) {
             +module
         }
     }
+
     useDevAuth("1.2.1")
-    useMixinExtras("0.4.1")
+    useMixinExtras("0.5.0")
 
     // Turns off the server-side run configs, as we're building a client-sided mod.
     disableRunConfigs(GameSide.SERVER)
@@ -42,18 +40,5 @@ toolkitLoomHelper {
     if (mcData.isForge) {
         // Configures the Mixin tweaker if we are building for Forge.
         useForgeMixin(modData.id)
-    }
-}
-
-dependencies {
-    // Add (Legacy) Fabric API as dependencies (these are both optional but are particularly useful).
-    if (mcData.isFabric) {
-        if (mcData.isLegacyFabric) {
-            // 1.8.9 - 1.13
-            modImplementation("net.legacyfabric.legacy-fabric-api:legacy-fabric-api:${mcData.dependencies.legacyFabric.legacyFabricApiVersion}")
-        } else {
-            // 1.16.5+
-            modImplementation("net.fabricmc.fabric-api:fabric-api:${mcData.dependencies.fabric.fabricApiVersion}")
-        }
     }
 }

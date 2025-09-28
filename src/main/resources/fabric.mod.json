@@ -1,0 +1,23 @@
+{
+	"schemaVersion": 1,
+	"id": "${mod_id}",
+	"name": "${mod_name}",
+	"version": "${mod_version}",
+	"description": "",
+	"authors": [
+		"Polyfrost"
+	],
+	"license": "GPL-3.0",
+	"environment": "client",
+	"entrypoints": {
+		"client": [
+			{
+				"value": "org.polyfrost.polyhitbox.PolyHitbox",
+				"adapter": "kotlin"
+			}
+		]
+	},
+	"mixins": [
+		"mixins.${mod_id}.json"
+	]
+}

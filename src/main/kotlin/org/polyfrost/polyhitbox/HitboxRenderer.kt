@@ -19,7 +19,7 @@ import dev.deftu.omnicore.api.math.OmniVector3f
 import net.minecraft.entity.Entity
 import kotlin.math.abs
 
-val STIPPLE_PATTERN: Short = 0xAAAA.toShort()
+const val STIPPLE_PATTERN: Short = 0xAAAA.toShort()
 
 val HITBOX_SNIPPET: OmniRenderPipeline.Snippet = OmniRenderPipelineSnippets.builder().run {
     setDepthTest(OmniRenderPipeline.DepthTest.LESS_OR_EQUAL)
@@ -33,13 +33,13 @@ val HITBOX_SNIPPET: OmniRenderPipeline.Snippet = OmniRenderPipelineSnippets.buil
 }
 
 val BOX_PIPELINE: OmniRenderPipeline = OmniRenderPipelines.builderWithDefaultShader(
-    identifierOrThrow(PolyHitbox.MODID, "pipeline/box"),
+    identifierOrThrow(PolyHitboxConstants.ID, "pipeline/box"),
     DefaultVertexFormats.POSITION_COLOR,
     DrawMode.QUADS
 ).applySnippet(HITBOX_SNIPPET).build()
 
 val OUTLINE_BOX_PIPELINE: OmniRenderPipeline = OmniRenderPipelines.builderWithDefaultShader(
-    identifierOrThrow(PolyHitbox.MODID, "pipeline/outline_box"),
+    identifierOrThrow(PolyHitboxConstants.ID, "pipeline/outline_box"),
     DefaultVertexFormats.POSITION_COLOR_NORMAL,
     DrawMode.LINES
 ).applySnippet(HITBOX_SNIPPET).build()
@@ -49,7 +49,7 @@ val OUTLINE_STIPPLE_BOX_PIPELINE: OmniRenderPipeline = OUTLINE_BOX_PIPELINE.newB
 }.build()
 
 val VIEW_RAY_PIPELINE: OmniRenderPipeline = OmniRenderPipelines.builderWithDefaultShader(
-    identifierOrThrow(PolyHitbox.MODID, "pipeline/view_ray"),
+    identifierOrThrow(PolyHitboxConstants.ID, "pipeline/view_ray"),
     DefaultVertexFormats.POSITION_COLOR_NORMAL,
     DrawMode.LINES
 ).applySnippet(HITBOX_SNIPPET).build()

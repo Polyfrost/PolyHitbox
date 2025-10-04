@@ -1,29 +1,35 @@
 package org.polyfrost.polyhitbox
 
+//#if FABRIC
+import net.fabricmc.api.ClientModInitializer
+//#elseif FORGE
+//#if MC >= 1.16.5
+//$$ import net.minecraftforge.eventbus.api.IEventBus
+//$$ import net.minecraftforge.fml.common.Mod
+//$$ import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent
+//$$ import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext
+//#else
+//$$ import net.minecraftforge.fml.common.Mod
+//$$ import net.minecraftforge.fml.common.event.FMLInitializationEvent
+//#endif
+//#endif
+
 import dev.deftu.omnicore.api.client.client
 import org.apache.logging.log4j.LogManager
 import org.polyfrost.oneconfig.api.config.v1.ConfigManager
 
-//#if FORGE
-//$$ @net.minecraftforge.fml.common.Mod(
-//#if MC >=1.20.1 || MC <=1.12.2
-//$$     modid = PolyHitbox.MODID,
-//$$     name = PolyHitbox.NAME,
-//$$     version = PolyHitbox.VERSION,
-//$$     modLanguageAdapter = "org.polyfrost.oneconfig.utils.v1.forge.KotlinLanguageAdapter"
+//#if FORGE-LIKE
+//#if MC >= 1.16.5
+//$$ @Mod(PolyHitboxConstants.ID)
 //#else
-//$$     value = PolyHitbox.MODID
+//$$ @Mod(modid = PolyHitboxConstants.ID, version = PolyHitboxConstants.VERSION)
 //#endif
-//$$ )
 //#endif
 object PolyHitbox
 //#if FABRIC
-    : net.fabricmc.api.ClientModInitializer
+    : ClientModInitializer
 //#endif
 {
-    const val MODID = "@MOD_ID@"
-    const val NAME = "@MOD_NAME@"
-    const val VERSION = "@MOD_VERSION@"
     private val LOGGER = LogManager.getLogger("PolyHitbox")
     private val hitboxInfo = HitboxInfo("hitbox.yaml")
 
@@ -43,7 +49,20 @@ object PolyHitbox
             //#endif
         }
 
-    fun initialize() {
+    //#if FABRIC
+    override
+    //#elseif FORGE && MC <= 1.12.2
+    //$$ @Mod.EventHandler
+    //#endif
+    fun onInitializeClient(
+        //#if FORGE-LIKE
+        //#if MC >= 1.16.5
+        //$$ event: FMLClientSetupEvent
+        //#else
+        //$$ event: FMLInitializationEvent
+        //#endif
+        //#endif
+    ) {
         hitboxInfo.tree.title = "PolyHitbox"
         hitboxInfo.tree = ConfigManager.active().register(hitboxInfo.tree).tree
         var enabled = false
@@ -59,17 +78,18 @@ object PolyHitbox
         //hitboxesEnabled = enabled
         //#endif
     }
+    //#endif
 
-    // TODO: Fix 1.16.5 Forge (idk what changed)
-    //#if FORGE
-    //$$ @net.minecraftforge.fml.common.Mod.EventHandler
-    //$$ fun onFMLInit(event: net.minecraftforge.fml.common.event.FMLInitializationEvent) {
-    //$$     initialize()
+    //#if FORGE && MC >= 1.16.5
+    //$$ init {
+    //$$     setupForgeEvents(FMLJavaModLoadingContext.get().modEventBus)
     //$$ }
-    //#else
-    override fun onInitializeClient() {
-        initialize()
-    }
+    //#endif
+
+    //#if FORGE-LIKE && MC >= 1.16.5
+    //$$ private fun setupForgeEvents(modEventBus: IEventBus) {
+    //$$     modEventBus.addListener(this::onInitializeClient)
+    //$$ }
     //#endif
 
     fun getHitboxInfo(): HitboxInfo {

@@ -15,7 +15,6 @@ import net.fabricmc.api.ClientModInitializer
 //#endif
 
 import dev.deftu.omnicore.api.client.client
-import org.apache.logging.log4j.LogManager
 import org.polyfrost.oneconfig.api.config.v1.ConfigManager
 
 //#if FORGE-LIKE
@@ -30,7 +29,6 @@ object PolyHitbox
     : ClientModInitializer
 //#endif
 {
-    private val LOGGER = LogManager.getLogger("PolyHitbox")
     private val hitboxInfo = HitboxInfo("hitbox.yaml")
 
     private var hitboxesEnabled: Boolean
@@ -78,7 +76,6 @@ object PolyHitbox
         //hitboxesEnabled = enabled
         //#endif
     }
-    //#endif
 
     //#if FORGE && MC >= 1.16.5
     //$$ init {

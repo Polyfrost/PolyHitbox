@@ -78,6 +78,7 @@ object PolyHitbox
         //hitboxesEnabled = enabled
         //#endif
     }
+    //#endif
 
     //#if FORGE && MC >= 1.16.5
     //$$ init {

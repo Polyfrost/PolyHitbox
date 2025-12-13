@@ -1,4 +1,4 @@
-package org.polyfrost.polyhitbox
+package org.polyfrost.polyhitbox.client
 
 import dev.deftu.omnicore.api.client.render.DefaultVertexFormats
 import dev.deftu.omnicore.api.client.render.DrawMode
@@ -16,6 +16,8 @@ import dev.deftu.omnicore.api.data.shape.OmniVoxelShapes
 import dev.deftu.omnicore.api.data.vec.OmniVec3d
 import dev.deftu.omnicore.api.identifierOrThrow
 import dev.deftu.omnicore.api.math.OmniVector3f
+import org.polyfrost.polyhitbox.PolyHitboxConstants
+import org.polyfrost.polyhitbox.PolyHitboxEntrypoint
 import kotlin.math.abs
 
 const val STIPPLE_PATTERN: Short = 0xAAAA.toShort()
@@ -69,7 +71,7 @@ fun renderHitbox(
     collisionSize: Double,
     boundingBox: OmniAABB,
 ) {
-    val info = PolyHitbox.getHitboxInfo()
+    val info = PolyHitboxClient.getHitboxInfo()
     when (info.showMode) {
         0 -> info.isTargeted = isTargeted
         1 -> if (!isTargeted) return else info.isTargeted = true

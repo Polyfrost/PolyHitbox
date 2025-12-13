@@ -12,7 +12,7 @@
 	"entrypoints": {
 		"client": [
 			{
-				"value": "org.polyfrost.polyhitbox.PolyHitbox",
+				"value": "org.polyfrost.polyhitbox.PolyHitboxEntrypoint",
 				"adapter": "kotlin"
 			}
 		]

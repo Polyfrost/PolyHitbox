@@ -1,4 +1,4 @@
-package org.polyfrost.polyhitbox
+package org.polyfrost.polyhitbox.client
 
 import dev.deftu.omnicore.api.color.OmniColor
 import org.polyfrost.oneconfig.api.config.v1.Properties.ktProperty

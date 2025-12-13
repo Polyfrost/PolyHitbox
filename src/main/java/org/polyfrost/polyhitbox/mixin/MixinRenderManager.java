@@ -8,7 +8,7 @@ import dev.deftu.omnicore.api.entity.OmniEntities;
 import net.minecraft.client.render.entity.EntityRenderDispatcher;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.LivingEntity;
-import org.polyfrost.polyhitbox.HitboxRendererKt;
+import org.polyfrost.polyhitbox.client.HitboxRendererKt;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;

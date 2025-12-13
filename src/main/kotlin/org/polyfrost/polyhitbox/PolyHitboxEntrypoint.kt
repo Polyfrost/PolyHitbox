@@ -14,8 +14,7 @@ import net.fabricmc.api.ClientModInitializer
 //#endif
 //#endif
 
-import dev.deftu.omnicore.api.client.client
-import org.polyfrost.oneconfig.api.config.v1.ConfigManager
+import org.polyfrost.polyhitbox.client.PolyHitboxClient
 
 //#if FORGE-LIKE
 //#if MC >= 1.16.5
@@ -24,29 +23,11 @@ import org.polyfrost.oneconfig.api.config.v1.ConfigManager
 //$$ @Mod(modid = PolyHitboxConstants.ID, version = PolyHitboxConstants.VERSION)
 //#endif
 //#endif
-object PolyHitbox
+class PolyHitboxEntrypoint
 //#if FABRIC
     : ClientModInitializer
 //#endif
 {
-    private val hitboxInfo = HitboxInfo("hitbox.yaml")
-
-    private var hitboxesEnabled: Boolean
-        get() {
-            //#if MC < 1.14
-            //$$ return client.renderManager.isDebugBoundingBox
-            //#else
-            return client.entityRenderDispatcher.shouldRenderHitboxes()
-            //#endif
-        }
-        set(value) {
-            //#if MC < 1.14
-            //$$ client.renderManager.isDebugBoundingBox = value
-            //#else
-            client.entityRenderDispatcher.setRenderHitboxes(value)
-            //#endif
-        }
-
     //#if FABRIC
     override
     //#elseif FORGE && MC <= 1.12.2
@@ -61,20 +42,13 @@ object PolyHitbox
         //#endif
         //#endif
     ) {
-        hitboxInfo.tree.title = "PolyHitbox"
-        hitboxInfo.tree = ConfigManager.active().register(hitboxInfo.tree).tree
-        var enabled = false
-        if (hitboxInfo.showMode != 2) {
-            enabled = true
-        }
-
-        //#if FABRIC && MC > 1.14
-        net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents.CLIENT_STARTED.register { tick ->
-            hitboxesEnabled = enabled
-        }
-        //#else
-        //hitboxesEnabled = enabled
+        //#if FORGE && MC <= 1.12.2
+        //$$ if (!event.side.isClient) {
+        //$$     return
+        //$$ }
         //#endif
+
+        PolyHitboxClient.initialize()
     }
 
     //#if FORGE && MC >= 1.16.5
@@ -88,8 +62,4 @@ object PolyHitbox
     //$$     modEventBus.addListener(this::onInitializeClient)
     //$$ }
     //#endif
-
-    fun getHitboxInfo(): HitboxInfo {
-        return hitboxInfo
-    }
 }

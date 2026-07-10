@@ -1,0 +1,41 @@
+{
+    "schemaVersion": 1,
+    "id": "${mod_id}",
+    "name": "${mod_name}",
+    "version": "${mod_version}",
+    "description": "${mod_description}",
+    "authors": [
+        "Polyfrost"
+    ],
+    "contact": {
+        "homepage": "https://polyfrost.org",
+        "sources": "https://github.com/Polyfrost/PolyHitbox",
+        "issues": "https://github.com/Polyfrost/PolyHitbox/issues"
+    },
+    "license": "LGPL-3.0-or-later",
+    "icon": "assets/${mod_id}/polyhitbox.svg",
+    "environment": "client",
+    "entrypoints": {
+        "client": [
+            {
+                "value": "org.polyfrost.polyhitbox.PolyHitboxClient",
+                "adapter": "kotlin"
+            }
+        ],
+        "modmenu": [
+            {
+                "value": "org.polyfrost.polyhitbox.integration.PolyHitboxModMenuIntegration",
+                "adapter": "kotlin"
+            }
+        ]
+    },
+    "mixins": [
+        "mixins.${mod_id}.json"
+    ],
+    "depends": {
+        "minecraft": ">=${mc_version}",
+        "fabricloader": ">=${loader_version}",
+        "oneconfigv1": ">=1.0.0-beta.6",
+        "fabric-language-kotlin": "*"
+    }
+}

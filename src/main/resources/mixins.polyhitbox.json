@@ -1,15 +1,10 @@
 {
-  "compatibilityLevel": "JAVA_8",
-  "minVersion": "0.7",
+  "compatibilityLevel": "JAVA_21",
+  "minVersion": "0.8",
   "package": "org.polyfrost.polyhitbox.mixin",
   "refmap": "mixins.polyhitbox.refmap.json",
-  "verbose": true,
   "client": [
-    "EntityMixin",
-    "EntityRendererMixin",
-    "GuiInventoryMixin",
-    "LayerArrowMixin",
-    "RenderManagerMixin",
-    "TileEntityMobSpawnerRendererMixin"
+    "HitboxRenderMixin",
+    "VanillaHitboxMixin"
   ]
 }

@@ -1,20 +1,19 @@
 package org.polyfrost.polyhitbox.config
 
-import cc.polyfrost.oneconfig.utils.dsl.mc
-import net.minecraft.client.entity.EntityPlayerSP
-import net.minecraft.entity.Entity
-import net.minecraft.entity.EntityHanging
-import net.minecraft.entity.EntityLiving
-import net.minecraft.entity.IProjectile
-import net.minecraft.entity.item.EntityArmorStand
-import net.minecraft.entity.item.EntityItem
-import net.minecraft.entity.projectile.EntityWitherSkull
-import net.minecraft.entity.item.EntityXPOrb
-import net.minecraft.entity.monster.IMob
-import net.minecraft.entity.player.EntityPlayer
-import net.minecraft.entity.projectile.EntityArrow
-import net.minecraft.entity.projectile.EntityFireball
-import org.polyfrost.polyhitbox.render.DummyWorld
+import net.minecraft.client.player.LocalPlayer
+import net.minecraft.world.entity.Entity
+import net.minecraft.world.entity.ExperienceOrb
+import net.minecraft.world.entity.Mob
+import net.minecraft.world.entity.decoration.ArmorStand
+import net.minecraft.world.entity.decoration.HangingEntity
+import net.minecraft.world.entity.item.ItemEntity
+import net.minecraft.world.entity.monster.Enemy
+import net.minecraft.world.entity.player.Player
+import net.minecraft.world.entity.projectile.Projectile
+// YALMM backports modern (26.2) mappings to 1.21.1-1.21.10, so these packages are uniform.
+import net.minecraft.world.entity.projectile.arrow.AbstractArrow
+import net.minecraft.world.entity.projectile.hurtingprojectile.Fireball
+import net.minecraft.world.entity.projectile.hurtingprojectile.WitherSkull
 
 private const val HIGH = 0
 private const val MID = 1
@@ -24,72 +23,33 @@ enum class HitboxCategory(
     val displayName: String,
     val condition: (Entity) -> Boolean,
     val priority: Int = MID,
-    val example: Entity? = null,
     var config: HitboxConfig = HitboxConfig(),
 ) {
-    DEFAULT(
-        displayName = "General",
-        condition = { true },
-        priority = LOW
-    ),
-    PLAYER(
-        displayName = "Player",
-        condition = { it is EntityPlayer }
-    ),
-    SELF(
-        displayName = "Self",
-        condition = { it is EntityPlayerSP && it.uniqueID == mc.thePlayer?.uniqueID },
-        priority = HIGH
-    ),
-    MOB(
-        displayName = "Mob",
-        condition = { it is EntityLiving }
-    ),
-    MONSTER(
-        displayName = "Monster",
-        condition = { it is IMob },
-        priority = HIGH
-    ),
-    ARROW(
-        displayName = "Arrow",
-        condition = { it is EntityArrow },
-        example = DummyWorld.ARROW,
-        priority = HIGH
-    ),
-    FIREBALL(
-        displayName = "Fireball",
-        condition = { it is EntityFireball },
-        example = DummyWorld.FIREBALL
-    ),
-    PROJECTILE(
-        displayName = "Projectile",
-        condition = { it is IProjectile },
-        example = DummyWorld.SNOWBALL
-    ),
-    WITHER_SKULL(
-        displayName = "Wither Skull",
-        condition = { it is EntityWitherSkull },
-        example = DummyWorld.WITHER_SKULL,
-        priority = HIGH
-    ),
-    FRAMES(
-        displayName = "Frames",
-        condition = { it is EntityHanging },
-        example = DummyWorld.ITEM_FRAME,
-    ),
-    ARMOR_STAND(
-        displayName = "Armor Stand",
-        condition = { it is EntityArmorStand },
-        example = DummyWorld.ARMOR_STAND,
-    ),
-    ITEM(
-        displayName = "Item",
-        condition = { it is EntityItem },
-        example = DummyWorld.ITEM,
-    ),
-    XP(
-        displayName = "XP",
-        condition = { it is EntityXPOrb },
-        example = DummyWorld.XP_ORB,
-    )
+    DEFAULT("General", { true }, LOW),
+    PLAYER("Player", { it is Player }),
+    SELF("Self", { it is LocalPlayer }, HIGH),
+    MOB("Mob", { it is Mob }),
+    MONSTER("Monster", { it is Enemy }, HIGH),
+    ARROW("Arrow", { it is AbstractArrow }, HIGH),
+    FIREBALL("Fireball", { it is Fireball }),
+    PROJECTILE("Projectile", { it is Projectile }),
+    WITHER_SKULL("Wither Skull", { it is WitherSkull }, HIGH),
+    FRAMES("Frames", { it is HangingEntity }),
+    ARMOR_STAND("Armor Stand", { it is ArmorStand }),
+    ITEM("Item", { it is ItemEntity }),
+    XP("XP", { it is ExperienceOrb });
+
+    companion object {
+        private val sortedByPriority: List<HitboxCategory> =
+            (entries - DEFAULT).sortedBy { it.priority }
+
+        /**
+         * Resolves the styling to use for [entity]: the highest-priority matching category that
+         * overrides the default, otherwise the [DEFAULT] styling.
+         */
+        fun resolve(entity: Entity): HitboxConfig {
+            val matched = sortedByPriority.firstOrNull { it.condition(entity) }?.config
+            return if (matched != null && matched.overwriteDefault) matched else DEFAULT.config
+        }
+    }
 }

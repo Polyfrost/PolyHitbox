@@ -1,4 +1,4 @@
-<img align="right" src="src/main/resources/polyhitbox.svg" alt="PolyHitbox Icon"/>
+<img align="right" src="src/main/resources/assets/polyhitbox/polyhitbox.svg" alt="PolyHitbox Icon"/>
 
 # PolyHitbox
 
@@ -8,8 +8,7 @@ A hitbox modification mod
 
 ## Features
 
-- Toggle Keybind
-- Show Condition - Always / Hovered / Toggled / Never
+- Show Condition - Always / Debug (F3+B) / Hovered / Never
 - Line Style - Normal / Proportioned / Dashed
 - Hovered Color
 - Sides

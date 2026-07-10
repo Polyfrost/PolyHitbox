@@ -14,9 +14,10 @@ import java.util.function.Supplier
 /**
  * PolyHitbox settings.
  *
- * The per-category options are identical in shape but must each live under their own subcategory,
- * which annotation-based config can't express (a `@Switch`'s `category` is fixed per class). The
- * tree is therefore built programmatically in [makeTree], one option group per [HitboxCategory].
+ * Every [HitboxCategory] gets its own identically-shaped tab (the OneConfig "category"), each led by
+ * an "Enabled" switch: on General it toggles the whole renderer, elsewhere it enables that category's
+ * style overrides. Annotation-based config can't express this (a `@Switch`'s `category` is fixed per
+ * class), so the tree is built programmatically in [makeTree].
  */
 object ModConfig : Config(
     "polyhitbox.json",
@@ -24,9 +25,6 @@ object ModConfig : Config(
     "PolyHitbox",
     Config.Category.COMBAT,
 ) {
-    private const val GENERAL = "General"
-    private const val CATEGORIES = "Categories"
-
     var enabled = true
 
     init {
@@ -35,9 +33,6 @@ object ModConfig : Config(
 
     override fun makeTree(): Tree {
         val tree = Tree.tree(id)
-        tree.put(
-            switch("enabled", "Enabled", "Enable hitbox rendering.", { enabled }, { enabled = it }, GENERAL, GENERAL),
-        )
         for (category in HitboxCategory.entries) {
             addCategory(tree, category)
         }
@@ -45,55 +40,63 @@ object ModConfig : Config(
     }
 
     private fun addCategory(tree: Tree, category: HitboxCategory) {
-        val id = category.name
-        val sub = category.displayName
+        val key = category.name
+        // Each category is its own tab. A single default-named subcategory keeps the list flat (no
+        // section header), so every tab lines up with the same layout.
+        val tab = category.displayName
+        val sub = "General"
         val cfg = { category.config }
+        val isDefault = category == HitboxCategory.DEFAULT
 
-        val enableProp: Property<Boolean>? = if (category != HitboxCategory.DEFAULT) {
+        // The "Enabled" switch atop each tab: on General it is the master renderer toggle; on every
+        // other tab it enables that category's style overrides (otherwise it falls back to General).
+        val enableProp: Property<Boolean> = if (isDefault) {
+            switch("enabled", "Enabled", "Enable hitbox rendering.", { enabled }, { enabled = it }, tab, sub)
+        } else {
             switch(
-                "$id.overwriteDefault", "Enable",
-                "Override the general styling for ${category.displayName}.",
-                { cfg().overwriteDefault }, { cfg().overwriteDefault = it }, CATEGORIES, sub,
+                "$key.overwriteDefault", "Enabled",
+                "Override the General styling for ${category.displayName}.",
+                { cfg().overwriteDefault }, { cfg().overwriteDefault = it }, tab, sub,
             )
-        } else null
+        }
 
         val showCondition = dropdown(
-            "$id.showCondition", "Show Condition",
+            "$key.showCondition", "Show Condition",
             "When to draw this hitbox. \"Debug (F3+B)\" follows the vanilla hitbox toggle.",
             { cfg().showCondition }, { cfg().showCondition = it },
-            arrayOf("Always", "Debug (F3+B)", "Hovered", "Never"), CATEGORIES, sub,
+            arrayOf("Always", "Debug (F3+B)", "Hovered", "Never"), tab, sub,
         )
         val lineStyle = dropdown(
-            "$id.lineStyle", "Line Style", "",
+            "$key.lineStyle", "Line Style", "",
             { cfg().lineStyle }, { cfg().lineStyle = it },
-            arrayOf("Normal", "Proportioned", "Dashed"), CATEGORIES, sub,
+            arrayOf("Normal", "Proportioned", "Dashed"), tab, sub,
         )
         val dashFactor = sliderInt(
-            "$id.dashFactor", "Dash Factor", "",
-            { cfg().dashFactor }, { cfg().dashFactor = it }, 1f, 20f, 1f, CATEGORIES, sub,
+            "$key.dashFactor", "Dash Factor", "",
+            { cfg().dashFactor }, { cfg().dashFactor = it }, 1f, 20f, 1f, tab, sub,
         )
-        val hoverColor = switch("$id.hoverColor", "Different Color on Hover", "", { cfg().hoverColor }, { cfg().hoverColor = it }, CATEGORIES, sub)
+        val hoverColor = switch("$key.hoverColor", "Different Color on Hover", "", { cfg().hoverColor }, { cfg().hoverColor = it }, tab, sub)
 
-        val showSide = checkbox("$id.showSide", "Sides", "", { cfg().showSide }, { cfg().showSide = it }, CATEGORIES, sub)
-        val sideColor = color("$id.sideColor", "Side Color", { cfg().sideColor }, { cfg().sideColor = it }, CATEGORIES, sub)
-        val sideHoverColor = color("$id.sideHoverColor", "Hovered Side Color", { cfg().sideHoverColor }, { cfg().sideHoverColor = it }, CATEGORIES, sub)
+        val showSide = checkbox("$key.showSide", "Sides", "", { cfg().showSide }, { cfg().showSide = it }, tab, sub)
+        val sideColor = color("$key.sideColor", "Side Color", { cfg().sideColor }, { cfg().sideColor = it }, tab, sub)
+        val sideHoverColor = color("$key.sideHoverColor", "Hovered Side Color", { cfg().sideHoverColor }, { cfg().sideHoverColor = it }, tab, sub)
 
-        val showOutline = checkbox("$id.showOutline", "Outline", "", { cfg().showOutline }, { cfg().showOutline = it }, CATEGORIES, sub)
-        val outlineColor = color("$id.outlineColor", "Outline Color", { cfg().outlineColor }, { cfg().outlineColor = it }, CATEGORIES, sub)
-        val outlineHoverColor = color("$id.outlineHoverColor", "Hovered Outline Color", { cfg().outlineHoverColor }, { cfg().outlineHoverColor = it }, CATEGORIES, sub)
-        val outlineThickness = sliderFloat("$id.outlineThickness", "Outline Thickness", "", { cfg().outlineThickness }, { cfg().outlineThickness = it }, 1f, 5f, 0.5f, CATEGORIES, sub)
+        val showOutline = checkbox("$key.showOutline", "Outline", "", { cfg().showOutline }, { cfg().showOutline = it }, tab, sub)
+        val outlineColor = color("$key.outlineColor", "Outline Color", { cfg().outlineColor }, { cfg().outlineColor = it }, tab, sub)
+        val outlineHoverColor = color("$key.outlineHoverColor", "Hovered Outline Color", { cfg().outlineHoverColor }, { cfg().outlineHoverColor = it }, tab, sub)
+        val outlineThickness = sliderFloat("$key.outlineThickness", "Outline Thickness", "", { cfg().outlineThickness }, { cfg().outlineThickness = it }, 1f, 5f, 0.5f, tab, sub)
 
-        val showEyeHeight = checkbox("$id.showEyeHeight", "Eye Height", "", { cfg().showEyeHeight }, { cfg().showEyeHeight = it }, CATEGORIES, sub)
-        val eyeHeightColor = color("$id.eyeHeightColor", "Eye Height Color", { cfg().eyeHeightColor }, { cfg().eyeHeightColor = it }, CATEGORIES, sub)
-        val eyeHeightHoverColor = color("$id.eyeHeightHoverColor", "Hovered Eye Height Color", { cfg().eyeHeightHoverColor }, { cfg().eyeHeightHoverColor = it }, CATEGORIES, sub)
-        val eyeHeightThickness = sliderFloat("$id.eyeHeightThickness", "Eye Height Thickness", "", { cfg().eyeHeightThickness }, { cfg().eyeHeightThickness = it }, 1f, 5f, 0.5f, CATEGORIES, sub)
+        val showEyeHeight = checkbox("$key.showEyeHeight", "Eye Height", "", { cfg().showEyeHeight }, { cfg().showEyeHeight = it }, tab, sub)
+        val eyeHeightColor = color("$key.eyeHeightColor", "Eye Height Color", { cfg().eyeHeightColor }, { cfg().eyeHeightColor = it }, tab, sub)
+        val eyeHeightHoverColor = color("$key.eyeHeightHoverColor", "Hovered Eye Height Color", { cfg().eyeHeightHoverColor }, { cfg().eyeHeightHoverColor = it }, tab, sub)
+        val eyeHeightThickness = sliderFloat("$key.eyeHeightThickness", "Eye Height Thickness", "", { cfg().eyeHeightThickness }, { cfg().eyeHeightThickness = it }, 1f, 5f, 0.5f, tab, sub)
 
-        val showViewRay = checkbox("$id.showViewRay", "View Ray", "", { cfg().showViewRay }, { cfg().showViewRay = it }, CATEGORIES, sub)
-        val viewRayColor = color("$id.viewRayColor", "View Ray Color", { cfg().viewRayColor }, { cfg().viewRayColor = it }, CATEGORIES, sub)
-        val viewRayHoverColor = color("$id.viewRayHoverColor", "Hovered View Ray Color", { cfg().viewRayHoverColor }, { cfg().viewRayHoverColor = it }, CATEGORIES, sub)
-        val viewRayThickness = sliderFloat("$id.viewRayThickness", "View Ray Thickness", "", { cfg().viewRayThickness }, { cfg().viewRayThickness = it }, 1f, 5f, 0.5f, CATEGORIES, sub)
+        val showViewRay = checkbox("$key.showViewRay", "View Ray", "", { cfg().showViewRay }, { cfg().showViewRay = it }, tab, sub)
+        val viewRayColor = color("$key.viewRayColor", "View Ray Color", { cfg().viewRayColor }, { cfg().viewRayColor = it }, tab, sub)
+        val viewRayHoverColor = color("$key.viewRayHoverColor", "Hovered View Ray Color", { cfg().viewRayHoverColor }, { cfg().viewRayHoverColor = it }, tab, sub)
+        val viewRayThickness = sliderFloat("$key.viewRayThickness", "View Ray Thickness", "", { cfg().viewRayThickness }, { cfg().viewRayThickness = it }, 1f, 5f, 0.5f, tab, sub)
 
-        enableProp?.let { tree.put(it) }
+        tree.put(enableProp)
         val body = listOf(
             showCondition, lineStyle, dashFactor, hoverColor,
             showSide, sideColor, sideHoverColor,
@@ -106,9 +109,8 @@ object ModConfig : Config(
         // Dependencies (visibility). The Property-based overload registers a callback on the
         // dependency so the dependent re-evaluates when it changes; the Supplier-only overload is
         // evaluated once and never reacts, so it must be paired with an explicit revaluate trigger.
-        if (enableProp != null) {
-            body.forEach { it.addDisplayCondition(enableProp, true) }
-        }
+        // Everything below the tab's "Enabled" switch is hidden while it is off.
+        body.forEach { it.addDisplayCondition(enableProp, true) }
         dashFactor.addDisplayCondition(Supplier { shown(cfg().lineStyle == 2) })
         // A callback returning true vetoes the change; return false so lineStyle still updates while
         // re-evaluating the dash-factor visibility as a side effect.

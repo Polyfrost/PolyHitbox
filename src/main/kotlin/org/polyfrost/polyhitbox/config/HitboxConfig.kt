@@ -17,7 +17,6 @@ class HitboxConfig {
     var lineStyle = 0
     var dashFactor = 10
 
-    var accurate = true
     var hoverColor = false
 
     var showSide = false

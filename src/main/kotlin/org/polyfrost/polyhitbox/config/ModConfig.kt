@@ -72,7 +72,6 @@ object ModConfig : Config(
             "$id.dashFactor", "Dash Factor", "",
             { cfg().dashFactor }, { cfg().dashFactor = it }, 1f, 20f, 1f, CATEGORIES, sub,
         )
-        val accurate = switch("$id.accurate", "Accurate Hitbox", "", { cfg().accurate }, { cfg().accurate = it }, CATEGORIES, sub)
         val hoverColor = switch("$id.hoverColor", "Different Color on Hover", "", { cfg().hoverColor }, { cfg().hoverColor = it }, CATEGORIES, sub)
 
         val showSide = checkbox("$id.showSide", "Sides", "", { cfg().showSide }, { cfg().showSide = it }, CATEGORIES, sub)
@@ -96,7 +95,7 @@ object ModConfig : Config(
 
         enableProp?.let { tree.put(it) }
         val body = listOf(
-            showCondition, lineStyle, dashFactor, accurate, hoverColor,
+            showCondition, lineStyle, dashFactor, hoverColor,
             showSide, sideColor, sideHoverColor,
             showOutline, outlineColor, outlineHoverColor, outlineThickness,
             showEyeHeight, eyeHeightColor, eyeHeightHoverColor, eyeHeightThickness,
@@ -111,7 +110,9 @@ object ModConfig : Config(
             body.forEach { it.addDisplayCondition(enableProp, true) }
         }
         dashFactor.addDisplayCondition(Supplier { shown(cfg().lineStyle == 2) })
-        lineStyle.addCallback(Predicate<Int> { dashFactor.revaluateDisplay(); true })
+        // A callback returning true vetoes the change; return false so lineStyle still updates while
+        // re-evaluating the dash-factor visibility as a side effect.
+        lineStyle.addCallback(Predicate<Int> { dashFactor.revaluateDisplay(); false })
 
         sideColor.addDisplayCondition(showSide, true)
         outlineColor.addDisplayCondition(showOutline, true)

@@ -8,9 +8,10 @@ import net.minecraft.world.phys.Vec3
 import org.polyfrost.polyhitbox.config.HitboxCategory
 import org.polyfrost.polyhitbox.config.HitboxConfig
 import org.polyfrost.polyhitbox.config.ModConfig
+import kotlin.math.abs
+import kotlin.math.min
 //? if <26.2 {
 /*import com.mojang.blaze3d.vertex.PoseStack
-import com.mojang.blaze3d.vertex.VertexConsumer
 *///?}
 
 /**
@@ -18,13 +19,26 @@ import com.mojang.blaze3d.vertex.VertexConsumer
  *
  * Two backends exist because Minecraft's rendering pipeline diverges:
  *  - `>=26.2` lost the immediate `MultiBufferSource` path and draws through the world-space
- *    [net.minecraft.gizmos.Gizmos] system (stroke/fill cuboids + lines).
+ *    [net.minecraft.gizmos.Gizmos] system (stroke/fill cuboids, lines and rects).
  *  - `<26.2` uses `MultiBufferSource` + `RenderType`/`RenderTypes` geometry.
  *
- * Line-style variants (proportioned/dashed) and per-line thickness on the buffered backend are
- * simplified to a plain outline in this port; the gizmo backend honours stroke width.
+ * Line styles are reimplemented geometrically since GL line stipple has no modern equivalent:
+ * normal edges are lines, dashed edges are split into world-space dash segments, and proportioned
+ * edges are world-space quad "tubes" whose width always tracks the thickness. Line thickness for
+ * the normal/dashed styles is honoured from 1.21.11 on (lines carry a per-vertex width there) and
+ * on the gizmo backend; below that lines are a fixed width.
  */
 object HitboxRenderer {
+
+    private const val NORMAL = 0
+    private const val PROPORTIONED = 1
+    private const val DASHED = 2
+
+    /** World-space half-width of a proportioned line per thickness unit (matches the legacy `/200`). */
+    private const val PROPORTIONED_HALF = 1.0 / 200.0
+
+    /** World-space dash length per dash-factor step. */
+    private const val DASH_STEP = 0.05
 
     private fun shouldShow(config: HitboxConfig, entity: Entity, hovered: Entity?): Boolean =
         when (config.showCondition) {
@@ -43,6 +57,52 @@ object HitboxRenderer {
         Minecraft.getInstance().entityRenderDispatcher.shouldRenderHitBoxes()
     *///?}
 
+    // --- Shared, backend-agnostic geometry -------------------------------------------------------
+
+    private fun boxEdges(b: AABB): List<Pair<Vec3, Vec3>> = listOf(
+        Vec3(b.minX, b.minY, b.minZ) to Vec3(b.maxX, b.minY, b.minZ),
+        Vec3(b.maxX, b.minY, b.minZ) to Vec3(b.maxX, b.minY, b.maxZ),
+        Vec3(b.maxX, b.minY, b.maxZ) to Vec3(b.minX, b.minY, b.maxZ),
+        Vec3(b.minX, b.minY, b.maxZ) to Vec3(b.minX, b.minY, b.minZ),
+        Vec3(b.minX, b.maxY, b.minZ) to Vec3(b.maxX, b.maxY, b.minZ),
+        Vec3(b.maxX, b.maxY, b.minZ) to Vec3(b.maxX, b.maxY, b.maxZ),
+        Vec3(b.maxX, b.maxY, b.maxZ) to Vec3(b.minX, b.maxY, b.maxZ),
+        Vec3(b.minX, b.maxY, b.maxZ) to Vec3(b.minX, b.maxY, b.minZ),
+        Vec3(b.minX, b.minY, b.minZ) to Vec3(b.minX, b.maxY, b.minZ),
+        Vec3(b.maxX, b.minY, b.minZ) to Vec3(b.maxX, b.maxY, b.minZ),
+        Vec3(b.maxX, b.minY, b.maxZ) to Vec3(b.maxX, b.maxY, b.maxZ),
+        Vec3(b.minX, b.minY, b.maxZ) to Vec3(b.minX, b.maxY, b.maxZ),
+    )
+
+    private fun dashSegments(from: Vec3, to: Vec3, dashFactor: Int): List<Pair<Vec3, Vec3>> {
+        val total = to.subtract(from).length()
+        if (total < 1.0e-6) return listOf(from to to)
+        val dashLen = (dashFactor * DASH_STEP).coerceAtLeast(0.02)
+        val dir = to.subtract(from).scale(1.0 / total)
+        val segments = ArrayList<Pair<Vec3, Vec3>>()
+        var t = 0.0
+        while (t < total) {
+            segments.add(from.add(dir.scale(t)) to from.add(dir.scale(min(t + dashLen, total))))
+            t += dashLen * 2.0
+        }
+        return segments
+    }
+
+    /** Two perpendicular quads forming a world-space tube along `from`..`to`; each quad is 4 corners. */
+    private fun tubeQuads(from: Vec3, to: Vec3, halfWidth: Double): List<List<Vec3>> {
+        val delta = to.subtract(from)
+        val len = delta.length()
+        if (len < 1.0e-6) return emptyList()
+        val dir = delta.scale(1.0 / len)
+        val reference = if (abs(dir.y) < 0.99) Vec3(0.0, 1.0, 0.0) else Vec3(1.0, 0.0, 0.0)
+        val p1 = dir.cross(reference).normalize().scale(halfWidth)
+        val p2 = dir.cross(p1).normalize().scale(halfWidth)
+        return listOf(
+            listOf(from.add(p1), to.add(p1), to.subtract(p1), from.subtract(p1)),
+            listOf(from.add(p2), to.add(p2), to.subtract(p2), from.subtract(p2)),
+        )
+    }
+
     //? if >=26.2 {
     fun emitGizmos() {
         if (!ModConfig.enabled) return
@@ -58,8 +118,8 @@ object HitboxRenderer {
     }
 
     private fun emit(entity: Entity, config: HitboxConfig, partialTicks: Float, hover: Boolean) {
-        val offset = entity.getPosition(partialTicks).subtract(entity.position())
-        val box = entity.boundingBox.move(offset)
+        val current = entity.getPosition(partialTicks)
+        val box = entity.boundingBox.move(current.subtract(entity.position()))
 
         if (config.showSide) {
             val c = if (hover) config.sideHoverColor else config.sideColor
@@ -67,19 +127,37 @@ object HitboxRenderer {
         }
         if (config.showOutline) {
             val c = if (hover) config.outlineHoverColor else config.outlineColor
-            net.minecraft.gizmos.Gizmos.cuboid(box, net.minecraft.gizmos.GizmoStyle.stroke(c.argb, config.outlineThickness))
+            gizmoBox(config, box, c.argb, config.outlineThickness)
         }
         if (config.showEyeHeight) {
             val c = if (hover) config.eyeHeightHoverColor else config.eyeHeightColor
             val eyeY = box.minY + entity.eyeHeight
-            val eyeBox = AABB(box.minX, eyeY - 0.01, box.minZ, box.maxX, eyeY + 0.01, box.maxZ)
-            net.minecraft.gizmos.Gizmos.cuboid(eyeBox, net.minecraft.gizmos.GizmoStyle.stroke(c.argb, config.eyeHeightThickness))
+            gizmoBox(config, AABB(box.minX, eyeY - 0.01, box.minZ, box.maxX, eyeY + 0.01, box.maxZ), c.argb, config.eyeHeightThickness)
         }
         if (config.showViewRay) {
             val c = if (hover) config.viewRayHoverColor else config.viewRayColor
-            val eye = Vec3(entity.getPosition(partialTicks).x, box.minY + entity.eyeHeight, entity.getPosition(partialTicks).z)
-            val end = eye.add(entity.getViewVector(partialTicks).scale(2.0))
-            net.minecraft.gizmos.Gizmos.line(eye, end, c.argb, config.viewRayThickness)
+            val eye = Vec3(current.x, box.minY + entity.eyeHeight, current.z)
+            gizmoEdge(config, eye, eye.add(entity.getViewVector(partialTicks).scale(2.0)), c.argb, config.viewRayThickness)
+        }
+    }
+
+    private fun gizmoBox(config: HitboxConfig, box: AABB, argb: Int, thickness: Float) {
+        if (config.lineStyle == NORMAL) {
+            net.minecraft.gizmos.Gizmos.cuboid(box, net.minecraft.gizmos.GizmoStyle.stroke(argb, thickness))
+        } else {
+            for ((from, to) in boxEdges(box)) gizmoEdge(config, from, to, argb, thickness)
+        }
+    }
+
+    private fun gizmoEdge(config: HitboxConfig, from: Vec3, to: Vec3, argb: Int, thickness: Float) {
+        when (config.lineStyle) {
+            PROPORTIONED -> for (quad in tubeQuads(from, to, thickness * PROPORTIONED_HALF)) {
+                net.minecraft.gizmos.Gizmos.rect(quad[0], quad[1], quad[2], quad[3], net.minecraft.gizmos.GizmoStyle.fill(argb))
+            }
+            DASHED -> for ((a, b) in dashSegments(from, to, config.dashFactor)) {
+                net.minecraft.gizmos.Gizmos.line(a, b, argb, thickness)
+            }
+            else -> net.minecraft.gizmos.Gizmos.line(from, to, argb, thickness)
         }
     }
     //?} else {
@@ -120,71 +198,73 @@ object HitboxRenderer {
 
         if (config.showSide) {
             val c = if (hover) config.sideHoverColor else config.sideColor
-            fillBox(buffer.getBuffer(quadsType()), pose, box, c.argb)
+            fillBox(buffer, pose, box, c.argb)
         }
         if (config.showOutline) {
             val c = if (hover) config.outlineHoverColor else config.outlineColor
-            outlineBox(buffer.getBuffer(linesType()), pose, box, c.argb)
+            styledBox(config, buffer, pose, box, c.argb, config.outlineThickness)
         }
         if (config.showEyeHeight) {
             val c = if (hover) config.eyeHeightHoverColor else config.eyeHeightColor
             val eyeY = box.minY + entity.eyeHeight
-            outlineBox(buffer.getBuffer(linesType()), pose, AABB(box.minX, eyeY - 0.01, box.minZ, box.maxX, eyeY + 0.01, box.maxZ), c.argb)
+            styledBox(config, buffer, pose, AABB(box.minX, eyeY - 0.01, box.minZ, box.maxX, eyeY + 0.01, box.maxZ), c.argb, config.eyeHeightThickness)
         }
         if (config.showViewRay) {
             val c = if (hover) config.viewRayHoverColor else config.viewRayColor
-            val view = entity.getViewVector(partialTicks)
             val eyeY = box.minY + entity.eyeHeight
-            line(buffer.getBuffer(linesType()), pose, 0.0, eyeY, 0.0, view.x * 2.0, eyeY + view.y * 2.0, view.z * 2.0, c.argb)
+            val view = entity.getViewVector(partialTicks)
+            styledEdge(config, buffer, pose, Vec3(0.0, eyeY, 0.0), Vec3(view.x * 2.0, eyeY + view.y * 2.0, view.z * 2.0), c.argb, config.viewRayThickness)
         }
         pose.popPose()
     }
 
-    private fun outlineBox(vc: VertexConsumer, pose: PoseStack, b: AABB, argb: Int) {
-        line(vc, pose, b.minX, b.minY, b.minZ, b.maxX, b.minY, b.minZ, argb)
-        line(vc, pose, b.maxX, b.minY, b.minZ, b.maxX, b.minY, b.maxZ, argb)
-        line(vc, pose, b.maxX, b.minY, b.maxZ, b.minX, b.minY, b.maxZ, argb)
-        line(vc, pose, b.minX, b.minY, b.maxZ, b.minX, b.minY, b.minZ, argb)
-        line(vc, pose, b.minX, b.maxY, b.minZ, b.maxX, b.maxY, b.minZ, argb)
-        line(vc, pose, b.maxX, b.maxY, b.minZ, b.maxX, b.maxY, b.maxZ, argb)
-        line(vc, pose, b.maxX, b.maxY, b.maxZ, b.minX, b.maxY, b.maxZ, argb)
-        line(vc, pose, b.minX, b.maxY, b.maxZ, b.minX, b.maxY, b.minZ, argb)
-        line(vc, pose, b.minX, b.minY, b.minZ, b.minX, b.maxY, b.minZ, argb)
-        line(vc, pose, b.maxX, b.minY, b.minZ, b.maxX, b.maxY, b.minZ, argb)
-        line(vc, pose, b.maxX, b.minY, b.maxZ, b.maxX, b.maxY, b.maxZ, argb)
-        line(vc, pose, b.minX, b.minY, b.maxZ, b.minX, b.maxY, b.maxZ, argb)
+    private fun styledBox(config: HitboxConfig, buffer: net.minecraft.client.renderer.MultiBufferSource, pose: PoseStack, box: AABB, argb: Int, thickness: Float) {
+        for ((from, to) in boxEdges(box)) styledEdge(config, buffer, pose, from, to, argb, thickness)
     }
 
-    private fun line(vc: VertexConsumer, pose: PoseStack, x1: Double, y1: Double, z1: Double, x2: Double, y2: Double, z2: Double, argb: Int) {
-        var nx = (x2 - x1).toFloat(); var ny = (y2 - y1).toFloat(); var nz = (z2 - z1).toFloat()
-        val len = Mth.sqrt(nx * nx + ny * ny + nz * nz)
-        if (len > 1.0e-5f) { nx /= len; ny /= len; nz /= len }
-        vc.addVertex(pose.last(), x1.toFloat(), y1.toFloat(), z1.toFloat()).setColor(argb).setNormal(pose.last(), nx, ny, nz)
-        vc.addVertex(pose.last(), x2.toFloat(), y2.toFloat(), z2.toFloat()).setColor(argb).setNormal(pose.last(), nx, ny, nz)
+    private fun styledEdge(config: HitboxConfig, buffer: net.minecraft.client.renderer.MultiBufferSource, pose: PoseStack, from: Vec3, to: Vec3, argb: Int, thickness: Float) {
+        when (config.lineStyle) {
+            PROPORTIONED -> for (quad in tubeQuads(from, to, thickness * PROPORTIONED_HALF)) fillQuad(buffer, pose, quad, argb)
+            DASHED -> for ((a, b) in dashSegments(from, to, config.dashFactor)) line(buffer, pose, a, b, argb, thickness)
+            else -> line(buffer, pose, from, to, argb, thickness)
+        }
     }
 
-    private fun fillBox(vc: VertexConsumer, pose: PoseStack, b: AABB, argb: Int) {
-        quad(vc, pose, b.minX, b.minY, b.minZ, b.maxX, b.minY, b.minZ, b.maxX, b.minY, b.maxZ, b.minX, b.minY, b.maxZ, argb)
-        quad(vc, pose, b.minX, b.maxY, b.minZ, b.minX, b.maxY, b.maxZ, b.maxX, b.maxY, b.maxZ, b.maxX, b.maxY, b.minZ, argb)
-        quad(vc, pose, b.minX, b.minY, b.minZ, b.minX, b.maxY, b.minZ, b.maxX, b.maxY, b.minZ, b.maxX, b.minY, b.minZ, argb)
-        quad(vc, pose, b.minX, b.minY, b.maxZ, b.maxX, b.minY, b.maxZ, b.maxX, b.maxY, b.maxZ, b.minX, b.maxY, b.maxZ, argb)
-        quad(vc, pose, b.minX, b.minY, b.minZ, b.minX, b.minY, b.maxZ, b.minX, b.maxY, b.maxZ, b.minX, b.maxY, b.minZ, argb)
-        quad(vc, pose, b.maxX, b.minY, b.minZ, b.maxX, b.maxY, b.minZ, b.maxX, b.maxY, b.maxZ, b.maxX, b.minY, b.maxZ, argb)
+    // MultiBufferSource.BufferSource can only build one shared layer at a time and ends the previous
+    // when the render type changes, so the consumer is fetched per primitive rather than cached.
+    private fun line(buffer: net.minecraft.client.renderer.MultiBufferSource, pose: PoseStack, from: Vec3, to: Vec3, argb: Int, thickness: Float) {
+        val vc = buffer.getBuffer(linesType())
+        val delta = to.subtract(from)
+        val len = delta.length()
+        val n = if (len > 1.0e-6) delta.scale(1.0 / len) else delta
+        lineWidth(vc.addVertex(pose.last(), from.x.toFloat(), from.y.toFloat(), from.z.toFloat()).setColor(argb).setNormal(pose.last(), n.x.toFloat(), n.y.toFloat(), n.z.toFloat()), thickness)
+        lineWidth(vc.addVertex(pose.last(), to.x.toFloat(), to.y.toFloat(), to.z.toFloat()).setColor(argb).setNormal(pose.last(), n.x.toFloat(), n.y.toFloat(), n.z.toFloat()), thickness)
     }
 
-    private fun quad(vc: VertexConsumer, pose: PoseStack, x1: Double, y1: Double, z1: Double, x2: Double, y2: Double, z2: Double, x3: Double, y3: Double, z3: Double, x4: Double, y4: Double, z4: Double, argb: Int) {
-        vc.addVertex(pose.last(), x1.toFloat(), y1.toFloat(), z1.toFloat()).setColor(argb)
-        vc.addVertex(pose.last(), x2.toFloat(), y2.toFloat(), z2.toFloat()).setColor(argb)
-        vc.addVertex(pose.last(), x3.toFloat(), y3.toFloat(), z3.toFloat()).setColor(argb)
-        vc.addVertex(pose.last(), x4.toFloat(), y4.toFloat(), z4.toFloat()).setColor(argb)
+    private fun fillBox(buffer: net.minecraft.client.renderer.MultiBufferSource, pose: PoseStack, b: AABB, argb: Int) {
+        fillQuad(buffer, pose, listOf(Vec3(b.minX, b.minY, b.minZ), Vec3(b.maxX, b.minY, b.minZ), Vec3(b.maxX, b.minY, b.maxZ), Vec3(b.minX, b.minY, b.maxZ)), argb)
+        fillQuad(buffer, pose, listOf(Vec3(b.minX, b.maxY, b.minZ), Vec3(b.minX, b.maxY, b.maxZ), Vec3(b.maxX, b.maxY, b.maxZ), Vec3(b.maxX, b.maxY, b.minZ)), argb)
+        fillQuad(buffer, pose, listOf(Vec3(b.minX, b.minY, b.minZ), Vec3(b.minX, b.maxY, b.minZ), Vec3(b.maxX, b.maxY, b.minZ), Vec3(b.maxX, b.minY, b.minZ)), argb)
+        fillQuad(buffer, pose, listOf(Vec3(b.minX, b.minY, b.maxZ), Vec3(b.maxX, b.minY, b.maxZ), Vec3(b.maxX, b.maxY, b.maxZ), Vec3(b.minX, b.maxY, b.maxZ)), argb)
+        fillQuad(buffer, pose, listOf(Vec3(b.minX, b.minY, b.minZ), Vec3(b.minX, b.minY, b.maxZ), Vec3(b.minX, b.maxY, b.maxZ), Vec3(b.minX, b.maxY, b.minZ)), argb)
+        fillQuad(buffer, pose, listOf(Vec3(b.maxX, b.minY, b.minZ), Vec3(b.maxX, b.maxY, b.minZ), Vec3(b.maxX, b.maxY, b.maxZ), Vec3(b.maxX, b.minY, b.maxZ)), argb)
+    }
+
+    private fun fillQuad(buffer: net.minecraft.client.renderer.MultiBufferSource, pose: PoseStack, corners: List<Vec3>, argb: Int) {
+        val vc = buffer.getBuffer(quadsType())
+        for (c in corners) vc.addVertex(pose.last(), c.x.toFloat(), c.y.toFloat(), c.z.toFloat()).setColor(argb)
     }*/
     //?}
 
+    // The lines() vertex format gained a mandatory per-vertex LineWidth element in 1.21.11; older
+    // versions have no such element, so setting it is a no-op there.
     //? if >=1.21.11 {
     private fun linesType() = net.minecraft.client.renderer.rendertype.RenderTypes.lines()
     private fun quadsType() = net.minecraft.client.renderer.rendertype.RenderTypes.debugQuads()
+    private fun lineWidth(vertex: com.mojang.blaze3d.vertex.VertexConsumer, thickness: Float): com.mojang.blaze3d.vertex.VertexConsumer = vertex.setLineWidth(thickness)
     //?} else {
     /*private fun linesType() = net.minecraft.client.renderer.rendertype.RenderType.lines()
     private fun quadsType() = net.minecraft.client.renderer.rendertype.RenderType.debugQuads()
+    private fun lineWidth(vertex: com.mojang.blaze3d.vertex.VertexConsumer, thickness: Float): com.mojang.blaze3d.vertex.VertexConsumer = vertex
     *///?}
 }

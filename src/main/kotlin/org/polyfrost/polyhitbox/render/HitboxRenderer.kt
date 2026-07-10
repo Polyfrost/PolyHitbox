@@ -10,7 +10,7 @@ import org.polyfrost.polyhitbox.config.HitboxConfig
 import org.polyfrost.polyhitbox.config.ModConfig
 import kotlin.math.abs
 import kotlin.math.min
-//? if <26.2 {
+//? if <1.21.11 {
 /*import com.mojang.blaze3d.vertex.PoseStack
 *///?}
 
@@ -18,15 +18,18 @@ import kotlin.math.min
  * Draws entity hitboxes.
  *
  * Two backends exist because Minecraft's rendering pipeline diverges:
- *  - `>=26.2` lost the immediate `MultiBufferSource` path and draws through the world-space
- *    [net.minecraft.gizmos.Gizmos] system (stroke/fill cuboids, lines and rects).
- *  - `<26.2` uses `MultiBufferSource` + `RenderType`/`RenderTypes` geometry.
+ *  - `>=1.21.11` draws through the world-space [net.minecraft.gizmos.Gizmos] system (stroke/fill
+ *    cuboids, lines and rects). Gizmos are collected during the frame and drawn after the entity
+ *    models are flushed to the depth buffer, so the hitbox composites correctly against them; this
+ *    is exactly where vanilla renders its own hitboxes on these versions.
+ *  - `<1.21.11` uses `MultiBufferSource` + `RenderType` geometry.
  *
- * Line styles are reimplemented geometrically since GL line stipple has no modern equivalent:
- * normal edges are lines, dashed edges are split into world-space dash segments, and proportioned
- * edges are world-space quad "tubes" whose width always tracks the thickness. Line thickness for
- * the normal/dashed styles is honoured from 1.21.11 on (lines carry a per-vertex width there) and
- * on the gizmo backend; below that lines are a fixed width.
+ * Line styles are reimplemented geometrically since GL line stipple has no modern equivalent. To
+ * stay consistent with the 26.2 gizmo backend (the closest match to the legacy look), normal and
+ * dashed edges are camera-facing ribbons of constant screen-space width, while proportioned edges
+ * are world-space quad "tubes" (width scales with distance). Both backends share the same geometry;
+ * the buffered backend billboards ribbons on the CPU, the gizmo backend uses screen-space gizmo
+ * lines. Thickness therefore behaves the same on every version.
  */
 object HitboxRenderer {
 
@@ -37,8 +40,12 @@ object HitboxRenderer {
     /** World-space half-width of a proportioned line per thickness unit (matches the legacy `/200`). */
     private const val PROPORTIONED_HALF = 1.0 / 200.0
 
+    /** Screen-space ribbon width calibration, tuned to match the 26.2 gizmo backend. */
+    private const val WIDTH_SCALE = 1.4f
+
     /** World-space dash length per dash-factor step. */
-    private const val DASH_STEP = 0.05
+    private const val DASH_STEP = 0.005
+    private const val MIN_DASH = 0.03
 
     private fun shouldShow(config: HitboxConfig, entity: Entity, hovered: Entity?): Boolean =
         when (config.showCondition) {
@@ -77,7 +84,7 @@ object HitboxRenderer {
     private fun dashSegments(from: Vec3, to: Vec3, dashFactor: Int): List<Pair<Vec3, Vec3>> {
         val total = to.subtract(from).length()
         if (total < 1.0e-6) return listOf(from to to)
-        val dashLen = (dashFactor * DASH_STEP).coerceAtLeast(0.02)
+        val dashLen = (dashFactor * DASH_STEP).coerceAtLeast(MIN_DASH)
         val dir = to.subtract(from).scale(1.0 / total)
         val segments = ArrayList<Pair<Vec3, Vec3>>()
         var t = 0.0
@@ -103,7 +110,7 @@ object HitboxRenderer {
         )
     }
 
-    //? if >=26.2 {
+    //? if >=1.21.11 {
     fun emitGizmos() {
         if (!ModConfig.enabled) return
         val mc = Minecraft.getInstance()
@@ -169,10 +176,18 @@ object HitboxRenderer {
         draw(entity, config, pose, buffer, camX, camY, camZ, partialTicks, entity === hovered && config.hoverColor)
     }
 
-    fun renderAll(pose: PoseStack, camX: Double, camY: Double, camZ: Double, partialTicks: Float) {
+    /**
+     * Submit-pipeline backend (1.21.10). Called from the tail of `DebugRenderer.render`, which runs
+     * after the entity model batches have been flushed to the depth buffer, so the depth-tested
+     * hitbox composites correctly against them. The pose is left identity: geometry is emitted in
+     * camera-relative world space and the billboard uses camera distance, so it does not depend on
+     * the pose carrying the view matrix.
+     */
+    fun renderAfterEntities(camX: Double, camY: Double, camZ: Double, partialTicks: Float) {
         if (!ModConfig.enabled) return
         val mc = Minecraft.getInstance()
         val level = mc.level ?: return
+        val pose = PoseStack()
         val buffer = mc.renderBuffers().bufferSource()
         val hovered = mc.crosshairPickEntity
         for (entity in level.entitiesForRendering()) {
@@ -180,7 +195,6 @@ object HitboxRenderer {
             if (!shouldShow(config, entity, hovered)) continue
             draw(entity, config, pose, buffer, camX, camY, camZ, partialTicks, entity === hovered && config.hoverColor)
         }
-        buffer.endBatch(linesType())
         buffer.endBatch(quadsType())
     }
 
@@ -225,20 +239,49 @@ object HitboxRenderer {
     private fun styledEdge(config: HitboxConfig, buffer: net.minecraft.client.renderer.MultiBufferSource, pose: PoseStack, from: Vec3, to: Vec3, argb: Int, thickness: Float) {
         when (config.lineStyle) {
             PROPORTIONED -> for (quad in tubeQuads(from, to, thickness * PROPORTIONED_HALF)) fillQuad(buffer, pose, quad, argb)
-            DASHED -> for ((a, b) in dashSegments(from, to, config.dashFactor)) line(buffer, pose, a, b, argb, thickness)
-            else -> line(buffer, pose, from, to, argb, thickness)
+            DASHED -> for ((a, b) in dashSegments(from, to, config.dashFactor)) screenLine(buffer, pose, a, b, thickness, argb)
+            else -> screenLine(buffer, pose, from, to, thickness, argb)
         }
     }
 
-    // MultiBufferSource.BufferSource can only build one shared layer at a time and ends the previous
-    // when the render type changes, so the consumer is fetched per primitive rather than cached.
-    private fun line(buffer: net.minecraft.client.renderer.MultiBufferSource, pose: PoseStack, from: Vec3, to: Vec3, argb: Int, thickness: Float) {
-        val vc = buffer.getBuffer(linesType())
-        val delta = to.subtract(from)
-        val len = delta.length()
-        val n = if (len > 1.0e-6) delta.scale(1.0 / len) else delta
-        lineWidth(vc.addVertex(pose.last(), from.x.toFloat(), from.y.toFloat(), from.z.toFloat()).setColor(argb).setNormal(pose.last(), n.x.toFloat(), n.y.toFloat(), n.z.toFloat()), thickness)
-        lineWidth(vc.addVertex(pose.last(), to.x.toFloat(), to.y.toFloat(), to.z.toFloat()).setColor(argb).setNormal(pose.last(), n.x.toFloat(), n.y.toFloat(), n.z.toFloat()), thickness)
+    /**
+     * Draws an edge as a camera-facing ribbon of constant screen-space width, matching the legacy
+     * glLineWidth look and the 26.2 gizmo backend. The endpoints are pushed to view space, offset
+     * perpendicular to the line by a depth-scaled amount so the width stays constant in pixels, then
+     * the offset is rotated back into model space for emission through the pose.
+     */
+    private fun screenLine(buffer: net.minecraft.client.renderer.MultiBufferSource, pose: PoseStack, from: Vec3, to: Vec3, thickness: Float, argb: Int) {
+        val m = pose.last().pose()
+        val va = org.joml.Vector3f(from.x.toFloat(), from.y.toFloat(), from.z.toFloat()); m.transformPosition(va)
+        val vb = org.joml.Vector3f(to.x.toFloat(), to.y.toFloat(), to.z.toFloat()); m.transformPosition(vb)
+        val dir = org.joml.Vector3f(vb).sub(va)
+        if (dir.lengthSquared() < 1.0e-9f) return
+        dir.normalize()
+        val toModel = org.joml.Matrix3f(m).transpose()
+        val vpH = Minecraft.getInstance().window.height.toFloat()
+        // The projection matrix isn't readable on 1.21.8+, so derive its focal scale from the
+        // vertical FOV: the perspective m11 term is 1/tan(fov/2).
+        val focal = (1.0 / kotlin.math.tan(Math.toRadians(Minecraft.getInstance().options.fov().get().toDouble()) * 0.5)).toFloat()
+        val offA = billboardOffset(va, dir, thickness, focal, vpH, toModel)
+        val offB = billboardOffset(vb, dir, thickness, focal, vpH, toModel)
+        fillQuad(buffer, pose, listOf(from.add(offA), to.add(offB), to.subtract(offB), from.subtract(offA)), argb)
+    }
+
+    private fun billboardOffset(v: org.joml.Vector3f, dir: org.joml.Vector3f, thickness: Float, focal: Float, vpH: Float, toModel: org.joml.Matrix3f): Vec3 {
+        // cross(lineDir, viewRay) is perpendicular to both the line and the view ray, so it faces the
+        // camera and lies exactly in the plane tangent to the view ray (perp is orthogonal to v).
+        val perp = org.joml.Vector3f(dir).cross(v)
+        if (perp.lengthSquared() < 1.0e-9f) return Vec3.ZERO
+        perp.normalize()
+        // Distance from the camera (rotation-invariant, so it works whether the pose is the view
+        // matrix or identity). Since perp is tangent to the view ray it projects at the clean rate
+        // focal/dist, so a world offset that spans a fixed pixel width is halfPx * dist / (focal *
+        // vpH/2) with no projected-length division — bounded even when the line is viewed end-on.
+        val dist = v.length().coerceAtLeast(0.05f)
+        val mag = thickness * 0.5f * WIDTH_SCALE * dist / (focal * vpH * 0.5f)
+        perp.mul(mag)
+        toModel.transform(perp)
+        return Vec3(perp.x().toDouble(), perp.y().toDouble(), perp.z().toDouble())
     }
 
     private fun fillBox(buffer: net.minecraft.client.renderer.MultiBufferSource, pose: PoseStack, b: AABB, argb: Int) {
@@ -253,18 +296,8 @@ object HitboxRenderer {
     private fun fillQuad(buffer: net.minecraft.client.renderer.MultiBufferSource, pose: PoseStack, corners: List<Vec3>, argb: Int) {
         val vc = buffer.getBuffer(quadsType())
         for (c in corners) vc.addVertex(pose.last(), c.x.toFloat(), c.y.toFloat(), c.z.toFloat()).setColor(argb)
-    }*/
-    //?}
+    }
 
-    // The lines() vertex format gained a mandatory per-vertex LineWidth element in 1.21.11; older
-    // versions have no such element, so setting it is a no-op there.
-    //? if >=1.21.11 {
-    private fun linesType() = net.minecraft.client.renderer.rendertype.RenderTypes.lines()
-    private fun quadsType() = net.minecraft.client.renderer.rendertype.RenderTypes.debugQuads()
-    private fun lineWidth(vertex: com.mojang.blaze3d.vertex.VertexConsumer, thickness: Float): com.mojang.blaze3d.vertex.VertexConsumer = vertex.setLineWidth(thickness)
-    //?} else {
-    /*private fun linesType() = net.minecraft.client.renderer.rendertype.RenderType.lines()
-    private fun quadsType() = net.minecraft.client.renderer.rendertype.RenderType.debugQuads()
-    private fun lineWidth(vertex: com.mojang.blaze3d.vertex.VertexConsumer, thickness: Float): com.mojang.blaze3d.vertex.VertexConsumer = vertex
-    *///?}
+    private fun quadsType() = net.minecraft.client.renderer.rendertype.RenderType.debugQuads()*/
+    //?}
 }

@@ -60,7 +60,7 @@ object ModConfig : Config(
             )
         }
 
-        val showCondition = dropdown(
+        val showCondition = radio(
             "$key.showCondition", "Show Condition",
             "When to draw this hitbox. \"Debug (F3+B)\" follows the vanilla hitbox toggle.",
             { cfg().showCondition }, { cfg().showCondition = it },
@@ -157,6 +157,12 @@ object ModConfig : Config(
 
     private fun dropdown(id: String, title: String, desc: String, getter: () -> Int, setter: (Int) -> Unit, options: Array<String>, category: String, subcategory: String): Property<Int> {
         val p = functional(id, title, desc, getter, setter, Int::class.javaObjectType, Visualizer.DropdownVisualizer::class.java, category, subcategory)
+        p.addMetadata("options", options)
+        return p
+    }
+
+    private fun radio(id: String, title: String, desc: String, getter: () -> Int, setter: (Int) -> Unit, options: Array<String>, category: String, subcategory: String): Property<Int> {
+        val p = functional(id, title, desc, getter, setter, Int::class.javaObjectType, Visualizer.RadioVisualizer::class.java, category, subcategory)
         p.addMetadata("options", options)
         return p
     }

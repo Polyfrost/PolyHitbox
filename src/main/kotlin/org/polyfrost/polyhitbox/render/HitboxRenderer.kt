@@ -47,13 +47,25 @@ object HitboxRenderer {
     private const val DASH_STEP = 0.005
     private const val MIN_DASH = 0.03
 
-    private fun shouldShow(config: HitboxConfig, entity: Entity, hovered: Entity?): Boolean =
-        when (config.showCondition) {
+    private fun shouldShow(config: HitboxConfig, entity: Entity, hovered: Entity?): Boolean {
+        if (isFirstPersonSelf(entity)) return false
+        return when (config.showCondition) {
             0 -> true
             1 -> vanillaHitboxesEnabled()
             2 -> entity === hovered
             else -> false
         }
+    }
+
+    /**
+     * In first-person view the camera sits inside the entity it's attached to (normally the local
+     * player), so drawing its hitbox would smear geometry across the whole screen. Skip it; in
+     * third-person the body is visible, so the hitbox stays.
+     */
+    private fun isFirstPersonSelf(entity: Entity): Boolean {
+        val mc = Minecraft.getInstance()
+        return mc.options.cameraType.isFirstPerson && entity === mc.cameraEntity
+    }
 
     /** Whether the vanilla debug hitboxes are toggled on (F3+B); the mod overrides their rendering. */
     //? if >=1.21.10 {

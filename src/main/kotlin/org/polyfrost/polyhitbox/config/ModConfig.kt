@@ -54,7 +54,7 @@ object ModConfig : Config(
             switch("enabled", "Enabled", "Enable hitbox rendering.", { enabled }, { enabled = it }, tab, sub)
         } else {
             switch(
-                "$key.overwriteDefault", "Enabled",
+                "$key.overwriteDefault", "Override General",
                 "Override the General styling for ${category.displayName}.",
                 { cfg().overwriteDefault }, { cfg().overwriteDefault = it }, tab, sub,
             )

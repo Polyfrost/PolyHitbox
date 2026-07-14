@@ -8,7 +8,7 @@ import org.polyfrost.compose.render.PolyColor
  */
 class HitboxConfig {
     /** Show condition: 0 = Always, 1 = Toggled, 2 = Hovered, 3 = Never. */
-    var showCondition = 1
+    var showCondition = 0
 
     /** Overrides the [HitboxCategory.DEFAULT] styling for this category when enabled. */
     var overwriteDefault = false

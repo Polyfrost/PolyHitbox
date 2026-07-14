@@ -25,7 +25,7 @@ object ModConfig : Config(
     "PolyHitbox",
     Config.Category.COMBAT,
 ) {
-    var enabled = true
+    var enabled = false
 
     init {
         preload()

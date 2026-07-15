@@ -52,6 +52,8 @@ object HitboxRenderer {
     private const val MIN_DASH = 0.03
 
     private fun shouldShow(config: HitboxConfig, entity: Entity, hovered: Entity?): Boolean {
+        if (entity.isInvisible) return false
+        if (entity.isInvisibleTo(Minecraft.getInstance().player!!)) return false
         if (isFirstPersonSelf(entity)) return false
         return when (config.showCondition) {
             0 -> true

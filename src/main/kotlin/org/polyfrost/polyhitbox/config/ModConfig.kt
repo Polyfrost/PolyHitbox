@@ -40,6 +40,9 @@ object ModConfig : Config(
     }
 
     private fun addCategory(tree: Tree, category: HitboxCategory) {
+        // Property IDs are "<category>_<field>". The separator must not be a dot: the JSON serializer
+        // treats dots in a property ID as nested-path separators, so the saved value never maps back
+        // onto the flat property on load and every field silently resets to its default.
         val key = category.name
         // Each category is its own tab. A single default-named subcategory keeps the list flat (no
         // section header), so every tab lines up with the same layout.
@@ -54,47 +57,47 @@ object ModConfig : Config(
             switch("enabled", "Enabled", "Enable hitbox rendering.", { enabled }, { enabled = it }, tab, sub)
         } else {
             switch(
-                "$key.overwriteDefault", "Override General",
+                "${key}_overwriteDefault", "Override General",
                 "Override the General styling for ${category.displayName}.",
                 { cfg().overwriteDefault }, { cfg().overwriteDefault = it }, tab, sub,
             )
         }
 
         val showCondition = radio(
-            "$key.showCondition", "Show Condition",
+            "${key}_showCondition", "Show Condition",
             "When to draw this hitbox. \"Debug (F3+B)\" follows the vanilla hitbox toggle.",
             { cfg().showCondition }, { cfg().showCondition = it },
             arrayOf("Always", "Debug (F3+B)", "Hovered", "Never"), tab, sub,
         )
         val lineStyle = dropdown(
-            "$key.lineStyle", "Line Style", "",
+            "${key}_lineStyle", "Line Style", "",
             { cfg().lineStyle }, { cfg().lineStyle = it },
             arrayOf("Normal", "Proportioned", "Dashed"), tab, sub,
         )
         val dashFactor = sliderInt(
-            "$key.dashFactor", "Dash Factor", "",
+            "${key}_dashFactor", "Dash Factor", "",
             { cfg().dashFactor }, { cfg().dashFactor = it }, 1f, 20f, 1f, tab, sub,
         )
-        val hoverColor = switch("$key.hoverColor", "Different Color on Hover", "", { cfg().hoverColor }, { cfg().hoverColor = it }, tab, sub)
+        val hoverColor = switch("${key}_hoverColor", "Different Color on Hover", "", { cfg().hoverColor }, { cfg().hoverColor = it }, tab, sub)
 
-        val showSide = checkbox("$key.showSide", "Sides", "", { cfg().showSide }, { cfg().showSide = it }, tab, sub)
-        val sideColor = color("$key.sideColor", "Side Color", { cfg().sideColor }, { cfg().sideColor = it }, tab, sub)
-        val sideHoverColor = color("$key.sideHoverColor", "Hovered Side Color", { cfg().sideHoverColor }, { cfg().sideHoverColor = it }, tab, sub)
+        val showSide = checkbox("${key}_showSide", "Sides", "", { cfg().showSide }, { cfg().showSide = it }, tab, sub)
+        val sideColor = color("${key}_sideColor", "Side Color", { cfg().sideColor }, { cfg().sideColor = it }, tab, sub)
+        val sideHoverColor = color("${key}_sideHoverColor", "Hovered Side Color", { cfg().sideHoverColor }, { cfg().sideHoverColor = it }, tab, sub)
 
-        val showOutline = checkbox("$key.showOutline", "Outline", "", { cfg().showOutline }, { cfg().showOutline = it }, tab, sub)
-        val outlineColor = color("$key.outlineColor", "Outline Color", { cfg().outlineColor }, { cfg().outlineColor = it }, tab, sub)
-        val outlineHoverColor = color("$key.outlineHoverColor", "Hovered Outline Color", { cfg().outlineHoverColor }, { cfg().outlineHoverColor = it }, tab, sub)
-        val outlineThickness = sliderFloat("$key.outlineThickness", "Outline Thickness", "", { cfg().outlineThickness }, { cfg().outlineThickness = it }, 1f, 5f, 0.5f, tab, sub)
+        val showOutline = checkbox("${key}_showOutline", "Outline", "", { cfg().showOutline }, { cfg().showOutline = it }, tab, sub)
+        val outlineColor = color("${key}_outlineColor", "Outline Color", { cfg().outlineColor }, { cfg().outlineColor = it }, tab, sub)
+        val outlineHoverColor = color("${key}_outlineHoverColor", "Hovered Outline Color", { cfg().outlineHoverColor }, { cfg().outlineHoverColor = it }, tab, sub)
+        val outlineThickness = sliderFloat("${key}_outlineThickness", "Outline Thickness", "", { cfg().outlineThickness }, { cfg().outlineThickness = it }, 1f, 5f, 0.5f, tab, sub)
 
-        val showEyeHeight = checkbox("$key.showEyeHeight", "Eye Height", "", { cfg().showEyeHeight }, { cfg().showEyeHeight = it }, tab, sub)
-        val eyeHeightColor = color("$key.eyeHeightColor", "Eye Height Color", { cfg().eyeHeightColor }, { cfg().eyeHeightColor = it }, tab, sub)
-        val eyeHeightHoverColor = color("$key.eyeHeightHoverColor", "Hovered Eye Height Color", { cfg().eyeHeightHoverColor }, { cfg().eyeHeightHoverColor = it }, tab, sub)
-        val eyeHeightThickness = sliderFloat("$key.eyeHeightThickness", "Eye Height Thickness", "", { cfg().eyeHeightThickness }, { cfg().eyeHeightThickness = it }, 1f, 5f, 0.5f, tab, sub)
+        val showEyeHeight = checkbox("${key}_showEyeHeight", "Eye Height", "", { cfg().showEyeHeight }, { cfg().showEyeHeight = it }, tab, sub)
+        val eyeHeightColor = color("${key}_eyeHeightColor", "Eye Height Color", { cfg().eyeHeightColor }, { cfg().eyeHeightColor = it }, tab, sub)
+        val eyeHeightHoverColor = color("${key}_eyeHeightHoverColor", "Hovered Eye Height Color", { cfg().eyeHeightHoverColor }, { cfg().eyeHeightHoverColor = it }, tab, sub)
+        val eyeHeightThickness = sliderFloat("${key}_eyeHeightThickness", "Eye Height Thickness", "", { cfg().eyeHeightThickness }, { cfg().eyeHeightThickness = it }, 1f, 5f, 0.5f, tab, sub)
 
-        val showViewRay = checkbox("$key.showViewRay", "View Ray", "", { cfg().showViewRay }, { cfg().showViewRay = it }, tab, sub)
-        val viewRayColor = color("$key.viewRayColor", "View Ray Color", { cfg().viewRayColor }, { cfg().viewRayColor = it }, tab, sub)
-        val viewRayHoverColor = color("$key.viewRayHoverColor", "Hovered View Ray Color", { cfg().viewRayHoverColor }, { cfg().viewRayHoverColor = it }, tab, sub)
-        val viewRayThickness = sliderFloat("$key.viewRayThickness", "View Ray Thickness", "", { cfg().viewRayThickness }, { cfg().viewRayThickness = it }, 1f, 5f, 0.5f, tab, sub)
+        val showViewRay = checkbox("${key}_showViewRay", "View Ray", "", { cfg().showViewRay }, { cfg().showViewRay = it }, tab, sub)
+        val viewRayColor = color("${key}_viewRayColor", "View Ray Color", { cfg().viewRayColor }, { cfg().viewRayColor = it }, tab, sub)
+        val viewRayHoverColor = color("${key}_viewRayHoverColor", "Hovered View Ray Color", { cfg().viewRayHoverColor }, { cfg().viewRayHoverColor = it }, tab, sub)
+        val viewRayThickness = sliderFloat("${key}_viewRayThickness", "View Ray Thickness", "", { cfg().viewRayThickness }, { cfg().viewRayThickness = it }, 1f, 5f, 0.5f, tab, sub)
 
         tree.put(enableProp)
         val body = listOf(

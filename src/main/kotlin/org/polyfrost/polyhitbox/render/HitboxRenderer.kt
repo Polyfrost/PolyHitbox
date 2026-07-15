@@ -27,7 +27,8 @@ import kotlin.math.min
  * Line styles are reimplemented geometrically since GL line stipple has no modern equivalent. To
  * stay consistent with the 26.2 gizmo backend (the closest match to the legacy look), normal and
  * dashed edges are camera-facing ribbons of constant screen-space width, while proportioned edges
- * are world-space quad "tubes" (width scales with distance). Both backends share the same geometry;
+ * are world-space quad "tubes" whose world width scales with camera distance, so they read as
+ * thinner up close and thicker far away. Both backends share the same geometry;
  * the buffered backend billboards ribbons on the CPU, the gizmo backend uses screen-space gizmo
  * lines. Thickness therefore behaves the same on every version.
  */
@@ -37,7 +38,10 @@ object HitboxRenderer {
     private const val PROPORTIONED = 1
     private const val DASHED = 2
 
-    /** World-space half-width of a proportioned line per thickness unit (matches the legacy `/200`). */
+    /**
+     * World-space half-width of a proportioned line per thickness unit per block of camera distance
+     * (matches the legacy `/200` at one block).
+     */
     private const val PROPORTIONED_HALF = 1.0 / 200.0
 
     /** Screen-space ribbon width calibration, tuned to match the 26.2 gizmo backend. */
@@ -170,8 +174,12 @@ object HitboxRenderer {
 
     private fun gizmoEdge(config: HitboxConfig, from: Vec3, to: Vec3, argb: Int, thickness: Float) {
         when (config.lineStyle) {
-            PROPORTIONED -> for (quad in tubeQuads(from, to, thickness * PROPORTIONED_HALF)) {
-                net.minecraft.gizmos.Gizmos.rect(quad[0], quad[1], quad[2], quad[3], net.minecraft.gizmos.GizmoStyle.fill(argb))
+            PROPORTIONED -> {
+                val cam = Minecraft.getInstance().entityRenderDispatcher.camera!!.position()
+                val half = thickness * PROPORTIONED_HALF * from.add(to).scale(0.5).distanceTo(cam)
+                for (quad in tubeQuads(from, to, half)) {
+                    net.minecraft.gizmos.Gizmos.rect(quad[0], quad[1], quad[2], quad[3], net.minecraft.gizmos.GizmoStyle.fill(argb))
+                }
             }
             DASHED -> for ((a, b) in dashSegments(from, to, config.dashFactor)) {
                 net.minecraft.gizmos.Gizmos.line(a, b, argb, thickness)
@@ -250,7 +258,13 @@ object HitboxRenderer {
 
     private fun styledEdge(config: HitboxConfig, buffer: net.minecraft.client.renderer.MultiBufferSource, pose: PoseStack, from: Vec3, to: Vec3, argb: Int, thickness: Float) {
         when (config.lineStyle) {
-            PROPORTIONED -> for (quad in tubeQuads(from, to, thickness * PROPORTIONED_HALF)) fillQuad(buffer, pose, quad, argb)
+            PROPORTIONED -> {
+                val mid = from.add(to).scale(0.5)
+                val v = org.joml.Vector3f(mid.x.toFloat(), mid.y.toFloat(), mid.z.toFloat())
+                pose.last().pose().transformPosition(v)
+                val half = thickness * PROPORTIONED_HALF * v.length().toDouble()
+                for (quad in tubeQuads(from, to, half)) fillQuad(buffer, pose, quad, argb)
+            }
             DASHED -> for ((a, b) in dashSegments(from, to, config.dashFactor)) screenLine(buffer, pose, a, b, thickness, argb)
             else -> screenLine(buffer, pose, from, to, thickness, argb)
         }

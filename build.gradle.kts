@@ -110,6 +110,9 @@ dependencies {
     modImplementation("org.polyfrost.oneconfig:notifications:$oneconfigversion")
 
     modCompileOnly("com.terraformersmc:modmenu:$modmenuVersion") { isTransitive = false }
+
+    testImplementation("org.junit.jupiter:junit-jupiter:6.1.2")
+    testImplementation("net.fabricmc:fabric-loader-junit:$loaderversion")
 }
 
 bloom {
@@ -133,6 +136,10 @@ tasks.processResources {
     filesMatching("fabric.mod.json") {
         expand(props)
     }
+}
+
+tasks.test {
+    useJUnitPlatform()
 }
 
 tasks.withType<JavaCompile>().configureEach {

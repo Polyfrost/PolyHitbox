@@ -133,16 +133,20 @@ object HitboxRenderer {
         if (!ModConfig.enabled) return
         val mc = Minecraft.getInstance()
         val level = mc.level ?: return
+        // Gizmos are emitted before the level renders, so the dispatcher still holds the previous
+        // frame's camera. It is null until the first level render after joining a world, which is
+        // the one frame where there is nothing to composite the hitboxes against anyway.
+        val cam = mc.entityRenderDispatcher.camera?.position() ?: return
         val partialTicks = mc.deltaTracker.getGameTimeDeltaPartialTick(false)
         val hovered = mc.crosshairPickEntity
         for (entity in level.entitiesForRendering()) {
             val config = HitboxCategory.resolve(entity)
             if (!shouldShow(config, entity, hovered)) continue
-            emit(entity, config, partialTicks, entity === hovered && config.hoverColor)
+            emit(entity, config, partialTicks, cam, entity === hovered && config.hoverColor)
         }
     }
 
-    private fun emit(entity: Entity, config: HitboxConfig, partialTicks: Float, hover: Boolean) {
+    private fun emit(entity: Entity, config: HitboxConfig, partialTicks: Float, cam: Vec3, hover: Boolean) {
         val current = entity.getPosition(partialTicks)
         val box = entity.boundingBox.move(current.subtract(entity.position()))
 
@@ -152,32 +156,31 @@ object HitboxRenderer {
         }
         if (config.showOutline) {
             val c = if (hover) config.outlineHoverColor else config.outlineColor
-            gizmoBox(config, box, c.argb, config.outlineThickness)
+            gizmoBox(config, cam, box, c.argb, config.outlineThickness)
         }
         if (config.showEyeHeight) {
             val c = if (hover) config.eyeHeightHoverColor else config.eyeHeightColor
             val eyeY = box.minY + entity.eyeHeight
-            gizmoBox(config, AABB(box.minX, eyeY - 0.01, box.minZ, box.maxX, eyeY + 0.01, box.maxZ), c.argb, config.eyeHeightThickness)
+            gizmoBox(config, cam, AABB(box.minX, eyeY - 0.01, box.minZ, box.maxX, eyeY + 0.01, box.maxZ), c.argb, config.eyeHeightThickness)
         }
         if (config.showViewRay) {
             val c = if (hover) config.viewRayHoverColor else config.viewRayColor
             val eye = Vec3(current.x, box.minY + entity.eyeHeight, current.z)
-            gizmoEdge(config, eye, eye.add(entity.getViewVector(partialTicks).scale(2.0)), c.argb, config.viewRayThickness)
+            gizmoEdge(config, cam, eye, eye.add(entity.getViewVector(partialTicks).scale(2.0)), c.argb, config.viewRayThickness)
         }
     }
 
-    private fun gizmoBox(config: HitboxConfig, box: AABB, argb: Int, thickness: Float) {
+    private fun gizmoBox(config: HitboxConfig, cam: Vec3, box: AABB, argb: Int, thickness: Float) {
         if (config.lineStyle == NORMAL) {
             net.minecraft.gizmos.Gizmos.cuboid(box, net.minecraft.gizmos.GizmoStyle.stroke(argb, thickness))
         } else {
-            for ((from, to) in boxEdges(box)) gizmoEdge(config, from, to, argb, thickness)
+            for ((from, to) in boxEdges(box)) gizmoEdge(config, cam, from, to, argb, thickness)
         }
     }
 
-    private fun gizmoEdge(config: HitboxConfig, from: Vec3, to: Vec3, argb: Int, thickness: Float) {
+    private fun gizmoEdge(config: HitboxConfig, cam: Vec3, from: Vec3, to: Vec3, argb: Int, thickness: Float) {
         when (config.lineStyle) {
             PROPORTIONED -> {
-                val cam = Minecraft.getInstance().entityRenderDispatcher.camera!!.position()
                 val half = thickness * PROPORTIONED_HALF * from.add(to).scale(0.5).distanceTo(cam)
                 for (quad in tubeQuads(from, to, half)) {
                     net.minecraft.gizmos.Gizmos.rect(quad[0], quad[1], quad[2], quad[3], net.minecraft.gizmos.GizmoStyle.fill(argb))

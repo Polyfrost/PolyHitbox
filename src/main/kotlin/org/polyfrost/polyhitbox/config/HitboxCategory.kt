@@ -10,7 +10,6 @@ import net.minecraft.world.entity.item.ItemEntity
 import net.minecraft.world.entity.monster.Enemy
 import net.minecraft.world.entity.player.Player
 import net.minecraft.world.entity.projectile.Projectile
-// YALMM backports modern (26.2) mappings to 1.21.1-1.21.10, so these packages are uniform.
 import net.minecraft.world.entity.projectile.arrow.AbstractArrow
 import net.minecraft.world.entity.projectile.hurtingprojectile.Fireball
 import net.minecraft.world.entity.projectile.hurtingprojectile.WitherSkull
@@ -30,9 +29,9 @@ enum class HitboxCategory(
     SELF("Self", { it is LocalPlayer }, HIGH),
     MOB("Mob", { it is Mob }),
     MONSTER("Monster", { it is Enemy }, HIGH),
-    ARROW("Arrow", { it is AbstractArrow }, HIGH),
-    FIREBALL("Fireball", { it is Fireball }),
     PROJECTILE("Projectile", { it is Projectile }),
+    ARROW("Arrow", { it is AbstractArrow }, HIGH),
+    FIREBALL("Fireball", { it is Fireball }, HIGH),
     WITHER_SKULL("Wither Skull", { it is WitherSkull }, HIGH),
     FRAMES("Frames", { it is HangingEntity }),
     ARMOR_STAND("Armor Stand", { it is ArmorStand }),

@@ -9,10 +9,19 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 //? if >=1.21.11 {
 @Mixin(net.minecraft.client.renderer.GameRenderer.class)
 public class HitboxRenderMixin {
-    // These versions draw hitboxes through the Gizmos system. A GizmoCollector is active for the
-    // whole render frame, and the collected gizmos are drawn after the entity models are flushed to
-    // the depth buffer, so emitting here composites the hitbox correctly against the models.
-    @Inject(method = "render(Lnet/minecraft/client/DeltaTracker;Z)V", at = @At("HEAD"))
+    // These versions draw hitboxes through the Gizmos system. Gizmos may only be created while a
+    // GizmoCollector is registered, and only the level render both registers one and drains what was
+    // collected; forced frames (Minecraft#setScreenAndShow, the world load and disconnect spin
+    // loops) skip it entirely. Injecting on the renderLevel call ties emission to exactly that.
+    // The collected gizmos are drawn after the entity models are flushed to the depth buffer, so the
+    // hitbox composites correctly against the models.
+    @Inject(
+        method = "render(Lnet/minecraft/client/DeltaTracker;Z)V",
+        at = @At(
+            value = "INVOKE",
+            target = "Lnet/minecraft/client/renderer/GameRenderer;renderLevel(Lnet/minecraft/client/DeltaTracker;)V"
+        )
+    )
     private void polyhitbox$emitGizmos(net.minecraft.client.DeltaTracker deltaTracker, boolean advanceGameTime, CallbackInfo ci) {
         HitboxRenderer.INSTANCE.emitGizmos();
     }

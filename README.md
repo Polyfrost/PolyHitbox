@@ -16,6 +16,8 @@ A hitbox modification mod
 - Eye Height
 - View Ray
 - Different color when hovered
+- Different color during invulnerability frames (i-frames)
+- Hide with the HUD (F1)
 
 ## Gallery
 

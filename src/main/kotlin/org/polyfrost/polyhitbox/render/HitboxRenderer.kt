@@ -1,79 +1,77 @@
 package org.polyfrost.polyhitbox.render
 
+import com.mojang.blaze3d.vertex.PoseStack
+import com.mojang.blaze3d.vertex.VertexConsumer
+import net.minecraft.client.Camera
 import net.minecraft.client.Minecraft
+import net.minecraft.client.renderer.culling.Frustum
 import net.minecraft.util.Mth
 import net.minecraft.world.entity.Entity
-import net.minecraft.world.phys.AABB
-import net.minecraft.world.phys.Vec3
+import net.minecraft.world.entity.LivingEntity
+import net.minecraft.world.entity.player.Player
+import org.polyfrost.compose.render.PolyColor
 import org.polyfrost.polyhitbox.config.HitboxCategory
 import org.polyfrost.polyhitbox.config.HitboxConfig
 import org.polyfrost.polyhitbox.config.ModConfig
 import kotlin.math.abs
+import kotlin.math.max
 import kotlin.math.min
-//? if <1.21.11 {
-/*import com.mojang.blaze3d.vertex.PoseStack
-*///?}
+import kotlin.math.sqrt
+import kotlin.math.tan
 
-/**
- * Draws entity hitboxes.
- *
- * Two backends exist because Minecraft's rendering pipeline diverges:
- *  - `>=1.21.11` draws through the world-space [net.minecraft.gizmos.Gizmos] system (stroke/fill
- *    cuboids, lines and rects). Gizmos are collected during the frame and drawn after the entity
- *    models are flushed to the depth buffer, so the hitbox composites correctly against them; this
- *    is exactly where vanilla renders its own hitboxes on these versions.
- *  - `<1.21.11` uses `MultiBufferSource` + `RenderType` geometry.
- *
- * Line styles are reimplemented geometrically since GL line stipple has no modern equivalent. To
- * stay consistent with the 26.2 gizmo backend (the closest match to the legacy look), normal and
- * dashed edges are camera-facing ribbons of constant screen-space width, while proportioned edges
- * are world-space quad "tubes" whose world width scales with camera distance, so they read as
- * thinner up close and thicker far away. Both backends share the same geometry;
- * the buffered backend billboards ribbons on the CPU, the gizmo backend uses screen-space gizmo
- * lines. Thickness therefore behaves the same on every version.
- */
 object HitboxRenderer {
 
     private const val NORMAL = 0
     private const val PROPORTIONED = 1
     private const val DASHED = 2
 
-    /**
-     * World-space half-width of a proportioned line per thickness unit per block of camera distance
-     * (matches the legacy `/200` at one block).
-     */
     private const val PROPORTIONED_HALF = 1.0 / 200.0
 
-    /** Screen-space ribbon width calibration, tuned to match the 26.2 gizmo backend. */
-    private const val WIDTH_SCALE = 1.4f
+    private const val WIDTH_SCALE = 1.4
 
-    /** World-space dash length per dash-factor step. */
     private const val DASH_STEP = 0.005
     private const val MIN_DASH = 0.03
 
-    private fun shouldShow(config: HitboxConfig, entity: Entity, hovered: Entity?): Boolean {
-        if (entity.isInvisible) return false
-        if (entity.isInvisibleTo(Minecraft.getInstance().player!!)) return false
-        if (isFirstPersonSelf(entity)) return false
-        return when (config.showCondition) {
-            0 -> true
-            1 -> vanillaHitboxesEnabled()
-            2 -> entity === hovered
-            else -> false
-        }
-    }
+    private const val VIEW_RAY_LENGTH = 2.0
 
-    /**
-     * In first-person view the camera sits inside the entity it's attached to (normally the local
-     * player), so drawing its hitbox would smear geometry across the whole screen. Skip it; in
-     * third-person the body is visible, so the hitbox stays.
-     */
-    private fun isFirstPersonSelf(entity: Entity): Boolean {
-        val mc = Minecraft.getInstance()
-        return mc.options.cameraType.isFirstPerson && entity === mc.cameraEntity
-    }
+    private const val CULL_MARGIN = 0.5
 
-    /** Whether the vanilla debug hitboxes are toggled on (F3+B); the mod overrides their rendering. */
+    private const val EPSILON = 1.0e-12
+
+    private const val NEAR_PLANE = 0.05
+
+    private var camX = 0.0
+    private var camY = 0.0
+    private var camZ = 0.0
+
+    private var fwdX = 0.0
+    private var fwdY = 0.0
+    private var fwdZ = 0.0
+
+    private var partialTicks = 0f
+
+    private var ribbonScale = 0.0
+    private var lastFov = -1
+    private var lastViewportHeight = -1
+
+    private var cullFrustum: Frustum? = null
+    private var hovered: Entity? = null
+    private var viewer: Player? = null
+    private var selfInFirstPerson: Entity? = null
+    private var vanillaToggle = false
+
+    private var offX = 0.0
+    private var offY = 0.0
+    private var offZ = 0.0
+
+    private fun active(): Boolean = ModConfig.enabled && !(ModConfig.hideInF1 && guiHidden())
+
+    //? if >=26.2 {
+    private fun guiHidden(): Boolean = Minecraft.getInstance().gui.hud.isHidden
+    //?} else {
+    /*private fun guiHidden(): Boolean = Minecraft.getInstance().options.hideGui
+    *///?}
+
     //? if >=1.21.10 {
     private fun vanillaHitboxesEnabled(): Boolean =
         Minecraft.getInstance().debugEntries.isCurrentlyEnabled(net.minecraft.client.gui.components.debug.DebugScreenEntries.ENTITY_HITBOXES)
@@ -82,253 +80,400 @@ object HitboxRenderer {
         Minecraft.getInstance().entityRenderDispatcher.shouldRenderHitBoxes()
     *///?}
 
-    // --- Shared, backend-agnostic geometry -------------------------------------------------------
+    //? if >=1.21.11 {
+    private fun readCamera(camera: Camera) {
+        val pos = camera.position()
+        camX = pos.x
+        camY = pos.y
+        camZ = pos.z
+        val forward = camera.forwardVector()
+        fwdX = forward.x().toDouble()
+        fwdY = forward.y().toDouble()
+        fwdZ = forward.z().toDouble()
+    }
+    //?} else {
+    /*private fun readCamera(camera: Camera) {
+        val pos = camera.position
+        camX = pos.x
+        camY = pos.y
+        camZ = pos.z
+        val forward = camera.lookVector
+        fwdX = forward.x.toDouble()
+        fwdY = forward.y.toDouble()
+        fwdZ = forward.z.toDouble()
+    }
+    *///?}
 
-    private fun boxEdges(b: AABB): List<Pair<Vec3, Vec3>> = listOf(
-        Vec3(b.minX, b.minY, b.minZ) to Vec3(b.maxX, b.minY, b.minZ),
-        Vec3(b.maxX, b.minY, b.minZ) to Vec3(b.maxX, b.minY, b.maxZ),
-        Vec3(b.maxX, b.minY, b.maxZ) to Vec3(b.minX, b.minY, b.maxZ),
-        Vec3(b.minX, b.minY, b.maxZ) to Vec3(b.minX, b.minY, b.minZ),
-        Vec3(b.minX, b.maxY, b.minZ) to Vec3(b.maxX, b.maxY, b.minZ),
-        Vec3(b.maxX, b.maxY, b.minZ) to Vec3(b.maxX, b.maxY, b.maxZ),
-        Vec3(b.maxX, b.maxY, b.maxZ) to Vec3(b.minX, b.maxY, b.maxZ),
-        Vec3(b.minX, b.maxY, b.maxZ) to Vec3(b.minX, b.maxY, b.minZ),
-        Vec3(b.minX, b.minY, b.minZ) to Vec3(b.minX, b.maxY, b.minZ),
-        Vec3(b.maxX, b.minY, b.minZ) to Vec3(b.maxX, b.maxY, b.minZ),
-        Vec3(b.maxX, b.minY, b.maxZ) to Vec3(b.maxX, b.maxY, b.maxZ),
-        Vec3(b.minX, b.minY, b.maxZ) to Vec3(b.minX, b.maxY, b.maxZ),
-    )
+    //? if >=1.21.4 {
+    private fun partialTick(): Float = Minecraft.getInstance().deltaTracker.getGameTimeDeltaPartialTick(false)
+    //?} else {
+    /*private fun partialTick(): Float = Minecraft.getInstance().timer.getGameTimeDeltaPartialTick(false)
+    *///?}
 
-    private fun dashSegments(from: Vec3, to: Vec3, dashFactor: Int): List<Pair<Vec3, Vec3>> {
-        val total = to.subtract(from).length()
-        if (total < 1.0e-6) return listOf(from to to)
-        val dashLen = (dashFactor * DASH_STEP).coerceAtLeast(MIN_DASH)
-        val dir = to.subtract(from).scale(1.0 / total)
-        val segments = ArrayList<Pair<Vec3, Vec3>>()
-        var t = 0.0
-        while (t < total) {
-            segments.add(from.add(dir.scale(t)) to from.add(dir.scale(min(t + dashLen, total))))
-            t += dashLen * 2.0
-        }
-        return segments
+    //? if >=1.21.11 {
+    private fun quadsType() = net.minecraft.client.renderer.rendertype.RenderTypes.debugQuads()
+    //?} else {
+    /*private fun quadsType() = net.minecraft.client.renderer.rendertype.RenderType.debugQuads()
+    *///?}
+
+    private fun beginFrame(cull: Frustum?): Boolean {
+        if (!active()) return false
+        val mc = Minecraft.getInstance()
+        if (mc.level == null) return false
+        val player = mc.player ?: return false
+        val camera = mc.entityRenderDispatcher.camera ?: return false
+        readCamera(camera)
+        partialTicks = partialTick()
+        cullFrustum = cull
+        hovered = mc.crosshairPickEntity
+        viewer = player
+        selfInFirstPerson = if (mc.options.cameraType.isFirstPerson) mc.cameraEntity else null
+        vanillaToggle = vanillaHitboxesEnabled()
+        updateRibbonScale(mc.options.fov().get(), mc.window.height)
+        return true
     }
 
-    /** Two perpendicular quads forming a world-space tube along `from`..`to`; each quad is 4 corners. */
-    private fun tubeQuads(from: Vec3, to: Vec3, halfWidth: Double): List<List<Vec3>> {
-        val delta = to.subtract(from)
-        val len = delta.length()
-        if (len < 1.0e-6) return emptyList()
-        val dir = delta.scale(1.0 / len)
-        val reference = if (abs(dir.y) < 0.99) Vec3(0.0, 1.0, 0.0) else Vec3(1.0, 0.0, 0.0)
-        val p1 = dir.cross(reference).normalize().scale(halfWidth)
-        val p2 = dir.cross(p1).normalize().scale(halfWidth)
-        return listOf(
-            listOf(from.add(p1), to.add(p1), to.subtract(p1), from.subtract(p1)),
-            listOf(from.add(p2), to.add(p2), to.subtract(p2), from.subtract(p2)),
+    private fun updateRibbonScale(fov: Int, viewportHeight: Int) {
+        if (fov == lastFov && viewportHeight == lastViewportHeight) return
+        lastFov = fov
+        lastViewportHeight = viewportHeight
+        val focal = 1.0 / tan(Math.toRadians(fov.toDouble()) * 0.5)
+        val halfViewport = viewportHeight * 0.5
+        ribbonScale = if (focal > 0.0 && halfViewport > 0.0) 0.5 * WIDTH_SCALE / (focal * halfViewport) else 0.0
+    }
+
+    private fun drawLevel(vc: VertexConsumer) {
+        val level = Minecraft.getInstance().level ?: return
+        val player = viewer ?: return
+        for (entity in level.entitiesForRendering()) {
+            if (entity === selfInFirstPerson || entity.isInvisible) continue
+            val matched = HitboxCategory.match(entity)
+            val config = HitboxCategory.visualsOf(matched)
+            if (!config.showSide && !config.showOutline && !config.showEyeHeight && !config.showViewRay) continue
+            when (HitboxCategory.logicOf(matched).showCondition) {
+                0 -> {}
+                1 -> if (!vanillaToggle) continue
+                2 -> if (entity !== hovered) continue
+                else -> continue
+            }
+            if (entity.isInvisibleTo(player)) continue
+            if (culled(entity, config)) continue
+            drawEntity(vc, entity, config)
+        }
+    }
+
+    private fun culled(entity: Entity, config: HitboxConfig): Boolean {
+        val bb = entity.boundingBox
+        if (bb.hasNaN()) return true
+        val ex = (bb.minX + bb.maxX) * 0.5 - camX
+        val ey = (bb.minY + bb.maxY) * 0.5 - camY
+        val ez = (bb.minZ + bb.maxZ) * 0.5 - camZ
+        if (!entity.shouldRenderAtSqrDistance(ex * ex + ey * ey + ez * ez)) return true
+        val reach = CULL_MARGIN + if (config.showViewRay) VIEW_RAY_LENGTH else 0.0
+        val rx = (bb.maxX - bb.minX) * 0.5
+        val ry = (bb.maxY - bb.minY) * 0.5
+        val rz = (bb.maxZ - bb.minZ) * 0.5
+        val margin = sqrt(rx * rx + ry * ry + rz * rz) + reach
+        if (ex * fwdX + ey * fwdY + ez * fwdZ < -margin) return true
+        val frustum = cullFrustum
+        return frustum != null && !frustum.isVisible(bb.inflate(reach))
+    }
+
+    private fun inIframes(entity: Entity): Boolean = entity is LivingEntity && entity.hurtTime > 0
+
+    private fun pick(iframe: Boolean, hover: Boolean, iframeColor: PolyColor, hoverColor: PolyColor, base: PolyColor): PolyColor =
+        if (iframe) iframeColor else if (hover) hoverColor else base
+
+    private fun drawEntity(vc: VertexConsumer, entity: Entity, config: HitboxConfig) {
+        val delta = partialTicks.toDouble()
+        val px = Mth.lerp(delta, entity.xo, entity.x)
+        val py = Mth.lerp(delta, entity.yo, entity.y)
+        val pz = Mth.lerp(delta, entity.zo, entity.z)
+        val bb = entity.boundingBox
+        val dx = px - entity.x - camX
+        val dy = py - entity.y - camY
+        val dz = pz - entity.z - camZ
+        val minX = bb.minX + dx
+        val minY = bb.minY + dy
+        val minZ = bb.minZ + dz
+        val maxX = bb.maxX + dx
+        val maxY = bb.maxY + dy
+        val maxZ = bb.maxZ + dz
+
+        val hover = entity === hovered && config.hoverColor
+        val iframe = config.iframeColor && inIframes(entity)
+
+        if (config.showSide) {
+            val c = pick(iframe, hover, config.sideIframeColor, config.sideHoverColor, config.sideColor)
+            fillBox(vc, minX, minY, minZ, maxX, maxY, maxZ, c.argb)
+        }
+        if (config.showOutline) {
+            val c = pick(iframe, hover, config.outlineIframeColor, config.outlineHoverColor, config.outlineColor)
+            styledBox(vc, config, minX, minY, minZ, maxX, maxY, maxZ, c.argb, config.outlineThickness)
+        }
+        if (config.showEyeHeight) {
+            val c = pick(iframe, hover, config.eyeHeightIframeColor, config.eyeHeightHoverColor, config.eyeHeightColor)
+            val eyeY = minY + entity.eyeHeight
+            styledBox(vc, config, minX, eyeY - 0.01, minZ, maxX, eyeY + 0.01, maxZ, c.argb, config.eyeHeightThickness)
+        }
+        if (config.showViewRay) {
+            val c = pick(iframe, hover, config.viewRayIframeColor, config.viewRayHoverColor, config.viewRayColor)
+            val eyeY = minY + entity.eyeHeight
+            val view = entity.getViewVector(partialTicks)
+            val ax = px - camX
+            val az = pz - camZ
+            styledEdge(
+                vc, config,
+                ax, eyeY, az,
+                ax + view.x * VIEW_RAY_LENGTH, eyeY + view.y * VIEW_RAY_LENGTH, az + view.z * VIEW_RAY_LENGTH,
+                c.argb, config.viewRayThickness,
+            )
+        }
+    }
+
+    private fun styledBox(
+        vc: VertexConsumer, config: HitboxConfig,
+        minX: Double, minY: Double, minZ: Double, maxX: Double, maxY: Double, maxZ: Double,
+        argb: Int, thickness: Float,
+    ) {
+        styledEdge(vc, config, minX, minY, minZ, maxX, minY, minZ, argb, thickness)
+        styledEdge(vc, config, maxX, minY, minZ, maxX, minY, maxZ, argb, thickness)
+        styledEdge(vc, config, maxX, minY, maxZ, minX, minY, maxZ, argb, thickness)
+        styledEdge(vc, config, minX, minY, maxZ, minX, minY, minZ, argb, thickness)
+        styledEdge(vc, config, minX, maxY, minZ, maxX, maxY, minZ, argb, thickness)
+        styledEdge(vc, config, maxX, maxY, minZ, maxX, maxY, maxZ, argb, thickness)
+        styledEdge(vc, config, maxX, maxY, maxZ, minX, maxY, maxZ, argb, thickness)
+        styledEdge(vc, config, minX, maxY, maxZ, minX, maxY, minZ, argb, thickness)
+        styledEdge(vc, config, minX, minY, minZ, minX, maxY, minZ, argb, thickness)
+        styledEdge(vc, config, maxX, minY, minZ, maxX, maxY, minZ, argb, thickness)
+        styledEdge(vc, config, maxX, minY, maxZ, maxX, maxY, maxZ, argb, thickness)
+        styledEdge(vc, config, minX, minY, maxZ, minX, maxY, maxZ, argb, thickness)
+    }
+
+    private fun styledEdge(
+        vc: VertexConsumer, config: HitboxConfig,
+        ax: Double, ay: Double, az: Double, bx: Double, by: Double, bz: Double,
+        argb: Int, thickness: Float,
+    ) {
+        when (config.lineStyle) {
+            PROPORTIONED -> tube(vc, ax, ay, az, bx, by, bz, thickness * PROPORTIONED_HALF, argb)
+
+            DASHED -> {
+                val dx = bx - ax
+                val dy = by - ay
+                val dz = bz - az
+                val total = sqrt(dx * dx + dy * dy + dz * dz)
+                if (total < 1.0e-6) return
+                val dashLength = max(config.dashFactor * DASH_STEP, MIN_DASH)
+                val ux = dx / total
+                val uy = dy / total
+                val uz = dz / total
+                var start = 0.0
+                while (start < total) {
+                    val end = min(start + dashLength, total)
+                    ribbon(
+                        vc,
+                        ax + ux * start, ay + uy * start, az + uz * start,
+                        ax + ux * end, ay + uy * end, az + uz * end,
+                        thickness, argb,
+                    )
+                    start += dashLength * 2.0
+                }
+            }
+
+            else -> ribbon(vc, ax, ay, az, bx, by, bz, thickness, argb)
+        }
+    }
+
+    private fun ribbon(
+        vc: VertexConsumer,
+        startX: Double, startY: Double, startZ: Double, endX: Double, endY: Double, endZ: Double,
+        thickness: Float, argb: Int,
+    ) {
+        val startDepth = startX * fwdX + startY * fwdY + startZ * fwdZ
+        val endDepth = endX * fwdX + endY * fwdY + endZ * fwdZ
+        if (startDepth < NEAR_PLANE && endDepth < NEAR_PLANE) return
+        var ax = startX
+        var ay = startY
+        var az = startZ
+        var bx = endX
+        var by = endY
+        var bz = endZ
+        if (startDepth < NEAR_PLANE) {
+            val t = (NEAR_PLANE - startDepth) / (endDepth - startDepth)
+            ax = startX + (endX - startX) * t
+            ay = startY + (endY - startY) * t
+            az = startZ + (endZ - startZ) * t
+        } else if (endDepth < NEAR_PLANE) {
+            val t = (NEAR_PLANE - endDepth) / (startDepth - endDepth)
+            bx = endX + (startX - endX) * t
+            by = endY + (startY - endY) * t
+            bz = endZ + (startZ - endZ) * t
+        }
+
+        val dx = bx - ax
+        val dy = by - ay
+        val dz = bz - az
+        val lengthSq = dx * dx + dy * dy + dz * dz
+        if (lengthSq < EPSILON) return
+        val inverse = 1.0 / sqrt(lengthSq)
+        val ux = dx * inverse
+        val uy = dy * inverse
+        val uz = dz * inverse
+
+        billboardOffset(ux, uy, uz, ax, ay, az, thickness)
+        val oax = offX
+        val oay = offY
+        val oaz = offZ
+        billboardOffset(ux, uy, uz, bx, by, bz, thickness)
+        quad(
+            vc,
+            ax + oax, ay + oay, az + oaz,
+            bx + offX, by + offY, bz + offZ,
+            bx - offX, by - offY, bz - offZ,
+            ax - oax, ay - oay, az - oaz,
+            argb,
         )
     }
 
-    //? if >=1.21.11 {
-    fun emitGizmos() {
-        if (!ModConfig.enabled) return
-        val mc = Minecraft.getInstance()
-        val level = mc.level ?: return
-        // Gizmos are emitted before the level renders, so the dispatcher still holds the previous
-        // frame's camera. It is null until the first level render after joining a world, which is
-        // the one frame where there is nothing to composite the hitboxes against anyway.
-        val cam = mc.entityRenderDispatcher.camera?.position() ?: return
-        val partialTicks = mc.deltaTracker.getGameTimeDeltaPartialTick(false)
-        val hovered = mc.crosshairPickEntity
-        for (entity in level.entitiesForRendering()) {
-            val config = HitboxCategory.resolve(entity)
-            if (!shouldShow(config, entity, hovered)) continue
-            emit(entity, config, partialTicks, cam, entity === hovered && config.hoverColor)
+    private fun billboardOffset(
+        ux: Double, uy: Double, uz: Double,
+        vx: Double, vy: Double, vz: Double,
+        thickness: Float,
+    ) {
+        val cx = uy * vz - uz * vy
+        val cy = uz * vx - ux * vz
+        val cz = ux * vy - uy * vx
+        val lengthSq = cx * cx + cy * cy + cz * cz
+        if (lengthSq < EPSILON) {
+            offX = 0.0
+            offY = 0.0
+            offZ = 0.0
+            return
         }
+        val distance = max(sqrt(vx * vx + vy * vy + vz * vz), 0.05)
+        val scale = thickness * ribbonScale * distance / sqrt(lengthSq)
+        offX = cx * scale
+        offY = cy * scale
+        offZ = cz * scale
     }
 
-    private fun emit(entity: Entity, config: HitboxConfig, partialTicks: Float, cam: Vec3, hover: Boolean) {
-        val current = entity.getPosition(partialTicks)
-        val box = entity.boundingBox.move(current.subtract(entity.position()))
+    private fun tube(
+        vc: VertexConsumer,
+        ax: Double, ay: Double, az: Double, bx: Double, by: Double, bz: Double,
+        half: Double, argb: Int,
+    ) {
+        val dx = bx - ax
+        val dy = by - ay
+        val dz = bz - az
+        val lengthSq = dx * dx + dy * dy + dz * dz
+        if (lengthSq < EPSILON) return
+        val inverse = 1.0 / sqrt(lengthSq)
+        val ux = dx * inverse
+        val uy = dy * inverse
+        val uz = dz * inverse
 
-        if (config.showSide) {
-            val c = if (hover) config.sideHoverColor else config.sideColor
-            net.minecraft.gizmos.Gizmos.cuboid(box, net.minecraft.gizmos.GizmoStyle.fill(c.argb))
-        }
-        if (config.showOutline) {
-            val c = if (hover) config.outlineHoverColor else config.outlineColor
-            gizmoBox(config, cam, box, c.argb, config.outlineThickness)
-        }
-        if (config.showEyeHeight) {
-            val c = if (hover) config.eyeHeightHoverColor else config.eyeHeightColor
-            val eyeY = box.minY + entity.eyeHeight
-            gizmoBox(config, cam, AABB(box.minX, eyeY - 0.01, box.minZ, box.maxX, eyeY + 0.01, box.maxZ), c.argb, config.eyeHeightThickness)
-        }
-        if (config.showViewRay) {
-            val c = if (hover) config.viewRayHoverColor else config.viewRayColor
-            val eye = Vec3(current.x, box.minY + entity.eyeHeight, current.z)
-            gizmoEdge(config, cam, eye, eye.add(entity.getViewVector(partialTicks).scale(2.0)), c.argb, config.viewRayThickness)
-        }
-    }
-
-    private fun gizmoBox(config: HitboxConfig, cam: Vec3, box: AABB, argb: Int, thickness: Float) {
-        if (config.lineStyle == NORMAL) {
-            net.minecraft.gizmos.Gizmos.cuboid(box, net.minecraft.gizmos.GizmoStyle.stroke(argb, thickness))
+        val rx: Double
+        val ry: Double
+        val rz: Double
+        if (abs(uy) < 0.99) {
+            rx = 0.0; ry = 1.0; rz = 0.0
         } else {
-            for ((from, to) in boxEdges(box)) gizmoEdge(config, cam, from, to, argb, thickness)
+            rx = 1.0; ry = 0.0; rz = 0.0
         }
+
+        var p1x = uy * rz - uz * ry
+        var p1y = uz * rx - ux * rz
+        var p1z = ux * ry - uy * rx
+        val n1 = half / sqrt(p1x * p1x + p1y * p1y + p1z * p1z)
+        p1x *= n1; p1y *= n1; p1z *= n1
+
+        var p2x = uy * p1z - uz * p1y
+        var p2y = uz * p1x - ux * p1z
+        var p2z = ux * p1y - uy * p1x
+        val n2 = half / sqrt(p2x * p2x + p2y * p2y + p2z * p2z)
+        p2x *= n2; p2y *= n2; p2z *= n2
+
+        quad(
+            vc,
+            ax + p1x, ay + p1y, az + p1z,
+            bx + p1x, by + p1y, bz + p1z,
+            bx - p1x, by - p1y, bz - p1z,
+            ax - p1x, ay - p1y, az - p1z,
+            argb,
+        )
+        quad(
+            vc,
+            ax + p2x, ay + p2y, az + p2z,
+            bx + p2x, by + p2y, bz + p2z,
+            bx - p2x, by - p2y, bz - p2z,
+            ax - p2x, ay - p2y, az - p2z,
+            argb,
+        )
     }
 
-    private fun gizmoEdge(config: HitboxConfig, cam: Vec3, from: Vec3, to: Vec3, argb: Int, thickness: Float) {
-        when (config.lineStyle) {
-            PROPORTIONED -> {
-                val half = thickness * PROPORTIONED_HALF * from.add(to).scale(0.5).distanceTo(cam)
-                for (quad in tubeQuads(from, to, half)) {
-                    net.minecraft.gizmos.Gizmos.rect(quad[0], quad[1], quad[2], quad[3], net.minecraft.gizmos.GizmoStyle.fill(argb))
-                }
-            }
-            DASHED -> for ((a, b) in dashSegments(from, to, config.dashFactor)) {
-                net.minecraft.gizmos.Gizmos.line(a, b, argb, thickness)
-            }
-            else -> net.minecraft.gizmos.Gizmos.line(from, to, argb, thickness)
+    private fun fillBox(
+        vc: VertexConsumer,
+        minX: Double, minY: Double, minZ: Double, maxX: Double, maxY: Double, maxZ: Double,
+        argb: Int,
+    ) {
+        quad(vc, minX, minY, minZ, maxX, minY, minZ, maxX, minY, maxZ, minX, minY, maxZ, argb)
+        quad(vc, minX, maxY, minZ, minX, maxY, maxZ, maxX, maxY, maxZ, maxX, maxY, minZ, argb)
+        quad(vc, minX, minY, minZ, minX, maxY, minZ, maxX, maxY, minZ, maxX, minY, minZ, argb)
+        quad(vc, minX, minY, maxZ, maxX, minY, maxZ, maxX, maxY, maxZ, minX, maxY, maxZ, argb)
+        quad(vc, minX, minY, minZ, minX, minY, maxZ, minX, maxY, maxZ, minX, maxY, minZ, argb)
+        quad(vc, maxX, minY, minZ, maxX, maxY, minZ, maxX, maxY, maxZ, maxX, minY, maxZ, argb)
+    }
+
+    private fun quad(
+        vc: VertexConsumer,
+        x1: Double, y1: Double, z1: Double,
+        x2: Double, y2: Double, z2: Double,
+        x3: Double, y3: Double, z3: Double,
+        x4: Double, y4: Double, z4: Double,
+        argb: Int,
+    ) {
+        vc.addVertex(x1.toFloat(), y1.toFloat(), z1.toFloat()).setColor(argb)
+        vc.addVertex(x2.toFloat(), y2.toFloat(), z2.toFloat()).setColor(argb)
+        vc.addVertex(x3.toFloat(), y3.toFloat(), z3.toFloat()).setColor(argb)
+        vc.addVertex(x4.toFloat(), y4.toFloat(), z4.toFloat()).setColor(argb)
+    }
+
+    //? if >=26.2 {
+    private val identityPose = PoseStack()
+
+    private val geometry = net.minecraft.client.renderer.SubmitNodeCollector.CustomGeometryRenderer { _, buffer -> drawLevel(buffer) }
+
+    fun submitHitboxes(camera: net.minecraft.client.renderer.state.level.CameraRenderState, collector: net.minecraft.client.renderer.SubmitNodeCollector) {
+        if (!beginFrame(camera.cullFrustum)) return
+        collector.submitCustomGeometry(identityPose, quadsType(), geometry)
+    }
+    //?} elif >=1.21.10 {
+    /*
+    fun renderHitboxes(cull: Frustum?) {
+        if (!beginFrame(cull)) return
+        val type = quadsType()
+        val buffer = Minecraft.getInstance().renderBuffers().bufferSource()
+        drawLevel(buffer.getBuffer(type))
+        buffer.endBatch(type)
+    }
+    *///?} else {
+    /*
+    fun renderEntity(entity: Entity, buffer: net.minecraft.client.renderer.MultiBufferSource) {
+        if (!beginFrame(null)) return
+        val player = viewer ?: return
+        if (entity === selfInFirstPerson || entity.isInvisible) return
+        val matched = HitboxCategory.match(entity)
+        val config = HitboxCategory.visualsOf(matched)
+        if (!config.showSide && !config.showOutline && !config.showEyeHeight && !config.showViewRay) return
+        when (HitboxCategory.logicOf(matched).showCondition) {
+            0 -> {}
+            1 -> if (!vanillaToggle) return
+            2 -> if (entity !== hovered) return
+            else -> return
         }
+        if (entity.isInvisibleTo(player)) return
+        drawEntity(buffer.getBuffer(quadsType()), entity, config)
     }
-    //?} else {
-    /*fun renderEntity(entity: Entity, pose: PoseStack, buffer: net.minecraft.client.renderer.MultiBufferSource, camX: Double, camY: Double, camZ: Double, partialTicks: Float) {
-        if (!ModConfig.enabled) return
-        val hovered = Minecraft.getInstance().crosshairPickEntity
-        val config = HitboxCategory.resolve(entity)
-        if (!shouldShow(config, entity, hovered)) return
-        draw(entity, config, pose, buffer, camX, camY, camZ, partialTicks, entity === hovered && config.hoverColor)
-    }
-
-    /**
-     * Submit-pipeline backend (1.21.10). Called from the tail of `DebugRenderer.render`, which runs
-     * after the entity model batches have been flushed to the depth buffer, so the depth-tested
-     * hitbox composites correctly against them. The pose is left identity: geometry is emitted in
-     * camera-relative world space and the billboard uses camera distance, so it does not depend on
-     * the pose carrying the view matrix.
-     */
-    fun renderAfterEntities(camX: Double, camY: Double, camZ: Double, partialTicks: Float) {
-        if (!ModConfig.enabled) return
-        val mc = Minecraft.getInstance()
-        val level = mc.level ?: return
-        val pose = PoseStack()
-        val buffer = mc.renderBuffers().bufferSource()
-        val hovered = mc.crosshairPickEntity
-        for (entity in level.entitiesForRendering()) {
-            val config = HitboxCategory.resolve(entity)
-            if (!shouldShow(config, entity, hovered)) continue
-            draw(entity, config, pose, buffer, camX, camY, camZ, partialTicks, entity === hovered && config.hoverColor)
-        }
-        buffer.endBatch(quadsType())
-    }
-
-    private fun draw(entity: Entity, config: HitboxConfig, pose: PoseStack, buffer: net.minecraft.client.renderer.MultiBufferSource, camX: Double, camY: Double, camZ: Double, partialTicks: Float, hover: Boolean) {
-        val x = entity.x
-        val y = entity.y
-        val z = entity.z
-        val renderX = Mth.lerp(partialTicks.toDouble(), entity.xo, x)
-        val renderY = Mth.lerp(partialTicks.toDouble(), entity.yo, y)
-        val renderZ = Mth.lerp(partialTicks.toDouble(), entity.zo, z)
-        pose.pushPose()
-        pose.translate(renderX - camX, renderY - camY, renderZ - camZ)
-        val bb = entity.boundingBox
-        val box = AABB(bb.minX - x, bb.minY - y, bb.minZ - z, bb.maxX - x, bb.maxY - y, bb.maxZ - z)
-
-        if (config.showSide) {
-            val c = if (hover) config.sideHoverColor else config.sideColor
-            fillBox(buffer, pose, box, c.argb)
-        }
-        if (config.showOutline) {
-            val c = if (hover) config.outlineHoverColor else config.outlineColor
-            styledBox(config, buffer, pose, box, c.argb, config.outlineThickness)
-        }
-        if (config.showEyeHeight) {
-            val c = if (hover) config.eyeHeightHoverColor else config.eyeHeightColor
-            val eyeY = box.minY + entity.eyeHeight
-            styledBox(config, buffer, pose, AABB(box.minX, eyeY - 0.01, box.minZ, box.maxX, eyeY + 0.01, box.maxZ), c.argb, config.eyeHeightThickness)
-        }
-        if (config.showViewRay) {
-            val c = if (hover) config.viewRayHoverColor else config.viewRayColor
-            val eyeY = box.minY + entity.eyeHeight
-            val view = entity.getViewVector(partialTicks)
-            styledEdge(config, buffer, pose, Vec3(0.0, eyeY, 0.0), Vec3(view.x * 2.0, eyeY + view.y * 2.0, view.z * 2.0), c.argb, config.viewRayThickness)
-        }
-        pose.popPose()
-    }
-
-    private fun styledBox(config: HitboxConfig, buffer: net.minecraft.client.renderer.MultiBufferSource, pose: PoseStack, box: AABB, argb: Int, thickness: Float) {
-        for ((from, to) in boxEdges(box)) styledEdge(config, buffer, pose, from, to, argb, thickness)
-    }
-
-    private fun styledEdge(config: HitboxConfig, buffer: net.minecraft.client.renderer.MultiBufferSource, pose: PoseStack, from: Vec3, to: Vec3, argb: Int, thickness: Float) {
-        when (config.lineStyle) {
-            PROPORTIONED -> {
-                val mid = from.add(to).scale(0.5)
-                val v = org.joml.Vector3f(mid.x.toFloat(), mid.y.toFloat(), mid.z.toFloat())
-                pose.last().pose().transformPosition(v)
-                val half = thickness * PROPORTIONED_HALF * v.length().toDouble()
-                for (quad in tubeQuads(from, to, half)) fillQuad(buffer, pose, quad, argb)
-            }
-            DASHED -> for ((a, b) in dashSegments(from, to, config.dashFactor)) screenLine(buffer, pose, a, b, thickness, argb)
-            else -> screenLine(buffer, pose, from, to, thickness, argb)
-        }
-    }
-
-    /**
-     * Draws an edge as a camera-facing ribbon of constant screen-space width, matching the legacy
-     * glLineWidth look and the 26.2 gizmo backend. The endpoints are pushed to view space, offset
-     * perpendicular to the line by a depth-scaled amount so the width stays constant in pixels, then
-     * the offset is rotated back into model space for emission through the pose.
-     */
-    private fun screenLine(buffer: net.minecraft.client.renderer.MultiBufferSource, pose: PoseStack, from: Vec3, to: Vec3, thickness: Float, argb: Int) {
-        val m = pose.last().pose()
-        val va = org.joml.Vector3f(from.x.toFloat(), from.y.toFloat(), from.z.toFloat()); m.transformPosition(va)
-        val vb = org.joml.Vector3f(to.x.toFloat(), to.y.toFloat(), to.z.toFloat()); m.transformPosition(vb)
-        val dir = org.joml.Vector3f(vb).sub(va)
-        if (dir.lengthSquared() < 1.0e-9f) return
-        dir.normalize()
-        val toModel = org.joml.Matrix3f(m).transpose()
-        val vpH = Minecraft.getInstance().window.height.toFloat()
-        // The projection matrix isn't readable on 1.21.8+, so derive its focal scale from the
-        // vertical FOV: the perspective m11 term is 1/tan(fov/2).
-        val focal = (1.0 / kotlin.math.tan(Math.toRadians(Minecraft.getInstance().options.fov().get().toDouble()) * 0.5)).toFloat()
-        val offA = billboardOffset(va, dir, thickness, focal, vpH, toModel)
-        val offB = billboardOffset(vb, dir, thickness, focal, vpH, toModel)
-        fillQuad(buffer, pose, listOf(from.add(offA), to.add(offB), to.subtract(offB), from.subtract(offA)), argb)
-    }
-
-    private fun billboardOffset(v: org.joml.Vector3f, dir: org.joml.Vector3f, thickness: Float, focal: Float, vpH: Float, toModel: org.joml.Matrix3f): Vec3 {
-        // cross(lineDir, viewRay) is perpendicular to both the line and the view ray, so it faces the
-        // camera and lies exactly in the plane tangent to the view ray (perp is orthogonal to v).
-        val perp = org.joml.Vector3f(dir).cross(v)
-        if (perp.lengthSquared() < 1.0e-9f) return Vec3.ZERO
-        perp.normalize()
-        // Distance from the camera (rotation-invariant, so it works whether the pose is the view
-        // matrix or identity). Since perp is tangent to the view ray it projects at the clean rate
-        // focal/dist, so a world offset that spans a fixed pixel width is halfPx * dist / (focal *
-        // vpH/2) with no projected-length division — bounded even when the line is viewed end-on.
-        val dist = v.length().coerceAtLeast(0.05f)
-        val mag = thickness * 0.5f * WIDTH_SCALE * dist / (focal * vpH * 0.5f)
-        perp.mul(mag)
-        toModel.transform(perp)
-        return Vec3(perp.x().toDouble(), perp.y().toDouble(), perp.z().toDouble())
-    }
-
-    private fun fillBox(buffer: net.minecraft.client.renderer.MultiBufferSource, pose: PoseStack, b: AABB, argb: Int) {
-        fillQuad(buffer, pose, listOf(Vec3(b.minX, b.minY, b.minZ), Vec3(b.maxX, b.minY, b.minZ), Vec3(b.maxX, b.minY, b.maxZ), Vec3(b.minX, b.minY, b.maxZ)), argb)
-        fillQuad(buffer, pose, listOf(Vec3(b.minX, b.maxY, b.minZ), Vec3(b.minX, b.maxY, b.maxZ), Vec3(b.maxX, b.maxY, b.maxZ), Vec3(b.maxX, b.maxY, b.minZ)), argb)
-        fillQuad(buffer, pose, listOf(Vec3(b.minX, b.minY, b.minZ), Vec3(b.minX, b.maxY, b.minZ), Vec3(b.maxX, b.maxY, b.minZ), Vec3(b.maxX, b.minY, b.minZ)), argb)
-        fillQuad(buffer, pose, listOf(Vec3(b.minX, b.minY, b.maxZ), Vec3(b.maxX, b.minY, b.maxZ), Vec3(b.maxX, b.maxY, b.maxZ), Vec3(b.minX, b.maxY, b.maxZ)), argb)
-        fillQuad(buffer, pose, listOf(Vec3(b.minX, b.minY, b.minZ), Vec3(b.minX, b.minY, b.maxZ), Vec3(b.minX, b.maxY, b.maxZ), Vec3(b.minX, b.maxY, b.minZ)), argb)
-        fillQuad(buffer, pose, listOf(Vec3(b.maxX, b.minY, b.minZ), Vec3(b.maxX, b.maxY, b.minZ), Vec3(b.maxX, b.maxY, b.maxZ), Vec3(b.maxX, b.minY, b.maxZ)), argb)
-    }
-
-    private fun fillQuad(buffer: net.minecraft.client.renderer.MultiBufferSource, pose: PoseStack, corners: List<Vec3>, argb: Int) {
-        val vc = buffer.getBuffer(quadsType())
-        for (c in corners) vc.addVertex(pose.last(), c.x.toFloat(), c.y.toFloat(), c.z.toFloat()).setColor(argb)
-    }
-
-    private fun quadsType() = net.minecraft.client.renderer.rendertype.RenderType.debugQuads()*/
-    //?}
+    *///?}
 }

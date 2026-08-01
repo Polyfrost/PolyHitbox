@@ -42,13 +42,13 @@ enum class HitboxCategory(
         private val sortedByPriority: List<HitboxCategory> =
             (entries - DEFAULT).sortedBy { it.priority }
 
-        /**
-         * Resolves the styling to use for [entity]: the highest-priority matching category that
-         * overrides the default, otherwise the [DEFAULT] styling.
-         */
-        fun resolve(entity: Entity): HitboxConfig {
-            val matched = sortedByPriority.firstOrNull { it.condition(entity) }?.config
-            return if (matched != null && matched.overwriteDefault) matched else DEFAULT.config
-        }
+        fun match(entity: Entity): HitboxConfig? =
+            sortedByPriority.firstOrNull { it.condition(entity) }?.config
+
+        fun logicOf(matched: HitboxConfig?): HitboxConfig =
+            if (matched != null && matched.overwriteLogic) matched else DEFAULT.config
+
+        fun visualsOf(matched: HitboxConfig?): HitboxConfig =
+            if (matched != null && matched.overwriteVisuals) matched else DEFAULT.config
     }
 }

@@ -1,41 +1,48 @@
 package org.polyfrost.polyhitbox.mixin;
 
 import org.polyfrost.polyhitbox.render.HitboxRenderer;
+import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-//? if >=1.21.11 {
-@Mixin(net.minecraft.client.renderer.GameRenderer.class)
+//? if >=26.2 {
+@Mixin(net.minecraft.client.renderer.LevelRenderer.class)
 public class HitboxRenderMixin {
-    // These versions draw hitboxes through the Gizmos system. Gizmos may only be created while a
-    // GizmoCollector is registered, and only the level render both registers one and drains what was
-    // collected; forced frames (Minecraft#setScreenAndShow, the world load and disconnect spin
-    // loops) skip it entirely. Injecting on the renderLevel call ties emission to exactly that.
-    // The collected gizmos are drawn after the entity models are flushed to the depth buffer, so the
-    // hitbox composites correctly against the models.
     @Inject(
-        method = "render(Lnet/minecraft/client/DeltaTracker;Z)V",
-        at = @At(
-            value = "INVOKE",
-            target = "Lnet/minecraft/client/renderer/GameRenderer;renderLevel(Lnet/minecraft/client/DeltaTracker;)V"
-        )
+        method = "submitFeatures(Lnet/minecraft/client/renderer/state/level/LevelRenderState;Lnet/minecraft/client/renderer/SubmitNodeCollector;Z)V",
+        at = @At("TAIL")
     )
-    private void polyhitbox$emitGizmos(net.minecraft.client.DeltaTracker deltaTracker, boolean advanceGameTime, CallbackInfo ci) {
-        HitboxRenderer.INSTANCE.emitGizmos();
+    private void polyhitbox$submit(net.minecraft.client.renderer.state.level.LevelRenderState levelRenderState, net.minecraft.client.renderer.SubmitNodeCollector collector, boolean renderOutline, CallbackInfo ci) {
+        HitboxRenderer.INSTANCE.submitHitboxes(levelRenderState.cameraRenderState, collector);
     }
 }
+//?} elif >=26.1 {
+/*@Mixin(net.minecraft.client.renderer.LevelRenderer.class)
+public class HitboxRenderMixin {
+    @Shadow @Final private net.minecraft.client.renderer.state.level.LevelRenderState levelRenderState;
+
+    @Inject(method = "finalizeGizmoCollection()V", at = @At("HEAD"))
+    private void polyhitbox$render(CallbackInfo ci) {
+        HitboxRenderer.INSTANCE.renderHitboxes(this.levelRenderState.cameraRenderState.cullFrustum);
+    }
+}*/
+//?} elif >=1.21.11 {
+/*@Mixin(net.minecraft.client.renderer.LevelRenderer.class)
+public class HitboxRenderMixin {
+    @Inject(method = "finalizeGizmoCollection()V", at = @At("HEAD"))
+    private void polyhitbox$render(CallbackInfo ci) {
+        HitboxRenderer.INSTANCE.renderHitboxes(null);
+    }
+}*/
 //?} elif >=1.21.10 {
 /*@Mixin(net.minecraft.client.renderer.debug.DebugRenderer.class)
 public class HitboxRenderMixin {
-    // 1.21.10 has no Gizmos system. DebugRenderer#render runs after the entity model batches have
-    // been flushed to the depth buffer, so the depth-tested hitbox composites correctly against them.
     @Inject(method = "render(Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/culling/Frustum;Lnet/minecraft/client/renderer/MultiBufferSource$BufferSource;DDDZ)V", at = @At("TAIL"))
     private void polyhitbox$render(com.mojang.blaze3d.vertex.PoseStack poseStack, net.minecraft.client.renderer.culling.Frustum frustum, net.minecraft.client.renderer.MultiBufferSource.BufferSource buffer, double camX, double camY, double camZ, boolean showChunkBorder, CallbackInfo ci) {
-        net.minecraft.client.Minecraft mc = net.minecraft.client.Minecraft.getInstance();
-        float partialTicks = mc.getDeltaTracker().getGameTimeDeltaPartialTick(false);
-        HitboxRenderer.INSTANCE.renderAfterEntities(camX, camY, camZ, partialTicks);
+        HitboxRenderer.INSTANCE.renderHitboxes(frustum);
     }
 }*/
 //?} else {
@@ -43,7 +50,7 @@ public class HitboxRenderMixin {
 public class HitboxRenderMixin {
     @Inject(method = "renderEntity(Lnet/minecraft/world/entity/Entity;DDDFLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;)V", at = @At("TAIL"))
     private void polyhitbox$render(net.minecraft.world.entity.Entity entity, double camX, double camY, double camZ, float partialTicks, com.mojang.blaze3d.vertex.PoseStack poseStack, net.minecraft.client.renderer.MultiBufferSource buffer, CallbackInfo ci) {
-        HitboxRenderer.INSTANCE.renderEntity(entity, poseStack, buffer, camX, camY, camZ, partialTicks);
+        HitboxRenderer.INSTANCE.renderEntity(entity, buffer);
     }
 }*/
 //?}

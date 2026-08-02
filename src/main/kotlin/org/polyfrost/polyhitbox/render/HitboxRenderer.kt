@@ -9,7 +9,6 @@ import net.minecraft.util.Mth
 import net.minecraft.world.entity.Entity
 import net.minecraft.world.entity.LivingEntity
 import net.minecraft.world.entity.player.Player
-import org.polyfrost.compose.render.PolyColor
 import org.polyfrost.polyhitbox.config.HitboxCategory
 import org.polyfrost.polyhitbox.config.HitboxConfig
 import org.polyfrost.polyhitbox.config.ModConfig
@@ -40,6 +39,8 @@ object HitboxRenderer {
 
     private const val NEAR_PLANE = 0.05
 
+    private const val MIN_DISTANCE_SQ = 0.05 * 0.05
+
     private var camX = 0.0
     private var camY = 0.0
     private var camZ = 0.0
@@ -49,6 +50,8 @@ object HitboxRenderer {
     private var fwdZ = 0.0
 
     private var partialTicks = 0f
+
+    private var lastFrameKey = Double.NaN
 
     private var ribbonScale = 0.0
     private var lastFov = -1
@@ -118,12 +121,18 @@ object HitboxRenderer {
 
     private fun beginFrame(cull: Frustum?): Boolean {
         if (!active()) return false
+        if (!HitboxCategory.anythingVisible()) return false
         val mc = Minecraft.getInstance()
-        if (mc.level == null) return false
+        val level = mc.level ?: return false
         val player = mc.player ?: return false
         val camera = mc.entityRenderDispatcher.camera ?: return false
         readCamera(camera)
         partialTicks = partialTick()
+        val frameKey = level.gameTime.toDouble() + partialTicks
+        if (frameKey != lastFrameKey) {
+            lastFrameKey = frameKey
+            HitboxCategory.resolveColors()
+        }
         cullFrustum = cull
         hovered = mc.crosshairPickEntity
         viewer = player
@@ -156,8 +165,10 @@ object HitboxRenderer {
                 2 -> if (entity !== hovered) continue
                 else -> continue
             }
-            if (entity.isInvisibleTo(player)) continue
+            // Cull before isInvisibleTo: culling is pure math on the bounding box, while
+            // isInvisibleTo walks scoreboard teams.
             if (culled(entity, config)) continue
+            if (entity.isInvisibleTo(player)) continue
             drawEntity(vc, entity, config)
         }
     }
@@ -181,8 +192,8 @@ object HitboxRenderer {
 
     private fun inIframes(entity: Entity): Boolean = entity is LivingEntity && entity.hurtTime > 0
 
-    private fun pick(iframe: Boolean, hover: Boolean, iframeColor: PolyColor, hoverColor: PolyColor, base: PolyColor): PolyColor =
-        if (iframe) iframeColor else if (hover) hoverColor else base
+    private fun pick(iframe: Boolean, hover: Boolean, iframeArgb: Int, hoverArgb: Int, baseArgb: Int): Int =
+        if (iframe) iframeArgb else if (hover) hoverArgb else baseArgb
 
     private fun drawEntity(vc: VertexConsumer, entity: Entity, config: HitboxConfig) {
         val delta = partialTicks.toDouble()
@@ -204,20 +215,20 @@ object HitboxRenderer {
         val iframe = config.iframeColor && inIframes(entity)
 
         if (config.showSide) {
-            val c = pick(iframe, hover, config.sideIframeColor, config.sideHoverColor, config.sideColor)
-            fillBox(vc, minX, minY, minZ, maxX, maxY, maxZ, c.argb)
+            val c = pick(iframe, hover, config.sideIframeArgb, config.sideHoverArgb, config.sideArgb)
+            fillBox(vc, minX, minY, minZ, maxX, maxY, maxZ, c)
         }
         if (config.showOutline) {
-            val c = pick(iframe, hover, config.outlineIframeColor, config.outlineHoverColor, config.outlineColor)
-            styledBox(vc, config, minX, minY, minZ, maxX, maxY, maxZ, c.argb, config.outlineThickness)
+            val c = pick(iframe, hover, config.outlineIframeArgb, config.outlineHoverArgb, config.outlineArgb)
+            styledBox(vc, config, minX, minY, minZ, maxX, maxY, maxZ, c, config.outlineThickness)
         }
         if (config.showEyeHeight) {
-            val c = pick(iframe, hover, config.eyeHeightIframeColor, config.eyeHeightHoverColor, config.eyeHeightColor)
+            val c = pick(iframe, hover, config.eyeHeightIframeArgb, config.eyeHeightHoverArgb, config.eyeHeightArgb)
             val eyeY = minY + entity.eyeHeight
-            styledBox(vc, config, minX, eyeY - 0.01, minZ, maxX, eyeY + 0.01, maxZ, c.argb, config.eyeHeightThickness)
+            styledBox(vc, config, minX, eyeY - 0.01, minZ, maxX, eyeY + 0.01, maxZ, c, config.eyeHeightThickness)
         }
         if (config.showViewRay) {
-            val c = pick(iframe, hover, config.viewRayIframeColor, config.viewRayHoverColor, config.viewRayColor)
+            val c = pick(iframe, hover, config.viewRayIframeArgb, config.viewRayHoverArgb, config.viewRayArgb)
             val eyeY = minY + entity.eyeHeight
             val view = entity.getViewVector(partialTicks)
             val ax = px - camX
@@ -226,7 +237,7 @@ object HitboxRenderer {
                 vc, config,
                 ax, eyeY, az,
                 ax + view.x * VIEW_RAY_LENGTH, eyeY + view.y * VIEW_RAY_LENGTH, az + view.z * VIEW_RAY_LENGTH,
-                c.argb, config.viewRayThickness,
+                c, config.viewRayThickness,
             )
         }
     }
@@ -314,18 +325,13 @@ object HitboxRenderer {
         val dx = bx - ax
         val dy = by - ay
         val dz = bz - az
-        val lengthSq = dx * dx + dy * dy + dz * dz
-        if (lengthSq < EPSILON) return
-        val inverse = 1.0 / sqrt(lengthSq)
-        val ux = dx * inverse
-        val uy = dy * inverse
-        val uz = dz * inverse
+        if (dx * dx + dy * dy + dz * dz < EPSILON) return
 
-        billboardOffset(ux, uy, uz, ax, ay, az, thickness)
+        billboardOffset(dx, dy, dz, ax, ay, az, thickness)
         val oax = offX
         val oay = offY
         val oaz = offZ
-        billboardOffset(ux, uy, uz, bx, by, bz, thickness)
+        billboardOffset(dx, dy, dz, bx, by, bz, thickness)
         quad(
             vc,
             ax + oax, ay + oay, az + oaz,
@@ -337,13 +343,13 @@ object HitboxRenderer {
     }
 
     private fun billboardOffset(
-        ux: Double, uy: Double, uz: Double,
+        dx: Double, dy: Double, dz: Double,
         vx: Double, vy: Double, vz: Double,
         thickness: Float,
     ) {
-        val cx = uy * vz - uz * vy
-        val cy = uz * vx - ux * vz
-        val cz = ux * vy - uy * vx
+        val cx = dy * vz - dz * vy
+        val cy = dz * vx - dx * vz
+        val cz = dx * vy - dy * vx
         val lengthSq = cx * cx + cy * cy + cz * cz
         if (lengthSq < EPSILON) {
             offX = 0.0
@@ -351,8 +357,8 @@ object HitboxRenderer {
             offZ = 0.0
             return
         }
-        val distance = max(sqrt(vx * vx + vy * vy + vz * vz), 0.05)
-        val scale = thickness * ribbonScale * distance / sqrt(lengthSq)
+        val distanceSq = max(vx * vx + vy * vy + vz * vz, MIN_DISTANCE_SQ)
+        val scale = thickness * ribbonScale * sqrt(distanceSq / lengthSq)
         offX = cx * scale
         offY = cy * scale
         offZ = cz * scale
@@ -388,11 +394,9 @@ object HitboxRenderer {
         val n1 = half / sqrt(p1x * p1x + p1y * p1y + p1z * p1z)
         p1x *= n1; p1y *= n1; p1z *= n1
 
-        var p2x = uy * p1z - uz * p1y
-        var p2y = uz * p1x - ux * p1z
-        var p2z = ux * p1y - uy * p1x
-        val n2 = half / sqrt(p2x * p2x + p2y * p2y + p2z * p2z)
-        p2x *= n2; p2y *= n2; p2z *= n2
+        val p2x = uy * p1z - uz * p1y
+        val p2y = uz * p1x - ux * p1z
+        val p2z = ux * p1y - uy * p1x
 
         quad(
             vc,

@@ -46,4 +46,40 @@ class HitboxConfig {
     var viewRayHoverColor: PolyColor = PolyColor.rgba(0, 0, 255, 255)
     var viewRayIframeColor: PolyColor = PolyColor.rgba(255, 85, 85, 255)
     var viewRayThickness = 2f
+
+    @JvmField var sideArgb = 0
+    @JvmField var sideHoverArgb = 0
+    @JvmField var sideIframeArgb = 0
+    @JvmField var outlineArgb = 0
+    @JvmField var outlineHoverArgb = 0
+    @JvmField var outlineIframeArgb = 0
+    @JvmField var eyeHeightArgb = 0
+    @JvmField var eyeHeightHoverArgb = 0
+    @JvmField var eyeHeightIframeArgb = 0
+    @JvmField var viewRayArgb = 0
+    @JvmField var viewRayHoverArgb = 0
+    @JvmField var viewRayIframeArgb = 0
+
+    fun resolveColors() {
+        if (showSide) {
+            sideArgb = sideColor.argb
+            if (hoverColor) sideHoverArgb = sideHoverColor.argb
+            if (iframeColor) sideIframeArgb = sideIframeColor.argb
+        }
+        if (showOutline) {
+            outlineArgb = outlineColor.argb
+            if (hoverColor) outlineHoverArgb = outlineHoverColor.argb
+            if (iframeColor) outlineIframeArgb = outlineIframeColor.argb
+        }
+        if (showEyeHeight) {
+            eyeHeightArgb = eyeHeightColor.argb
+            if (hoverColor) eyeHeightHoverArgb = eyeHeightHoverColor.argb
+            if (iframeColor) eyeHeightIframeArgb = eyeHeightIframeColor.argb
+        }
+        if (showViewRay) {
+            viewRayArgb = viewRayColor.argb
+            if (hoverColor) viewRayHoverArgb = viewRayHoverColor.argb
+            if (iframeColor) viewRayIframeArgb = viewRayIframeColor.argb
+        }
+    }
 }

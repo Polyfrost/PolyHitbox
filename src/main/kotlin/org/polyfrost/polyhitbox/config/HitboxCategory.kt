@@ -13,10 +13,13 @@ import net.minecraft.world.entity.projectile.Projectile
 import net.minecraft.world.entity.projectile.arrow.AbstractArrow
 import net.minecraft.world.entity.projectile.hurtingprojectile.Fireball
 import net.minecraft.world.entity.projectile.hurtingprojectile.WitherSkull
+import java.util.concurrent.ConcurrentHashMap
 
 private const val HIGH = 0
 private const val MID = 1
 private const val LOW = 2
+
+private const val NEVER = 3
 
 enum class HitboxCategory(
     val displayName: String,
@@ -39,16 +42,49 @@ enum class HitboxCategory(
     XP("XP", { it is ExperienceOrb });
 
     companion object {
-        private val sortedByPriority: List<HitboxCategory> =
-            (entries - DEFAULT).sortedBy { it.priority }
+        private val all: Array<HitboxCategory> = entries.toTypedArray()
 
-        fun match(entity: Entity): HitboxConfig? =
-            sortedByPriority.firstOrNull { it.condition(entity) }?.config
+        private val sortedByPriority: Array<HitboxCategory> =
+            (entries - DEFAULT).sortedBy { it.priority }.toTypedArray()
 
-        fun logicOf(matched: HitboxConfig?): HitboxConfig =
-            if (matched != null && matched.overwriteLogic) matched else DEFAULT.config
+        private val byClass = ConcurrentHashMap<Class<*>, HitboxCategory>()
 
-        fun visualsOf(matched: HitboxConfig?): HitboxConfig =
-            if (matched != null && matched.overwriteVisuals) matched else DEFAULT.config
+        fun match(entity: Entity): HitboxConfig {
+            val type = entity.javaClass
+            var category = byClass[type]
+            if (category == null) {
+                category = resolve(entity)
+                byClass[type] = category
+            }
+            return category.config
+        }
+
+        private fun resolve(entity: Entity): HitboxCategory {
+            for (category in sortedByPriority) {
+                if (category.condition(entity)) return category
+            }
+            return DEFAULT
+        }
+
+        fun logicOf(matched: HitboxConfig): HitboxConfig =
+            if (matched.overwriteLogic) matched else DEFAULT.config
+
+        fun visualsOf(matched: HitboxConfig): HitboxConfig =
+            if (matched.overwriteVisuals) matched else DEFAULT.config
+
+        fun anythingVisible(): Boolean {
+            for (category in all) {
+                val matched = category.config
+                if (logicOf(matched).showCondition == NEVER) continue
+                val visuals = visualsOf(matched)
+                if (!visuals.showSide && !visuals.showOutline && !visuals.showEyeHeight && !visuals.showViewRay) continue
+                return true
+            }
+            return false
+        }
+
+        fun resolveColors() {
+            for (category in all) category.config.resolveColors()
+        }
     }
 }

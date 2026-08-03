@@ -12,21 +12,12 @@ import net.minecraft.world.entity.player.Player
 import org.polyfrost.polyhitbox.config.HitboxCategory
 import org.polyfrost.polyhitbox.config.HitboxConfig
 import org.polyfrost.polyhitbox.config.ModConfig
-import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.sqrt
 import kotlin.math.tan
 
 object HitboxRenderer {
-
-    private const val NORMAL = 0
-    private const val PROPORTIONED = 1
-    private const val DASHED = 2
-
-    private const val PROPORTIONED_HALF = 1.0 / 200.0
-
-    private const val WIDTH_SCALE = 1.4
 
     private const val DASH_STEP = 0.005
     private const val MIN_DASH = 0.03
@@ -38,8 +29,6 @@ object HitboxRenderer {
     private const val EPSILON = 1.0e-12
 
     private const val NEAR_PLANE = 0.05
-
-    private const val MIN_DISTANCE_SQ = 0.05 * 0.05
 
     private var camX = 0.0
     private var camY = 0.0
@@ -54,7 +43,7 @@ object HitboxRenderer {
     private var lastFrameKey = Double.NaN
 
     private var ribbonScale = 0.0
-    private var lastFov = -1
+    private var lastFov = -1f
     private var lastViewportHeight = -1
 
     private var cullFrustum: Frustum? = null
@@ -113,6 +102,18 @@ object HitboxRenderer {
     /*private fun partialTick(): Float = Minecraft.getInstance().timer.getGameTimeDeltaPartialTick(false)
     *///?}
 
+    // The FOV actually being rendered, including the sprint/Speed modifier, the FOV Effects slider
+    // and the death/lava animations, so the on-screen width holds still through those transitions.
+    //? if >=26.1 {
+    private fun effectiveFov(camera: Camera): Float = camera.fov
+    //?} elif >=1.21.4 {
+    /*private fun effectiveFov(camera: Camera): Float =
+        (Minecraft.getInstance().gameRenderer as org.polyfrost.polyhitbox.mixin.FovAccessor).`polyhitbox$fov`(camera, partialTicks, true)
+    *///?} else {
+    /*private fun effectiveFov(camera: Camera): Float =
+        (Minecraft.getInstance().gameRenderer as org.polyfrost.polyhitbox.mixin.FovAccessor).`polyhitbox$fov`(camera, partialTicks, true).toFloat()
+    *///?}
+
     //? if >=1.21.11 {
     private fun quadsType() = net.minecraft.client.renderer.rendertype.RenderTypes.debugQuads()
     //?} else {
@@ -128,6 +129,7 @@ object HitboxRenderer {
         val camera = mc.entityRenderDispatcher.camera ?: return false
         readCamera(camera)
         partialTicks = partialTick()
+        updateRibbonScale(effectiveFov(camera), mc.window.height)
         val frameKey = level.gameTime.toDouble() + partialTicks
         if (frameKey != lastFrameKey) {
             lastFrameKey = frameKey
@@ -138,17 +140,23 @@ object HitboxRenderer {
         viewer = player
         selfInFirstPerson = if (mc.options.cameraType.isFirstPerson) mc.cameraEntity else null
         vanillaToggle = vanillaHitboxesEnabled()
-        updateRibbonScale(mc.options.fov().get(), mc.window.height)
         return true
     }
 
-    private fun updateRibbonScale(fov: Int, viewportHeight: Int) {
+    // Thickness is a multiple of vanilla's line width, so one unit is 2.5 physical framebuffer
+    // pixels of on-screen width. mc.window.height is the framebuffer height, so GUI Scale does not
+    // enter into it.
+    private fun updateRibbonScale(fov: Float, viewportHeight: Int) {
         if (fov == lastFov && viewportHeight == lastViewportHeight) return
         lastFov = fov
         lastViewportHeight = viewportHeight
         val focal = 1.0 / tan(Math.toRadians(fov.toDouble()) * 0.5)
         val halfViewport = viewportHeight * 0.5
-        ribbonScale = if (focal > 0.0 && halfViewport > 0.0) 0.5 * WIDTH_SCALE / (focal * halfViewport) else 0.0
+        ribbonScale = if (focal > 0.0 && halfViewport > 0.0) {
+            0.5 * HitboxConfig.VANILLA_WIDTH / (focal * halfViewport)
+        } else {
+            0.0
+        }
     }
 
     private fun drawLevel(vc: VertexConsumer) {
@@ -266,10 +274,8 @@ object HitboxRenderer {
         ax: Double, ay: Double, az: Double, bx: Double, by: Double, bz: Double,
         argb: Int, thickness: Float,
     ) {
-        when (config.lineStyle) {
-            PROPORTIONED -> tube(vc, ax, ay, az, bx, by, bz, thickness * PROPORTIONED_HALF, argb)
-
-            DASHED -> {
+        when (config.lineMode) {
+            HitboxConfig.DASHED -> {
                 val dx = bx - ax
                 val dy = by - ay
                 val dz = bz - az
@@ -347,73 +353,30 @@ object HitboxRenderer {
         vx: Double, vy: Double, vz: Double,
         thickness: Float,
     ) {
-        val cx = dy * vz - dz * vy
-        val cy = dz * vx - dx * vz
-        val cz = dx * vy - dy * vx
-        val lengthSq = cx * cx + cy * cy + cz * cz
+        // Offsetting perpendicular to the view axis, by a magnitude taken from the depth the
+        // perspective divide will use, keeps the on-screen width constant across the whole frame.
+        var cx = dy * fwdZ - dz * fwdY
+        var cy = dz * fwdX - dx * fwdZ
+        var cz = dx * fwdY - dy * fwdX
+        var lengthSq = cx * cx + cy * cy + cz * cz
         if (lengthSq < EPSILON) {
-            offX = 0.0
-            offY = 0.0
-            offZ = 0.0
-            return
+            // The edge points down the view axis; fall back to a radial perpendicular.
+            cx = dy * vz - dz * vy
+            cy = dz * vx - dx * vz
+            cz = dx * vy - dy * vx
+            lengthSq = cx * cx + cy * cy + cz * cz
+            if (lengthSq < EPSILON) {
+                offX = 0.0
+                offY = 0.0
+                offZ = 0.0
+                return
+            }
         }
-        val distanceSq = max(vx * vx + vy * vy + vz * vz, MIN_DISTANCE_SQ)
-        val scale = thickness * ribbonScale * sqrt(distanceSq / lengthSq)
+        val depth = max(vx * fwdX + vy * fwdY + vz * fwdZ, NEAR_PLANE)
+        val scale = thickness * ribbonScale * depth / sqrt(lengthSq)
         offX = cx * scale
         offY = cy * scale
         offZ = cz * scale
-    }
-
-    private fun tube(
-        vc: VertexConsumer,
-        ax: Double, ay: Double, az: Double, bx: Double, by: Double, bz: Double,
-        half: Double, argb: Int,
-    ) {
-        val dx = bx - ax
-        val dy = by - ay
-        val dz = bz - az
-        val lengthSq = dx * dx + dy * dy + dz * dz
-        if (lengthSq < EPSILON) return
-        val inverse = 1.0 / sqrt(lengthSq)
-        val ux = dx * inverse
-        val uy = dy * inverse
-        val uz = dz * inverse
-
-        val rx: Double
-        val ry: Double
-        val rz: Double
-        if (abs(uy) < 0.99) {
-            rx = 0.0; ry = 1.0; rz = 0.0
-        } else {
-            rx = 1.0; ry = 0.0; rz = 0.0
-        }
-
-        var p1x = uy * rz - uz * ry
-        var p1y = uz * rx - ux * rz
-        var p1z = ux * ry - uy * rx
-        val n1 = half / sqrt(p1x * p1x + p1y * p1y + p1z * p1z)
-        p1x *= n1; p1y *= n1; p1z *= n1
-
-        val p2x = uy * p1z - uz * p1y
-        val p2y = uz * p1x - ux * p1z
-        val p2z = ux * p1y - uy * p1x
-
-        quad(
-            vc,
-            ax + p1x, ay + p1y, az + p1z,
-            bx + p1x, by + p1y, bz + p1z,
-            bx - p1x, by - p1y, bz - p1z,
-            ax - p1x, ay - p1y, az - p1z,
-            argb,
-        )
-        quad(
-            vc,
-            ax + p2x, ay + p2y, az + p2z,
-            bx + p2x, by + p2y, bz + p2z,
-            bx - p2x, by - p2y, bz - p2z,
-            ax - p2x, ay - p2y, az - p2z,
-            argb,
-        )
     }
 
     private fun fillBox(

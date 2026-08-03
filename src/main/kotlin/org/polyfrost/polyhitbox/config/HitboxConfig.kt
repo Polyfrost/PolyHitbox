@@ -7,6 +7,14 @@ import org.polyfrost.compose.render.PolyColor
  * OneConfig settings tree in [ModConfig], so mutating fields here reflects live config edits.
  */
 class HitboxConfig {
+    companion object {
+        const val NORMAL = 0
+        const val DASHED = 1
+
+        /** Vanilla's line width, in physical framebuffer pixels. One thickness unit draws this wide. */
+        const val VANILLA_WIDTH = 2.5f
+    }
+
     /** Show condition: 0 = Always, 1 = Toggled, 2 = Hovered, 3 = Never. */
     var showCondition = 0
 
@@ -16,8 +24,8 @@ class HitboxConfig {
     /** Overrides the [HitboxCategory.DEFAULT] styling for this category when enabled. */
     var overwriteVisuals = false
 
-    /** Line style: 0 = Normal, 1 = Proportioned, 2 = Dashed. */
-    var lineStyle = 0
+    /** Line style: 0 = Normal, 1 = Dashed. */
+    var lineMode = NORMAL
     var dashFactor = 10
 
     var hoverColor = false
@@ -33,19 +41,19 @@ class HitboxConfig {
     var outlineColor: PolyColor = PolyColor.rgba(255, 255, 255, 255)
     var outlineHoverColor: PolyColor = PolyColor.rgba(255, 255, 255, 255)
     var outlineIframeColor: PolyColor = PolyColor.rgba(255, 85, 85, 255)
-    var outlineThickness = 2f
+    var outlineThickness = 1f
 
     var showEyeHeight = true
     var eyeHeightColor: PolyColor = PolyColor.rgba(255, 0, 0, 255)
     var eyeHeightHoverColor: PolyColor = PolyColor.rgba(255, 0, 0, 255)
     var eyeHeightIframeColor: PolyColor = PolyColor.rgba(255, 85, 85, 255)
-    var eyeHeightThickness = 2f
+    var eyeHeightThickness = 1f
 
     var showViewRay = true
     var viewRayColor: PolyColor = PolyColor.rgba(0, 0, 255, 255)
     var viewRayHoverColor: PolyColor = PolyColor.rgba(0, 0, 255, 255)
     var viewRayIframeColor: PolyColor = PolyColor.rgba(255, 85, 85, 255)
-    var viewRayThickness = 2f
+    var viewRayThickness = 1f
 
     @JvmField var sideArgb = 0
     @JvmField var sideHoverArgb = 0

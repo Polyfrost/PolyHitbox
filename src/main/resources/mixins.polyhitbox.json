@@ -5,6 +5,7 @@
   "package": "org.polyfrost.polyhitbox.mixin",
   "refmap": "mixins.polyhitbox.refmap.json",
   "client": [
+    "FovAccessor",
     "HitboxRenderMixin",
     "VanillaHitboxMixin"
   ],

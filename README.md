@@ -9,7 +9,7 @@ A hitbox modification mod
 ## Features
 
 - Show Condition - Always / Debug (F3+B) / Hovered / Never
-- Line Style - Normal / Proportioned / Dashed
+- Line Style - Normal / Dashed
 - Hovered Color
 - Sides
 - Outline

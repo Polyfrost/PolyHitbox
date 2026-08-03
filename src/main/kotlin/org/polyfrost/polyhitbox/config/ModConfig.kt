@@ -18,17 +18,29 @@ object ModConfig : Config(
     "PolyHitbox",
     Config.Category.COMBAT,
 ) {
+    private const val THICKNESS_MIN = 0.5f
+    private const val THICKNESS_MAX = 3f
+    private const val THICKNESS_STEP = 0.25f
+    private const val THICKNESS_DESC = "Line width, as a multiple of vanilla's 2.5 pixel lines."
+
     var enabled = false
 
     var hideInF1 = true
 
+    // The stored config as it was on disk, read before preload() registers the current tree with
+    // OneConfig. Registering rewrites the file with only the properties the tree still declares, so
+    // this is the one chance to see settings that have since been renamed or removed.
+    private var stored: Tree? = ConfigManager.active().load(id)
+
     init {
         preload()
         migrateSplitOverride()
+        migrateLegacyStyle()
+        stored = null
     }
 
     private fun migrateSplitOverride() {
-        val saved = ConfigManager.active().load(id) ?: return
+        val saved = stored ?: return
         var migrated = false
         for (category in HitboxCategory.entries) {
             if (category == HitboxCategory.DEFAULT) continue
@@ -40,6 +52,39 @@ object ModConfig : Config(
             migrated = true
         }
         if (migrated) save()
+    }
+
+    /**
+     * Brings the line settings of a config written by 1.1.2 or earlier onto the current format.
+     * Such a config is identified by its `lineStyle` property, which this release replaced with
+     * `lineMode`.
+     */
+    private fun migrateLegacyStyle() {
+        val saved = stored ?: return
+        var migrated = false
+        for (category in HitboxCategory.entries) {
+            val key = category.name
+            val legacy = (saved.getProp("${key}_lineStyle")?.get() as? Number)?.toInt() ?: continue
+            val cfg = category.config
+            // Old order was Normal / Proportioned / Dashed; Proportioned collapses onto Normal.
+            cfg.lineMode = if (legacy == 2) HitboxConfig.DASHED else HitboxConfig.NORMAL
+            cfg.outlineThickness = legacyThickness(saved, "${key}_outlineThickness", cfg.outlineThickness)
+            cfg.eyeHeightThickness = legacyThickness(saved, "${key}_eyeHeightThickness", cfg.eyeHeightThickness)
+            cfg.viewRayThickness = legacyThickness(saved, "${key}_viewRayThickness", cfg.viewRayThickness)
+            migrated = true
+        }
+        if (migrated) save()
+    }
+
+    /**
+     * The supported thickness closest to the width the [key] setting of [saved] used to draw, back
+     * when it was a pixel count that came out 1.4x wider than asked for. Falls back to [current] if
+     * the config did not store that setting.
+     */
+    private fun legacyThickness(saved: Tree, key: String, current: Float): Float {
+        val legacy = (saved.getProp(key)?.get() as? Number)?.toFloat() ?: return current
+        val multiplier = legacy * 1.4f / HitboxConfig.VANILLA_WIDTH
+        return (Math.round(multiplier / THICKNESS_STEP) * THICKNESS_STEP).coerceIn(THICKNESS_MIN, THICKNESS_MAX)
     }
 
     override fun makeTree(): Tree {
@@ -103,9 +148,9 @@ object ModConfig : Config(
             arrayOf("Always", "Debug (F3+B)", "Hovered", "Never"), tab, sub,
         )
         val lineStyle = dropdown(
-            "${key}_lineStyle", "Line Style", "",
-            { cfg().lineStyle }, { cfg().lineStyle = it },
-            arrayOf("Normal", "Proportioned", "Dashed"), tab, sub,
+            "${key}_lineMode", "Line Style", "",
+            { cfg().lineMode }, { cfg().lineMode = it },
+            arrayOf("Normal", "Dashed"), tab, sub,
         )
         val dashFactor = sliderInt(
             "${key}_dashFactor", "Dash Factor", "",
@@ -128,19 +173,19 @@ object ModConfig : Config(
         val outlineColor = color("${key}_outlineColor", "Outline Color", { cfg().outlineColor }, { cfg().outlineColor = it }, tab, sub)
         val outlineHoverColor = color("${key}_outlineHoverColor", "Hovered Outline Color", { cfg().outlineHoverColor }, { cfg().outlineHoverColor = it }, tab, sub)
         val outlineIframeColor = color("${key}_outlineIframeColor", "I-Frame Outline Color", { cfg().outlineIframeColor }, { cfg().outlineIframeColor = it }, tab, sub)
-        val outlineThickness = sliderFloat("${key}_outlineThickness", "Outline Thickness", "", { cfg().outlineThickness }, { cfg().outlineThickness = it }, 1f, 5f, 0.5f, tab, sub)
+        val outlineThickness = sliderFloat("${key}_outlineThickness", "Outline Thickness", THICKNESS_DESC, { cfg().outlineThickness }, { cfg().outlineThickness = it }, THICKNESS_MIN, THICKNESS_MAX, THICKNESS_STEP, tab, sub)
 
         val showEyeHeight = checkbox("${key}_showEyeHeight", "Eye Height", "", { cfg().showEyeHeight }, { cfg().showEyeHeight = it }, tab, sub)
         val eyeHeightColor = color("${key}_eyeHeightColor", "Eye Height Color", { cfg().eyeHeightColor }, { cfg().eyeHeightColor = it }, tab, sub)
         val eyeHeightHoverColor = color("${key}_eyeHeightHoverColor", "Hovered Eye Height Color", { cfg().eyeHeightHoverColor }, { cfg().eyeHeightHoverColor = it }, tab, sub)
         val eyeHeightIframeColor = color("${key}_eyeHeightIframeColor", "I-Frame Eye Height Color", { cfg().eyeHeightIframeColor }, { cfg().eyeHeightIframeColor = it }, tab, sub)
-        val eyeHeightThickness = sliderFloat("${key}_eyeHeightThickness", "Eye Height Thickness", "", { cfg().eyeHeightThickness }, { cfg().eyeHeightThickness = it }, 1f, 5f, 0.5f, tab, sub)
+        val eyeHeightThickness = sliderFloat("${key}_eyeHeightThickness", "Eye Height Thickness", THICKNESS_DESC, { cfg().eyeHeightThickness }, { cfg().eyeHeightThickness = it }, THICKNESS_MIN, THICKNESS_MAX, THICKNESS_STEP, tab, sub)
 
         val showViewRay = checkbox("${key}_showViewRay", "View Ray", "", { cfg().showViewRay }, { cfg().showViewRay = it }, tab, sub)
         val viewRayColor = color("${key}_viewRayColor", "View Ray Color", { cfg().viewRayColor }, { cfg().viewRayColor = it }, tab, sub)
         val viewRayHoverColor = color("${key}_viewRayHoverColor", "Hovered View Ray Color", { cfg().viewRayHoverColor }, { cfg().viewRayHoverColor = it }, tab, sub)
         val viewRayIframeColor = color("${key}_viewRayIframeColor", "I-Frame View Ray Color", { cfg().viewRayIframeColor }, { cfg().viewRayIframeColor = it }, tab, sub)
-        val viewRayThickness = sliderFloat("${key}_viewRayThickness", "View Ray Thickness", "", { cfg().viewRayThickness }, { cfg().viewRayThickness = it }, 1f, 5f, 0.5f, tab, sub)
+        val viewRayThickness = sliderFloat("${key}_viewRayThickness", "View Ray Thickness", THICKNESS_DESC, { cfg().viewRayThickness }, { cfg().viewRayThickness = it }, THICKNESS_MIN, THICKNESS_MAX, THICKNESS_STEP, tab, sub)
 
         enableProp?.let { tree.put(it) }
         hideInF1Prop?.let { tree.put(it) }
@@ -163,7 +208,7 @@ object ModConfig : Config(
         }
         logicProp?.let { showCondition.addDisplayCondition(it, true) }
         visualsProp?.let { p -> visuals.forEach { it.addDisplayCondition(p, true) } }
-        dashFactor.addDisplayCondition(Supplier { shown(cfg().lineStyle == 2) })
+        dashFactor.addDisplayCondition(Supplier { shown(cfg().lineMode == HitboxConfig.DASHED) })
         lineStyle.addCallback(Predicate<Int> { dashFactor.revaluateDisplay(); false })
 
         sideColor.addDisplayCondition(showSide, true)

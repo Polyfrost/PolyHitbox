@@ -1,4 +1,3 @@
-## 1.1.2
-- Improve performance significantly
-- Add per-i-frame colors (when the player is hit)
-- Add hiding hitbox with F1
+## 1.1.3
+- Normal mode matches vanilla more closely now
+- Removed Proportioned mode

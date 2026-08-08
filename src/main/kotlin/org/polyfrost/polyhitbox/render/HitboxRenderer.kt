@@ -9,6 +9,9 @@ import net.minecraft.util.Mth
 import net.minecraft.world.entity.Entity
 import net.minecraft.world.entity.LivingEntity
 import net.minecraft.world.entity.player.Player
+import org.polyfrost.polyhitbox.api.HitboxColorProvider
+import org.polyfrost.polyhitbox.api.HitboxColors
+import org.polyfrost.polyhitbox.api.HitboxElement
 import org.polyfrost.polyhitbox.config.HitboxCategory
 import org.polyfrost.polyhitbox.config.HitboxConfig
 import org.polyfrost.polyhitbox.config.ModConfig
@@ -51,6 +54,7 @@ object HitboxRenderer {
     private var viewer: Player? = null
     private var selfInFirstPerson: Entity? = null
     private var vanillaToggle = false
+    private var colorProviders: Array<HitboxColorProvider> = emptyArray()
 
     private var offX = 0.0
     private var offY = 0.0
@@ -140,6 +144,7 @@ object HitboxRenderer {
         viewer = player
         selfInFirstPerson = if (mc.options.cameraType.isFirstPerson) mc.cameraEntity else null
         vanillaToggle = vanillaHitboxesEnabled()
+        colorProviders = HitboxColors.snapshot()
         return true
     }
 
@@ -203,6 +208,14 @@ object HitboxRenderer {
     private fun pick(iframe: Boolean, hover: Boolean, iframeArgb: Int, hoverArgb: Int, baseArgb: Int): Int =
         if (iframe) iframeArgb else if (hover) hoverArgb else baseArgb
 
+    private fun tint(entity: Entity, element: HitboxElement, argb: Int): Int {
+        val providers = colorProviders
+        if (providers.isEmpty()) return argb
+        var result = argb
+        for (provider in providers) result = provider.color(entity, element, result)
+        return result
+    }
+
     private fun drawEntity(vc: VertexConsumer, entity: Entity, config: HitboxConfig) {
         val delta = partialTicks.toDouble()
         val px = Mth.lerp(delta, entity.xo, entity.x)
@@ -223,20 +236,20 @@ object HitboxRenderer {
         val iframe = config.iframeColor && inIframes(entity)
 
         if (config.showSide) {
-            val c = pick(iframe, hover, config.sideIframeArgb, config.sideHoverArgb, config.sideArgb)
+            val c = tint(entity, HitboxElement.SIDE, pick(iframe, hover, config.sideIframeArgb, config.sideHoverArgb, config.sideArgb))
             fillBox(vc, minX, minY, minZ, maxX, maxY, maxZ, c)
         }
         if (config.showOutline) {
-            val c = pick(iframe, hover, config.outlineIframeArgb, config.outlineHoverArgb, config.outlineArgb)
+            val c = tint(entity, HitboxElement.OUTLINE, pick(iframe, hover, config.outlineIframeArgb, config.outlineHoverArgb, config.outlineArgb))
             styledBox(vc, config, minX, minY, minZ, maxX, maxY, maxZ, c, config.outlineThickness)
         }
         if (config.showEyeHeight) {
-            val c = pick(iframe, hover, config.eyeHeightIframeArgb, config.eyeHeightHoverArgb, config.eyeHeightArgb)
+            val c = tint(entity, HitboxElement.EYE_HEIGHT, pick(iframe, hover, config.eyeHeightIframeArgb, config.eyeHeightHoverArgb, config.eyeHeightArgb))
             val eyeY = minY + entity.eyeHeight
             styledBox(vc, config, minX, eyeY - 0.01, minZ, maxX, eyeY + 0.01, maxZ, c, config.eyeHeightThickness)
         }
         if (config.showViewRay) {
-            val c = pick(iframe, hover, config.viewRayIframeArgb, config.viewRayHoverArgb, config.viewRayArgb)
+            val c = tint(entity, HitboxElement.VIEW_RAY, pick(iframe, hover, config.viewRayIframeArgb, config.viewRayHoverArgb, config.viewRayArgb))
             val eyeY = minY + entity.eyeHeight
             val view = entity.getViewVector(partialTicks)
             val ax = px - camX

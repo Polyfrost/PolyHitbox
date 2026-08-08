@@ -9,8 +9,10 @@ import net.minecraft.util.Mth
 import net.minecraft.world.entity.Entity
 import net.minecraft.world.entity.LivingEntity
 import net.minecraft.world.entity.player.Player
+import org.polyfrost.polyhitbox.api.HitboxColorContext
 import org.polyfrost.polyhitbox.api.HitboxColorProvider
 import org.polyfrost.polyhitbox.api.HitboxColors
+import org.polyfrost.polyhitbox.api.HitboxCondition
 import org.polyfrost.polyhitbox.api.HitboxElement
 import org.polyfrost.polyhitbox.config.HitboxCategory
 import org.polyfrost.polyhitbox.config.HitboxConfig
@@ -208,11 +210,38 @@ object HitboxRenderer {
     private fun pick(iframe: Boolean, hover: Boolean, iframeArgb: Int, hoverArgb: Int, baseArgb: Int): Int =
         if (iframe) iframeArgb else if (hover) hoverArgb else baseArgb
 
+    private class Context : HitboxColorContext {
+        override lateinit var entity: Entity
+        override lateinit var element: HitboxElement
+        var hovered = false
+        var iframe = false
+
+        override fun has(condition: HitboxCondition): Boolean = when (condition) {
+            HitboxCondition.HOVERED -> hovered
+            HitboxCondition.IFRAME -> iframe
+        }
+    }
+
+    private val context = Context()
+
     private fun tint(entity: Entity, element: HitboxElement, argb: Int): Int {
         val providers = colorProviders
         if (providers.isEmpty()) return argb
+        context.entity = entity
+        context.element = element
+        context.hovered = entity === hovered
+        context.iframe = inIframes(entity)
         var result = argb
-        for (provider in providers) result = provider.color(entity, element, result)
+        var failed = false
+        for (provider in providers) {
+            try {
+                result = provider.color(context, result)
+            } catch (error: Throwable) {
+                HitboxColors.disable(provider, error)
+                failed = true
+            }
+        }
+        if (failed) colorProviders = HitboxColors.snapshot()
         return result
     }
 

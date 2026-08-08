@@ -24,12 +24,20 @@ A hitbox modification mod
 Other mods can recolour hitboxes per entity through `org.polyfrost.polyhitbox.api.HitboxColors`:
 
 ```java
-HitboxColors.register((entity, element, argb) ->
-    element == HitboxElement.OUTLINE ? myColorFor(entity, argb) : argb);
+HitboxColors.register((context, argb) ->
+    context.getElement() == HitboxElement.OUTLINE
+        ? myColorFor(context.getEntity(), argb)
+        : argb);
 ```
 
 Providers run on the render thread, once per element per visible entity per frame, after the
-configured hover and i-frame colours have been applied.
+configured hover and i-frame colours have been applied. `context.has(HitboxCondition.HOVERED)` and
+`context.has(HitboxCondition.IFRAME)` report the entity's actual state regardless of whether the
+matching colour option is enabled; more conditions may be added to `HitboxCondition` later.
+
+The context is only valid for the duration of the call — read what you need, don't retain it. A
+provider that throws is unregistered and the failure is logged, so a broken integration degrades to
+its own feature going away rather than breaking hitbox rendering.
 
 Everything in `org.polyfrost.polyhitbox.api` is stable. Nothing else is — in particular
 `render.HitboxRenderer` is private, is rewritten between patch releases, and injecting into it will

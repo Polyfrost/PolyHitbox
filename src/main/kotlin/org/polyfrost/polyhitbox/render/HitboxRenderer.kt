@@ -210,27 +210,22 @@ object HitboxRenderer {
     private fun pick(iframe: Boolean, hover: Boolean, iframeArgb: Int, hoverArgb: Int, baseArgb: Int): Int =
         if (iframe) iframeArgb else if (hover) hoverArgb else baseArgb
 
-    private class Context : HitboxColorContext {
-        override lateinit var entity: Entity
-        override lateinit var element: HitboxElement
-        var hovered = false
-        var iframe = false
-
+    private class Context(
+        override val entity: Entity,
+        override val element: HitboxElement,
+        private val hovered: Boolean,
+        private val iframe: Boolean,
+    ) : HitboxColorContext {
         override fun has(condition: HitboxCondition): Boolean = when (condition) {
             HitboxCondition.HOVERED -> hovered
             HitboxCondition.IFRAME -> iframe
         }
     }
 
-    private val context = Context()
-
-    private fun tint(entity: Entity, element: HitboxElement, argb: Int): Int {
+    private fun tint(entity: Entity, element: HitboxElement, hover: Boolean, iframe: Boolean, argb: Int): Int {
         val providers = colorProviders
         if (providers.isEmpty()) return argb
-        context.entity = entity
-        context.element = element
-        context.hovered = entity === hovered
-        context.iframe = inIframes(entity)
+        val context = Context(entity, element, hover, iframe)
         var result = argb
         var failed = false
         for (provider in providers) {
@@ -265,20 +260,20 @@ object HitboxRenderer {
         val iframe = config.iframeColor && inIframes(entity)
 
         if (config.showSide) {
-            val c = tint(entity, HitboxElement.SIDE, pick(iframe, hover, config.sideIframeArgb, config.sideHoverArgb, config.sideArgb))
+            val c = tint(entity, HitboxElement.SIDE, hover, iframe, pick(iframe, hover, config.sideIframeArgb, config.sideHoverArgb, config.sideArgb))
             fillBox(vc, minX, minY, minZ, maxX, maxY, maxZ, c)
         }
         if (config.showOutline) {
-            val c = tint(entity, HitboxElement.OUTLINE, pick(iframe, hover, config.outlineIframeArgb, config.outlineHoverArgb, config.outlineArgb))
+            val c = tint(entity, HitboxElement.OUTLINE, hover, iframe, pick(iframe, hover, config.outlineIframeArgb, config.outlineHoverArgb, config.outlineArgb))
             styledBox(vc, config, minX, minY, minZ, maxX, maxY, maxZ, c, config.outlineThickness)
         }
         if (config.showEyeHeight) {
-            val c = tint(entity, HitboxElement.EYE_HEIGHT, pick(iframe, hover, config.eyeHeightIframeArgb, config.eyeHeightHoverArgb, config.eyeHeightArgb))
+            val c = tint(entity, HitboxElement.EYE_HEIGHT, hover, iframe, pick(iframe, hover, config.eyeHeightIframeArgb, config.eyeHeightHoverArgb, config.eyeHeightArgb))
             val eyeY = minY + entity.eyeHeight
             styledBox(vc, config, minX, eyeY - 0.01, minZ, maxX, eyeY + 0.01, maxZ, c, config.eyeHeightThickness)
         }
         if (config.showViewRay) {
-            val c = tint(entity, HitboxElement.VIEW_RAY, pick(iframe, hover, config.viewRayIframeArgb, config.viewRayHoverArgb, config.viewRayArgb))
+            val c = tint(entity, HitboxElement.VIEW_RAY, hover, iframe, pick(iframe, hover, config.viewRayIframeArgb, config.viewRayHoverArgb, config.viewRayArgb))
             val eyeY = minY + entity.eyeHeight
             val view = entity.getViewVector(partialTicks)
             val ax = px - camX

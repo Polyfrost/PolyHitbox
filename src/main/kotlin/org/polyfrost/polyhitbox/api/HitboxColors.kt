@@ -35,7 +35,9 @@ object HitboxColors {
 
     @JvmStatic
     fun register(provider: HitboxColorProvider) {
-        synchronized(this) { providers += provider }
+        synchronized(this) {
+            if (providers.none { it === provider }) providers += provider
+        }
     }
 
     @JvmStatic

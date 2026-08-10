@@ -37,5 +37,8 @@
         "fabricloader": ">=${loader_version}",
         "oneconfigv1": ">=1.0.0-beta.6",
         "fabric-language-kotlin": "*"
+    },
+    "breaks": {
+        "combat-hitboxes": "*"
     }
 }

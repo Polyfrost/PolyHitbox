@@ -27,9 +27,8 @@ object ModConfig : Config(
 
     var hideInF1 = true
 
-    // The stored config as it was on disk, read before preload() registers the current tree with
-    // OneConfig. Registering rewrites the file with only the properties the tree still declares, so
-    // this is the one chance to see settings that have since been renamed or removed.
+    // Read before preload registers the tree because registering rewrites the file with only the
+    // properties the tree still declares dropping any renamed or removed settings
     private var stored: Tree? = ConfigManager.active().load(id)
 
     init {
@@ -54,11 +53,7 @@ object ModConfig : Config(
         if (migrated) save()
     }
 
-    /**
-     * Brings the line settings of a config written by 1.1.2 or earlier onto the current format.
-     * Such a config is identified by its `lineStyle` property, which this release replaced with
-     * `lineMode`.
-     */
+    // Migrates line settings from 1.1.2 or earlier which are identified by the old lineStyle property
     private fun migrateLegacyStyle() {
         val saved = stored ?: return
         var migrated = false
@@ -66,7 +61,7 @@ object ModConfig : Config(
             val key = category.name
             val legacy = (saved.getProp("${key}_lineStyle")?.get() as? Number)?.toInt() ?: continue
             val cfg = category.config
-            // Old order was Normal / Proportioned / Dashed; Proportioned collapses onto Normal.
+            // Old order was Normal Proportioned Dashed so Proportioned collapses onto Normal
             cfg.lineMode = if (legacy == 2) HitboxConfig.DASHED else HitboxConfig.NORMAL
             cfg.outlineThickness = legacyThickness(saved, "${key}_outlineThickness", cfg.outlineThickness)
             cfg.eyeHeightThickness = legacyThickness(saved, "${key}_eyeHeightThickness", cfg.eyeHeightThickness)
@@ -76,11 +71,7 @@ object ModConfig : Config(
         if (migrated) save()
     }
 
-    /**
-     * The supported thickness closest to the width the [key] setting of [saved] used to draw, back
-     * when it was a pixel count that came out 1.4x wider than asked for. Falls back to [current] if
-     * the config did not store that setting.
-     */
+    // Old thickness was a pixel count that drew 1.4x wider than asked so convert and snap to a step
     private fun legacyThickness(saved: Tree, key: String, current: Float): Float {
         val legacy = (saved.getProp(key)?.get() as? Number)?.toFloat() ?: return current
         val multiplier = legacy * 1.4f / HitboxConfig.VANILLA_WIDTH
@@ -96,12 +87,10 @@ object ModConfig : Config(
     }
 
     private fun addCategory(tree: Tree, category: HitboxCategory) {
-        // Property IDs are "<category>_<field>". The separator must not be a dot: the JSON serializer
-        // treats dots in a property ID as nested-path separators, so the saved value never maps back
-        // onto the flat property on load and every field silently resets to its default.
+        // Separator must not be a dot because the JSON serializer treats it as a nested path
+        // so the saved value never maps back onto the flat property and every field resets
         val key = category.name
-        // Each category is its own tab. A single default-named subcategory keeps the list flat (no
-        // section header), so every tab lines up with the same layout.
+        // One tab per category with a single subcategory so the list stays flat with no section header
         val tab = category.displayName
         val sub = "General"
         val cfg = { category.config }

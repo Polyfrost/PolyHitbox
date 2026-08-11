@@ -8,8 +8,8 @@ import org.polyfrost.oneconfig.internal.ui.compose.impls.OneConfigUIScreen
 
 class PolyHitboxModMenuIntegration : ModMenuApi {
     override fun getModConfigScreenFactory(): ConfigScreenFactory<*>? {
-        // When Mod Menu is absent, OneConfig's own compat layer still collects this factory and would
-        // register a duplicate entry next to the native config, so only expose it to Mod Menu itself.
+        // Without Mod Menu the OneConfig compat layer still collects this factory
+        // and would register a duplicate entry next to the native config
         if (!FabricLoader.getInstance().isModLoaded("modmenu")) return null
         return ConfigScreenFactory { OneConfigUIScreen(ModConfig.id) }
     }

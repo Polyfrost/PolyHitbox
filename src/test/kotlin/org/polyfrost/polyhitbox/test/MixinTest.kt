@@ -9,10 +9,8 @@ import org.spongepowered.asm.mixin.MixinEnvironment
 import org.spongepowered.asm.mixin.MixinEnvironment.Option
 import org.spongepowered.asm.mixin.transformer.IMixinTransformer
 
-/**
- * Audits mixins to ensure their validity without launching a full Minecraft client.
- * Implementation inspired by [Skyblocker](https://github.com/SkyblockerMod/Skyblocker).
- */
+// Audits mixins without launching a full client
+// Inspired by https://github.com/SkyblockerMod/Skyblocker
 class MixinTest {
 
     companion object {
@@ -31,11 +29,8 @@ class MixinTest {
             IMixinTransformer::class.java,
             environment.activeTransformer,
         )
-        // Fabric Loader enables refmap remapping in development, which makes Mixin retry failed
-        // target selection with the method descriptor stripped. Production launches do no such
-        // thing, so disable it to match their strictness — otherwise a selector whose descriptor
-        // does not exist on this Minecraft version still resolves by name alone and the audit
-        // passes on a mixin that cannot apply in production.
+        // Refmap remapping is on in dev so Mixin retries failed targets with the descriptor stripped
+        // Disable it to match production or a selector with a bad descriptor still resolves by name
         environment.setOption(Option.REFMAP_REMAP, false)
         environment.audit()
     }

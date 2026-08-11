@@ -3,7 +3,7 @@
     "id": "${mod_id}",
     "name": "${mod_name}",
     "version": "${mod_version}",
-    "description": "${mod_description}",
+    "description": "Highly customizable entity hitbox visualization for PvP.",
     "authors": [
         "Polyfrost"
     ],
@@ -33,7 +33,7 @@
         "mixins.${mod_id}.json"
     ],
     "depends": {
-        "minecraft": ">=${mc_version}",
+        "minecraft": "${minecraft_version_range}",
         "fabricloader": ">=${loader_version}",
         "oneconfigv1": ">=1.0.0-beta.6",
         "fabric-language-kotlin": "*"

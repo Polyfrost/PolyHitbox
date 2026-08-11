@@ -6,9 +6,8 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-// PolyHitbox replaces the vanilla debug hitbox rather than layering over it (the toggle keybind is
-// F3+B, which also drives the vanilla overlay). When the mod is enabled, cancel vanilla's draw so
-// the two boxes don't z-fight. The suppression point differs by version's render pipeline.
+// PolyHitbox replaces the vanilla debug hitbox instead of layering over it
+// so cancel the vanilla draw while enabled and stop the two boxes z-fighting
 //? if >=1.21.11 {
 @Mixin(net.minecraft.client.renderer.debug.EntityHitboxDebugRenderer.class)
 public class VanillaHitboxMixin {

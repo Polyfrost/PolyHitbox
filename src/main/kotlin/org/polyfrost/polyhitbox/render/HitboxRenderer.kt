@@ -108,8 +108,8 @@ object HitboxRenderer {
     /*private fun partialTick(): Float = Minecraft.getInstance().timer.getGameTimeDeltaPartialTick(false)
     *///?}
 
-    // The FOV actually being rendered, including the sprint/Speed modifier, the FOV Effects slider
-    // and the death/lava animations, so the on-screen width holds still through those transitions.
+    // FOV as actually rendered including the sprint modifier and the FOV Effects slider
+    // so on-screen width holds still through those transitions
     //? if >=26.1 {
     private fun effectiveFov(camera: Camera): Float = camera.fov
     //?} elif >=1.21.4 {
@@ -150,9 +150,8 @@ object HitboxRenderer {
         return true
     }
 
-    // Thickness is a multiple of vanilla's line width, so one unit is 2.5 physical framebuffer
-    // pixels of on-screen width. mc.window.height is the framebuffer height, so GUI Scale does not
-    // enter into it.
+    // Thickness multiplies vanilla line width so one unit is 2.5 framebuffer pixels wide
+    // viewportHeight is the framebuffer height so GUI Scale does not enter into it
     private fun updateRibbonScale(fov: Float, viewportHeight: Int) {
         if (fov == lastFov && viewportHeight == lastViewportHeight) return
         lastFov = fov
@@ -180,8 +179,7 @@ object HitboxRenderer {
                 2 -> if (entity !== hovered) continue
                 else -> continue
             }
-            // Cull before isInvisibleTo: culling is pure math on the bounding box, while
-            // isInvisibleTo walks scoreboard teams.
+            // Cull first because it is pure math while isInvisibleTo walks scoreboard teams
             if (culled(entity, config)) continue
             if (entity.isInvisibleTo(player)) continue
             drawEntity(vc, entity, config)
@@ -390,14 +388,14 @@ object HitboxRenderer {
         vx: Double, vy: Double, vz: Double,
         thickness: Float,
     ) {
-        // Offsetting perpendicular to the view axis, by a magnitude taken from the depth the
-        // perspective divide will use, keeps the on-screen width constant across the whole frame.
+        // Offset perpendicular to the view axis scaled by the depth the perspective divide uses
+        // which keeps on-screen width constant across the frame
         var cx = dy * fwdZ - dz * fwdY
         var cy = dz * fwdX - dx * fwdZ
         var cz = dx * fwdY - dy * fwdX
         var lengthSq = cx * cx + cy * cy + cz * cz
         if (lengthSq < EPSILON) {
-            // The edge points down the view axis; fall back to a radial perpendicular.
+            // Edge points down the view axis so fall back to a radial perpendicular
             cx = dy * vz - dz * vy
             cy = dz * vx - dx * vz
             cz = dx * vy - dy * vx

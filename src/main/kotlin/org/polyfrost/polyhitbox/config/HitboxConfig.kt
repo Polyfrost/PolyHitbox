@@ -2,29 +2,23 @@ package org.polyfrost.polyhitbox.config
 
 import org.polyfrost.compose.render.PolyColor
 
-/**
- * Per-category hitbox styling. Instances are held by [HitboxCategory] and are bound to the
- * OneConfig settings tree in [ModConfig], so mutating fields here reflects live config edits.
- */
+// Held by HitboxCategory and bound to the OneConfig tree in ModConfig so these fields track live edits
 class HitboxConfig {
     companion object {
         const val NORMAL = 0
         const val DASHED = 1
 
-        /** Vanilla's line width, in physical framebuffer pixels. One thickness unit draws this wide. */
+        // Vanilla line width in framebuffer pixels which is what one thickness unit draws
         const val VANILLA_WIDTH = 2.5f
     }
 
-    /** Show condition: 0 = Always, 1 = Toggled, 2 = Hovered, 3 = Never. */
+    // 0 Always 1 Toggled 2 Hovered 3 Never
     var showCondition = 0
 
-    /** Overrides the [HitboxCategory.DEFAULT] [showCondition] for this category when enabled. */
     var overwriteLogic = false
 
-    /** Overrides the [HitboxCategory.DEFAULT] styling for this category when enabled. */
     var overwriteVisuals = false
 
-    /** Line style: 0 = Normal, 1 = Dashed. */
     var lineMode = NORMAL
     var dashFactor = 10
 

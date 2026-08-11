@@ -123,7 +123,7 @@ object HitboxRenderer {
     //? if >=1.21.11 {
     private fun quadsType() = net.minecraft.client.renderer.rendertype.RenderTypes.debugQuads()
     //?} else {
-    /*private fun quadsType() = net.minecraft.client.renderer.rendertype.RenderType.debugQuads()
+    /*private fun quadsType() = net.minecraft.client.renderer.RenderType.debugQuads()
     *///?}
 
     private fun beginFrame(cull: Frustum?): Boolean {

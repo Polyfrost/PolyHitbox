@@ -10,9 +10,15 @@ import net.minecraft.world.entity.item.ItemEntity
 import net.minecraft.world.entity.monster.Enemy
 import net.minecraft.world.entity.player.Player
 import net.minecraft.world.entity.projectile.Projectile
+//? if >=1.21.11 {
 import net.minecraft.world.entity.projectile.arrow.AbstractArrow
 import net.minecraft.world.entity.projectile.hurtingprojectile.Fireball
 import net.minecraft.world.entity.projectile.hurtingprojectile.WitherSkull
+//?} else {
+/*import net.minecraft.world.entity.projectile.AbstractArrow
+import net.minecraft.world.entity.projectile.Fireball
+import net.minecraft.world.entity.projectile.WitherSkull
+*///?}
 import java.util.concurrent.ConcurrentHashMap
 
 private const val HIGH = 0

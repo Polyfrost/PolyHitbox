@@ -22,6 +22,8 @@ class HitboxConfig {
     var lineMode = NORMAL
     var dashFactor = 10
 
+    var drawOverEntity = false
+
     var hoverColor = false
 
     var iframeColor = false

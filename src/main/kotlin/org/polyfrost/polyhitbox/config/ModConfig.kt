@@ -194,6 +194,12 @@ object ModConfig : Config(
             "${key}_dashFactor", "Dash Factor", "",
             { cfg().dashFactor }, { cfg().dashFactor = it }, 1f, 20f, 1f, tab, sub,
         )
+        val drawOverEntity = switch(
+            "${key}_drawOverEntity", "Draw Over Entity",
+            "Draw the hitbox on top of the entity it belongs to instead of letting the entity cover it. " +
+                "Blocks and other entities in the way still cover it.",
+            { cfg().drawOverEntity }, { cfg().drawOverEntity = it }, tab, sub,
+        )
         val hoverColor = switch("${key}_hoverColor", "Different Color on Hover", "", { cfg().hoverColor }, { cfg().hoverColor = it }, tab, sub)
         val iframeColor = switch(
             "${key}_iframeColor", "Different Color in I-Frames",
@@ -234,7 +240,7 @@ object ModConfig : Config(
         toggledProp?.let { tree.put(it) }
         visualsProp?.let { tree.put(it) }
         val visuals = listOf(
-            lineStyle, dashFactor, hoverColor, iframeColor,
+            lineStyle, dashFactor, drawOverEntity, hoverColor, iframeColor,
             showSide, sideColor, sideHoverColor, sideIframeColor,
             showOutline, outlineColor, outlineHoverColor, outlineIframeColor, outlineThickness,
             showEyeHeight, eyeHeightColor, eyeHeightHoverColor, eyeHeightIframeColor, eyeHeightThickness,

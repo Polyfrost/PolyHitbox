@@ -35,6 +35,9 @@ object HitboxRenderer {
 
     private const val NEAR_PLANE = 0.05
 
+    // How far a model may hang outside its hitbox, matching the margin vanilla culling allows for
+    private const val MODEL_MARGIN = 0.5
+
     private var camX = 0.0
     private var camY = 0.0
     private var camZ = 0.0
@@ -61,6 +64,24 @@ object HitboxRenderer {
     private var offX = 0.0
     private var offY = 0.0
     private var offZ = 0.0
+
+    private var clamping = false
+    private var gateMinX = 0.0
+    private var gateMinY = 0.0
+    private var gateMinZ = 0.0
+    private var gateMaxX = 0.0
+    private var gateMaxY = 0.0
+    private var gateMaxZ = 0.0
+    private var clampMinX = 0.0
+    private var clampMinY = 0.0
+    private var clampMinZ = 0.0
+    private var clampMaxX = 0.0
+    private var clampMaxY = 0.0
+    private var clampMaxZ = 0.0
+
+    private var gateEnter = 0.0
+    private var gateExit = 0.0
+    private var clampEnter = 0.0
 
     private fun active(): Boolean = ModConfig.enabled && !(ModConfig.hideInF1 && guiHidden())
 
@@ -249,6 +270,9 @@ object HitboxRenderer {
         val hover = entity === hovered && config.hoverColor
         val iframe = config.iframeColor && inIframes(entity)
 
+        clamping = config.drawOverEntity
+        if (clamping) setClampBoxes(config, minX, minY, minZ, maxX, maxY, maxZ)
+
         if (config.showSide) {
             val c = tint(entity, HitboxElement.SIDE, hover, iframe, pick(iframe, hover, config.sideIframeArgb, config.sideHoverArgb, config.sideArgb))
             fillBox(vc, minX, minY, minZ, maxX, maxY, maxZ, c)
@@ -406,6 +430,71 @@ object HitboxRenderer {
         offZ = cz * scale
     }
 
+    private fun setClampBoxes(
+        config: HitboxConfig,
+        minX: Double, minY: Double, minZ: Double, maxX: Double, maxY: Double, maxZ: Double,
+    ) {
+        var thickness = 0f
+        if (config.showOutline) thickness = max(thickness, config.outlineThickness)
+        if (config.showEyeHeight) thickness = max(thickness, config.eyeHeightThickness)
+        if (config.showViewRay) thickness = max(thickness, config.viewRayThickness)
+        val cx = (minX + maxX) * 0.5
+        val cy = (minY + maxY) * 0.5
+        val cz = (minZ + maxZ) * 0.5
+        val rx = (maxX - minX) * 0.5
+        val ry = (maxY - minY) * 0.5
+        val rz = (maxZ - minZ) * 0.5
+        val farDepth = cx * fwdX + cy * fwdY + cz * fwdZ + sqrt(rx * rx + ry * ry + rz * rz)
+        val margin = max(thickness * ribbonScale * farDepth, 0.0)
+        gateMinX = minX - margin
+        gateMinY = minY - margin
+        gateMinZ = minZ - margin
+        gateMaxX = maxX + margin
+        gateMaxY = maxY + margin
+        gateMaxZ = maxZ + margin
+        clampMinX = gateMinX - MODEL_MARGIN
+        clampMinY = gateMinY - MODEL_MARGIN
+        clampMinZ = gateMinZ - MODEL_MARGIN
+        clampMaxX = gateMaxX + MODEL_MARGIN
+        clampMaxY = gateMaxY + MODEL_MARGIN
+        clampMaxZ = gateMaxZ + MODEL_MARGIN
+    }
+
+    private fun depthScale(x: Double, y: Double, z: Double): Double {
+        gateEnter = -Double.MAX_VALUE
+        gateExit = Double.MAX_VALUE
+        clampEnter = -Double.MAX_VALUE
+        if (!slab(x, gateMinX, gateMaxX, clampMinX, clampMaxX)) return 1.0
+        if (!slab(y, gateMinY, gateMaxY, clampMinY, clampMaxY)) return 1.0
+        if (!slab(z, gateMinZ, gateMaxZ, clampMinZ, clampMaxZ)) return 1.0
+        // Hitbox is behind the camera, or the camera sits inside the margin with nothing left to escape
+        if (gateExit <= 0.0 || clampEnter <= 0.0) return 1.0
+        var scale = min(1.0, clampEnter)
+        val depth = x * fwdX + y * fwdY + z * fwdZ
+        if (depth * scale < NEAR_PLANE) scale = if (depth > NEAR_PLANE) NEAR_PLANE / depth else 1.0
+        return scale
+    }
+
+    private fun slab(d: Double, gateLo: Double, gateHi: Double, clampLo: Double, clampHi: Double): Boolean {
+        if (d > -EPSILON && d < EPSILON) return gateLo <= 0.0 && gateHi >= 0.0
+        val inv = 1.0 / d
+        var near = gateLo * inv
+        var far = gateHi * inv
+        if (near > far) {
+            val swap = near
+            near = far
+            far = swap
+        }
+        if (near > gateEnter) gateEnter = near
+        if (far < gateExit) gateExit = far
+        if (gateEnter > gateExit) return false
+        near = clampLo * inv
+        far = clampHi * inv
+        if (near > far) near = far
+        if (near > clampEnter) clampEnter = near
+        return true
+    }
+
     private fun fillBox(
         vc: VertexConsumer,
         minX: Double, minY: Double, minZ: Double, maxX: Double, maxY: Double, maxZ: Double,
@@ -427,10 +516,15 @@ object HitboxRenderer {
         x4: Double, y4: Double, z4: Double,
         argb: Int,
     ) {
-        vc.addVertex(x1.toFloat(), y1.toFloat(), z1.toFloat()).setColor(argb)
-        vc.addVertex(x2.toFloat(), y2.toFloat(), z2.toFloat()).setColor(argb)
-        vc.addVertex(x3.toFloat(), y3.toFloat(), z3.toFloat()).setColor(argb)
-        vc.addVertex(x4.toFloat(), y4.toFloat(), z4.toFloat()).setColor(argb)
+        vertex(vc, x1, y1, z1, argb)
+        vertex(vc, x2, y2, z2, argb)
+        vertex(vc, x3, y3, z3, argb)
+        vertex(vc, x4, y4, z4, argb)
+    }
+
+    private fun vertex(vc: VertexConsumer, x: Double, y: Double, z: Double, argb: Int) {
+        val scale = if (clamping) depthScale(x, y, z) else 1.0
+        vc.addVertex((x * scale).toFloat(), (y * scale).toFloat(), (z * scale).toFloat()).setColor(argb)
     }
 
     //? if >=26.2 {

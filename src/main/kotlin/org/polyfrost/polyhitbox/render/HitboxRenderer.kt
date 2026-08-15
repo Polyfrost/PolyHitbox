@@ -55,7 +55,7 @@ object HitboxRenderer {
     private var hovered: Entity? = null
     private var viewer: Player? = null
     private var selfInFirstPerson: Entity? = null
-    private var vanillaToggle = false
+    private var toggled = false
     private var colorProviders: Array<HitboxColorProvider> = emptyArray()
 
     private var offX = 0.0
@@ -68,14 +68,6 @@ object HitboxRenderer {
     private fun guiHidden(): Boolean = Minecraft.getInstance().gui.hud.isHidden
     //?} else {
     /*private fun guiHidden(): Boolean = Minecraft.getInstance().options.hideGui
-    *///?}
-
-    //? if >=1.21.10 {
-    private fun vanillaHitboxesEnabled(): Boolean =
-        Minecraft.getInstance().debugEntries.isCurrentlyEnabled(net.minecraft.client.gui.components.debug.DebugScreenEntries.ENTITY_HITBOXES)
-    //?} else {
-    /*private fun vanillaHitboxesEnabled(): Boolean =
-        Minecraft.getInstance().entityRenderDispatcher.shouldRenderHitBoxes()
     *///?}
 
     //? if >=1.21.11 {
@@ -145,7 +137,7 @@ object HitboxRenderer {
         hovered = mc.crosshairPickEntity
         viewer = player
         selfInFirstPerson = if (mc.options.cameraType.isFirstPerson) mc.cameraEntity else null
-        vanillaToggle = vanillaHitboxesEnabled()
+        toggled = ModConfig.toggled
         colorProviders = HitboxColors.snapshot()
         return true
     }
@@ -175,7 +167,7 @@ object HitboxRenderer {
             if (!config.showSide && !config.showOutline && !config.showEyeHeight && !config.showViewRay) continue
             when (HitboxCategory.logicOf(matched).showCondition) {
                 0 -> {}
-                1 -> if (!vanillaToggle) continue
+                1 -> if (!toggled) continue
                 2 -> if (entity !== hovered) continue
                 else -> continue
             }
@@ -470,7 +462,7 @@ object HitboxRenderer {
         if (!config.showSide && !config.showOutline && !config.showEyeHeight && !config.showViewRay) return
         when (HitboxCategory.logicOf(matched).showCondition) {
             0 -> {}
-            1 -> if (!vanillaToggle) return
+            1 -> if (!toggled) return
             2 -> if (entity !== hovered) return
             else -> return
         }

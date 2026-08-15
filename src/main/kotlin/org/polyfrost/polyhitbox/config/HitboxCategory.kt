@@ -25,6 +25,7 @@ private const val HIGH = 0
 private const val MID = 1
 private const val LOW = 2
 
+private const val TOGGLED = 1
 private const val NEVER = 3
 
 enum class HitboxCategory(
@@ -77,6 +78,8 @@ enum class HitboxCategory(
 
         fun visualsOf(matched: HitboxConfig): HitboxConfig =
             if (matched.overwriteVisuals) matched else DEFAULT.config
+
+        fun anyToggled(): Boolean = all.any { logicOf(it.config).showCondition == TOGGLED }
 
         fun anythingVisible(): Boolean {
             for (category in all) {

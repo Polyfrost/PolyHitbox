@@ -1,5 +1,6 @@
 package org.polyfrost.polyhitbox.config
 
+import org.lwjgl.glfw.GLFW
 import org.polyfrost.compose.render.PolyColor
 import org.polyfrost.oneconfig.api.config.v1.Config
 import org.polyfrost.oneconfig.api.config.v1.ConfigManager
@@ -8,6 +9,9 @@ import org.polyfrost.oneconfig.api.config.v1.Property
 import org.polyfrost.oneconfig.api.config.v1.Property.Display
 import org.polyfrost.oneconfig.api.config.v1.Tree
 import org.polyfrost.oneconfig.api.config.v1.Visualizer
+import org.polyfrost.oneconfig.api.platform.v1.Platform
+import org.polyfrost.oneconfig.api.ui.v1.keybind.KeybindHelper
+import org.polyfrost.oneconfig.api.ui.v1.keybind.OneConfigKeybind
 import java.util.function.Consumer
 import java.util.function.Predicate
 import java.util.function.Supplier
@@ -27,6 +31,24 @@ object ModConfig : Config(
 
     var hideInF1 = true
 
+    var toggled = false
+
+    var retainToggle = true
+
+    var toggleKeybind: OneConfigKeybind = defaultToggleKeybind()
+
+    private fun defaultToggleKeybind(): OneConfigKeybind = KeybindHelper.builder()
+        .key(GLFW.GLFW_KEY_F3, GLFW.GLFW_KEY_B)
+        .action { pressed: Boolean ->
+            // Rebinding through the settings UI swaps in a keybind that is not screen aware
+            // so we check here instead of in the keybind itself
+            if (pressed && Platform.screen().current<Any?>() == null) toggled = !toggled
+            true
+        }
+        .build()
+
+    private val toggleProps = ArrayList<Property<*>>()
+
     // Read before preload registers the tree because registering rewrites the file with only the
     // properties the tree still declares dropping any renamed or removed settings
     private var stored: Tree? = ConfigManager.active().load(id)
@@ -35,6 +57,7 @@ object ModConfig : Config(
         preload()
         migrateSplitOverride()
         migrateLegacyStyle()
+        if (!retainToggle) toggled = false
         stored = null
     }
 
@@ -80,6 +103,7 @@ object ModConfig : Config(
 
     override fun makeTree(): Tree {
         val tree = Tree.tree(id)
+        toggleProps.clear()
         for (category in HitboxCategory.entries) {
             addCategory(tree, category)
         }
@@ -132,10 +156,35 @@ object ModConfig : Config(
 
         val showCondition = radio(
             "${key}_showCondition", "Show Condition",
-            "When to draw this hitbox. \"Debug (F3+B)\" follows the vanilla hitbox toggle.",
+            "When to draw this hitbox. \"Toggled\" is switched on and off with the toggle keybind.",
             { cfg().showCondition }, { cfg().showCondition = it },
-            arrayOf("Always", "Debug (F3+B)", "Hovered", "Never"), tab, sub,
+            arrayOf("Always", "Toggled", "Hovered", "Never"), tab, sub,
         )
+        val toggleKeybindProp: Property<OneConfigKeybind>? = if (isDefault) {
+            keybind(
+                "toggleKeybind", "Toggle Keybind",
+                "Switches the hitboxes using the \"Toggled\" show condition on and off.",
+                { toggleKeybind }, { toggleKeybind = it }, defaultToggleKeybind(), tab, sub,
+            )
+        } else {
+            null
+        }
+        val retainToggleProp: Property<Boolean>? = if (isDefault) {
+            switch(
+                "retainToggle", "Retain Toggle State",
+                "Remember whether the toggle is on across game restarts, instead of starting every session with it off.",
+                { retainToggle }, { retainToggle = it }, tab, sub,
+            )
+        } else {
+            null
+        }
+        // Stored so the toggle can survive a restart
+        val toggledProp: Property<Boolean>? = if (isDefault) {
+            switch("toggled", "Toggled", "", { toggled }, { toggled = it }, tab, sub)
+                .also { it.addMetadata("hidden", true) }
+        } else {
+            null
+        }
         val lineStyle = dropdown(
             "${key}_lineMode", "Line Style", "",
             { cfg().lineMode }, { cfg().lineMode = it },
@@ -180,6 +229,9 @@ object ModConfig : Config(
         hideInF1Prop?.let { tree.put(it) }
         logicProp?.let { tree.put(it) }
         tree.put(showCondition)
+        toggleKeybindProp?.let { tree.put(it) }
+        retainToggleProp?.let { tree.put(it) }
+        toggledProp?.let { tree.put(it) }
         visualsProp?.let { tree.put(it) }
         val visuals = listOf(
             lineStyle, dashFactor, hoverColor, iframeColor,
@@ -190,13 +242,19 @@ object ModConfig : Config(
         )
         visuals.forEach { tree.put(it) }
 
+        val toggles = listOfNotNull(toggleKeybindProp, retainToggleProp)
+        toggleProps.addAll(toggles)
         if (enableProp != null) {
             hideInF1Prop?.addDisplayCondition(enableProp, true)
             showCondition.addDisplayCondition(enableProp, true)
+            toggles.forEach { it.addDisplayCondition(enableProp, true) }
             visuals.forEach { it.addDisplayCondition(enableProp, true) }
         }
         logicProp?.let { showCondition.addDisplayCondition(it, true) }
         visualsProp?.let { p -> visuals.forEach { it.addDisplayCondition(p, true) } }
+        toggles.forEach { p -> p.addDisplayCondition(Supplier { shown(HitboxCategory.anyToggled()) }) }
+        showCondition.addCallback(Predicate<Int> { revaluateToggleProps(); false })
+        logicProp?.addCallback(Predicate<Boolean> { revaluateToggleProps(); false })
         dashFactor.addDisplayCondition(Supplier { shown(cfg().lineMode == HitboxConfig.DASHED) })
         lineStyle.addCallback(Predicate<Int> { dashFactor.revaluateDisplay(); false })
 
@@ -229,6 +287,10 @@ object ModConfig : Config(
         }
     }
 
+    private fun revaluateToggleProps() {
+        for (prop in toggleProps) prop.revaluateDisplay()
+    }
+
     private fun shown(condition: Boolean): Display = if (condition) Display.SHOWN else Display.HIDDEN
 
     private fun <T : Any> functional(
@@ -258,6 +320,18 @@ object ModConfig : Config(
     private fun radio(id: String, title: String, desc: String, getter: () -> Int, setter: (Int) -> Unit, options: Array<String>, category: String, subcategory: String): Property<Int> {
         val p = functional(id, title, desc, getter, setter, Int::class.javaObjectType, Visualizer.RadioVisualizer::class.java, category, subcategory)
         p.addMetadata("options", options)
+        return p
+    }
+
+    private fun keybind(
+        id: String, title: String, desc: String,
+        getter: () -> OneConfigKeybind, setter: (OneConfigKeybind) -> Unit,
+        default: OneConfigKeybind, category: String, subcategory: String,
+    ): Property<OneConfigKeybind> {
+        val p = functional(id, title, desc, getter, setter, OneConfigKeybind::class.java, Visualizer.KeybindVisualizer::class.java, category, subcategory)
+        p.addMetadata("default", default)
+        // Keeps the bind out of Minecraft's Controls menu, which cannot represent a combo like F3+B
+        p.addMetadata("oc_no_mc_mirror", true)
         return p
     }
 

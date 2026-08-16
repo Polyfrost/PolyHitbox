@@ -1,2 +1,3 @@
-## 1.1.4
-- Add first-party hitbox color API
+## 1.2.0
+- Added ability to customize hitbox toggle keybind
+- Added option to draw hitbox over the entity

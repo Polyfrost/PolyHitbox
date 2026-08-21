@@ -1,3 +1,2 @@
-## 1.2.0
-- Added ability to customize hitbox toggle keybind
-- Added option to draw hitbox over the entity
+## 1.2.1
+- Fixed rare crash on 1.21.10 - 26.1

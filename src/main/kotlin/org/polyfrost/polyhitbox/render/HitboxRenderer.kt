@@ -1,5 +1,6 @@
 package org.polyfrost.polyhitbox.render
 
+import com.mojang.blaze3d.systems.RenderSystem
 import com.mojang.blaze3d.vertex.PoseStack
 import com.mojang.blaze3d.vertex.VertexConsumer
 import net.minecraft.client.Camera
@@ -537,13 +538,23 @@ object HitboxRenderer {
         collector.submitCustomGeometry(identityPose, quadsType(), geometry)
     }
     //?} elif >=1.21.10 {
-    /*
-    fun renderHitboxes(cull: Frustum?) {
+    
+    /*fun renderHitboxes(cull: Frustum?) {
+        if (!drawTargetUsable()) return
         if (!beginFrame(cull)) return
         val type = quadsType()
         val buffer = Minecraft.getInstance().renderBuffers().bufferSource()
         drawLevel(buffer.getBuffer(type))
         buffer.endBatch(type)
+    }
+
+    private fun drawTargetUsable(): Boolean {
+        val target = Minecraft.getInstance().mainRenderTarget
+        val color = RenderSystem.outputColorTextureOverride ?: target.colorTextureView ?: return false
+        if (color.isClosed) return false
+        if (!target.useDepth) return true
+        val depth = RenderSystem.outputDepthTextureOverride ?: target.depthTextureView ?: return false
+        return !depth.isClosed
     }
     *///?} else {
     /*

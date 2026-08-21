@@ -16,8 +16,8 @@ public interface FovAccessor {
 public interface FovAccessor {
     @Invoker("getFov")
     float polyhitbox$fov(net.minecraft.client.Camera camera, float partialTick, boolean useFovSetting);
-}*/
-//?} else {
+}
+*///?} else {
 /*@Mixin(net.minecraft.client.renderer.GameRenderer.class)
 public interface FovAccessor {
     @Invoker("getFov")

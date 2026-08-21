@@ -36,8 +36,8 @@ public class HitboxRenderMixin {
     private void polyhitbox$render(CallbackInfo ci) {
         HitboxRenderer.INSTANCE.renderHitboxes(null);
     }
-}*/
-//?} elif >=1.21.10 {
+}
+*///?} elif >=1.21.10 {
 /*@Mixin(net.minecraft.client.renderer.debug.DebugRenderer.class)
 public class HitboxRenderMixin {
     @Inject(method = "render(Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/culling/Frustum;Lnet/minecraft/client/renderer/MultiBufferSource$BufferSource;DDDZ)V", at = @At("TAIL"))

@@ -1,2 +1,2 @@
-## 1.2.1
-- Fixed rare crash on 1.21.10 - 26.1
+## 1.2.2
+- Fixed the mod not properly accounting for fog (including blindness) and reduced debug info

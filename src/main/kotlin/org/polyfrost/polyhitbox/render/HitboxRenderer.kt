@@ -24,7 +24,6 @@ import kotlin.math.sqrt
 import kotlin.math.tan
 
 object HitboxRenderer {
-
     private const val DASH_STEP = 0.005
     private const val MIN_DASH = 0.03
     private const val MAX_DASHES = 1024.0
@@ -37,7 +36,7 @@ object HitboxRenderer {
 
     private const val NEAR_PLANE = 0.05
 
-    // How far a model may hang outside its hitbox, matching the margin vanilla culling allows for
+    // How far a model may hang outside its hitbox, matching vanilla culling
     private const val MODEL_MARGIN = 0.5
 
     private var camX = 0.0
@@ -85,7 +84,8 @@ object HitboxRenderer {
     private var gateExit = 0.0
     private var clampEnter = 0.0
 
-    private fun active(): Boolean = ModConfig.enabled && !(ModConfig.hideInF1 && guiHidden())
+    private fun active(): Boolean =
+        ModConfig.enabled && !Minecraft.getInstance().showOnlyReducedInfo() && !(ModConfig.hideInF1 && guiHidden())
 
     //? if >=26.2 {
     private fun guiHidden(): Boolean = Minecraft.getInstance().gui.hud.isHidden
@@ -123,8 +123,6 @@ object HitboxRenderer {
     /*private fun partialTick(): Float = Minecraft.getInstance().timer.getGameTimeDeltaPartialTick(false)
     *///?}
 
-    // FOV as actually rendered including the sprint modifier and the FOV Effects slider
-    // so on-screen width holds still through those transitions
     //? if >=26.1 {
     private fun effectiveFov(camera: Camera): Float = camera.fov
     //?} elif >=1.21.4 {
@@ -149,6 +147,7 @@ object HitboxRenderer {
         val player = mc.player ?: return false
         val camera = mc.entityRenderDispatcher.camera ?: return false
         readCamera(camera)
+        HitboxFog.beginFrame()
         partialTicks = partialTick()
         updateRibbonScale(effectiveFov(camera), mc.window.height)
         val frameKey = level.gameTime.toDouble() + partialTicks
@@ -196,10 +195,29 @@ object HitboxRenderer {
             }
             // Cull first because it is pure math while isInvisibleTo walks scoreboard teams
             if (culled(entity, config)) continue
+            if (!vanillaVisible(entity, player)) continue
             if (entity.isInvisibleTo(player)) continue
             drawEntity(vc, entity, config)
         }
     }
+
+    //? if >=26.2 {
+    private fun vanillaVisible(entity: Entity, player: Player): Boolean {
+        val frustum = cullFrustum ?: return false
+        return Minecraft.getInstance().levelExtractor.isEntityVisible(entity, frustum, camX, camY, camZ)
+    }
+    //?} elif >=1.21.11 {
+    /*// The vanilla hitbox debug renderer only frustum culls here
+    private fun vanillaVisible(entity: Entity, player: Player): Boolean = true
+    *///?} else {
+    /*private fun vanillaVisible(entity: Entity, player: Player): Boolean {
+        val mc = Minecraft.getInstance()
+        val frustum = cullFrustum ?: return false
+        if (!mc.entityRenderDispatcher.shouldRender(entity, frustum, camX, camY, camZ) && !entity.hasIndirectPassenger(player)) return false
+        val pos = entity.blockPosition()
+        return mc.level?.isOutsideBuildHeight(pos.y) == true || mc.levelRenderer.isSectionCompiled(pos)
+    }
+    *///?}
 
     private fun culled(entity: Entity, config: HitboxConfig): Boolean {
         val bb = entity.boundingBox
@@ -469,7 +487,7 @@ object HitboxRenderer {
         if (!slab(x, gateMinX, gateMaxX, clampMinX, clampMaxX)) return 1.0
         if (!slab(y, gateMinY, gateMaxY, clampMinY, clampMaxY)) return 1.0
         if (!slab(z, gateMinZ, gateMaxZ, clampMinZ, clampMaxZ)) return 1.0
-        // Hitbox is behind the camera, or the camera sits inside the margin with nothing left to escape
+        // Hitbox is behind the camera, or the camera is inside the margin
         if (gateExit <= 0.0 || clampEnter <= 0.0) return 1.0
         var scale = min(1.0, clampEnter)
         val depth = x * fwdX + y * fwdY + z * fwdZ
@@ -510,6 +528,11 @@ object HitboxRenderer {
         quad(vc, maxX, minY, minZ, maxX, maxY, minZ, maxX, maxY, maxZ, maxX, minY, maxZ, argb)
     }
 
+    private val poly = FogPoly()
+    private val pieces = ArrayList<FogPoly>()
+    private val nextPieces = ArrayList<FogPoly>()
+    private val spare = ArrayList<FogPoly>()
+
     private fun quad(
         vc: VertexConsumer,
         x1: Double, y1: Double, z1: Double,
@@ -518,15 +541,82 @@ object HitboxRenderer {
         x4: Double, y4: Double, z4: Double,
         argb: Int,
     ) {
-        vertex(vc, x1, y1, z1, argb)
-        vertex(vc, x2, y2, z2, argb)
-        vertex(vc, x3, y3, z3, argb)
-        vertex(vc, x4, y4, z4, argb)
+        poly.n = 0
+        poly.add(x1, y1, z1, HitboxFog.distanceA(x1, y1, z1), HitboxFog.distanceB(x1, y1, z1))
+        poly.add(x2, y2, z2, HitboxFog.distanceA(x2, y2, z2), HitboxFog.distanceB(x2, y2, z2))
+        poly.add(x3, y3, z3, HitboxFog.distanceA(x3, y3, z3), HitboxFog.distanceB(x3, y3, z3))
+        poly.add(x4, y4, z4, HitboxFog.distanceA(x4, y4, z4), HitboxFog.distanceB(x4, y4, z4))
+        if (!crossesFogCut(poly)) {
+            fan(vc, poly, argb)
+            return
+        }
+        triangle(vc, 0, 1, 2, argb)
+        triangle(vc, 2, 3, 0, argb)
     }
 
-    private fun vertex(vc: VertexConsumer, x: Double, y: Double, z: Double, argb: Int) {
+    private fun triangle(vc: VertexConsumer, i: Int, j: Int, k: Int, argb: Int) {
+        val tri = take()
+        tri.n = 0
+        tri.add(poly, i)
+        tri.add(poly, j)
+        tri.add(poly, k)
+        pieces.add(tri)
+        for (channel in 0..1) for (cut in fogCuts(channel)) cutPieces(channel, cut)
+        for (piece in pieces) piece.refreshDominance()
+        cutPieces(FogPoly.DOMINANCE, 0.0)
+        for (piece in pieces) {
+            fan(vc, piece, argb)
+            spare.add(piece)
+        }
+        pieces.clear()
+    }
+
+    private fun cutPieces(channel: Int, cut: Double) {
+        nextPieces.clear()
+        for (piece in pieces) {
+            if (piece.straddles(channel, cut)) {
+                val below = take()
+                val above = take()
+                piece.split(channel, cut, below, above)
+                nextPieces.add(below)
+                nextPieces.add(above)
+                spare.add(piece)
+            } else {
+                nextPieces.add(piece)
+            }
+        }
+        pieces.clear()
+        pieces.addAll(nextPieces)
+    }
+
+    private fun fogCuts(channel: Int): DoubleArray = if (channel == 0) HitboxFog.cutsA else HitboxFog.cutsB
+
+    private fun crossesFogCut(poly: FogPoly): Boolean {
+        for (channel in 0..1) for (cut in fogCuts(channel)) if (poly.straddles(channel, cut)) return true
+        return poly.straddles(FogPoly.DOMINANCE, 0.0)
+    }
+
+    private fun take(): FogPoly = if (spare.isEmpty()) FogPoly() else spare.removeAt(spare.size - 1)
+
+    private fun fan(vc: VertexConsumer, poly: FogPoly, argb: Int) {
+        var i = 1
+        while (i + 1 < poly.n) {
+            vertex(vc, poly, 0, argb)
+            vertex(vc, poly, i, argb)
+            vertex(vc, poly, i + 1, argb)
+            vertex(vc, poly, min(i + 2, poly.n - 1), argb)
+            i += 2
+        }
+    }
+
+    private fun vertex(vc: VertexConsumer, poly: FogPoly, i: Int, argb: Int) {
+        val x = poly.x[i]
+        val y = poly.y[i]
+        val z = poly.z[i]
+        // Fog uses the true position to make sure drawing over the entity doesn't bypass fog
+        val color = HitboxFog.apply(poly.a[i], poly.b[i], argb)
         val scale = if (clamping) depthScale(x, y, z) else 1.0
-        vc.addVertex((x * scale).toFloat(), (y * scale).toFloat(), (z * scale).toFloat()).setColor(argb)
+        vc.addVertex((x * scale).toFloat(), (y * scale).toFloat(), (z * scale).toFloat()).setColor(color)
     }
 
     //? if >=26.2 {

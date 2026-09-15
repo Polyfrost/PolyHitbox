@@ -1,6 +1,6 @@
 package org.polyfrost.polyhitbox.config
 
-import org.lwjgl.glfw.GLFW
+import com.mojang.blaze3d.platform.InputConstants
 import org.polyfrost.compose.render.PolyColor
 import org.polyfrost.oneconfig.api.config.v1.Config
 import org.polyfrost.oneconfig.api.config.v1.ConfigManager
@@ -38,7 +38,7 @@ object ModConfig : Config(
     var toggleKeybind: OneConfigKeybind = defaultToggleKeybind()
 
     private fun defaultToggleKeybind(): OneConfigKeybind = KeybindHelper.builder()
-        .key(GLFW.GLFW_KEY_F3, GLFW.GLFW_KEY_B)
+        .key(InputConstants.KEY_F3, InputConstants.KEY_B)
         .action { pressed: Boolean ->
             // Rebinding through the settings UI swaps in a keybind that is not screen aware
             // so we check here instead of in the keybind itself

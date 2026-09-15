@@ -23,6 +23,9 @@ import kotlin.math.min
 import kotlin.math.sqrt
 import kotlin.math.tan
 
+//? if >=26.3
+import net.minecraft.util.Util
+
 object HitboxRenderer {
     private const val DASH_STEP = 0.005
     private const val MIN_DASH = 0.03
@@ -201,12 +204,19 @@ object HitboxRenderer {
         }
     }
 
-    //? if >=26.2 {
+    //? if >=26.3 {
     private fun vanillaVisible(entity: Entity, player: Player): Boolean {
+        val frustum = cullFrustum ?: return false
+        val mc = Minecraft.getInstance()
+        val chunkFadeDuration = Util.toMillis(mc.options.chunkSectionFadeInTime().get())
+        return mc.levelExtractor.isEntityVisible(entity, frustum, camX, camY, camZ, partialTicks, chunkFadeDuration)
+    }
+    //?} elif >=26.2 {
+    /*private fun vanillaVisible(entity: Entity, player: Player): Boolean {
         val frustum = cullFrustum ?: return false
         return Minecraft.getInstance().levelExtractor.isEntityVisible(entity, frustum, camX, camY, camZ)
     }
-    //?} elif >=1.21.11 {
+    *///?} elif >=1.21.11 {
     /*// The vanilla hitbox debug renderer only frustum culls here
     private fun vanillaVisible(entity: Entity, player: Player): Boolean = true
     *///?} else {

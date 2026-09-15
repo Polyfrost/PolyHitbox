@@ -1,2 +1,2 @@
-## 1.2.2
-- Fixed the mod not properly accounting for fog (including blindness) and reduced debug info
+## 1.3.0
+- Added support for Minecraft 26.3

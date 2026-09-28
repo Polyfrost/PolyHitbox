@@ -32,11 +32,19 @@ public class VanillaHitboxMixin {
         if (ModConfig.INSTANCE.getEnabled()) ci.cancel();
     }
 }*/
-//?} else {
+//?} elif >1.8.9 {
 /*@Mixin(net.minecraft.client.renderer.entity.EntityRenderDispatcher.class)
 public class VanillaHitboxMixin {
     @Inject(method = "renderHitbox", at = @At("HEAD"), cancellable = true)
     private static void polyhitbox$suppressVanillaHitbox(com.mojang.blaze3d.vertex.PoseStack pose, com.mojang.blaze3d.vertex.VertexConsumer vc, net.minecraft.world.entity.Entity entity, float a, float b, float c, float d, CallbackInfo ci) {
+        if (ModConfig.INSTANCE.getEnabled()) ci.cancel();
+    }
+}*/
+//?} else {
+/*@Mixin(net.minecraft.client.render.entity.EntityRenderDispatcher.class)
+public class VanillaHitboxMixin {
+    @Inject(method = "renderHitbox", at = @At("HEAD"), cancellable = true)
+    private void polyhitbox$suppressVanillaHitbox(net.minecraft.world.entity.Entity entity, double x, double y, double z, float yaw, float partialTicks, CallbackInfo ci) {
         if (ModConfig.INSTANCE.getEnabled()) ci.cancel();
     }
 }*/

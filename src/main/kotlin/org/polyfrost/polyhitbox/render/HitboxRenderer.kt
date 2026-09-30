@@ -10,6 +10,11 @@ import net.minecraft.util.Mth
 import net.minecraft.world.entity.Entity
 import net.minecraft.world.entity.LivingEntity
 import net.minecraft.world.entity.player.Player
+//? if >=1.21.11 {
+import net.minecraft.world.entity.projectile.arrow.AbstractArrow
+//?} else {
+/*import net.minecraft.world.entity.projectile.AbstractArrow
+*///?}
 import org.polyfrost.polyhitbox.api.HitboxColorContext
 import org.polyfrost.polyhitbox.api.HitboxColorProvider
 import org.polyfrost.polyhitbox.api.HitboxColors
@@ -182,11 +187,19 @@ object HitboxRenderer {
         }
     }
 
+    private fun hiddenGrounded(entity: Entity): Boolean {
+        if (HitboxCategory.ARROW.config.showGrounded || entity !is AbstractArrow) return false
+        //? if >1.21.1 {
+        return entity.isInGround
+        //?} else
+        //return entity.inGround
+    }
+
     private fun drawLevel(vc: VertexConsumer) {
         val level = Minecraft.getInstance().level ?: return
         val player = viewer ?: return
         for (entity in level.entitiesForRendering()) {
-            if (entity === selfInFirstPerson || entity.isInvisible) continue
+            if (entity === selfInFirstPerson || entity.isInvisible || hiddenGrounded(entity)) continue
             val matched = HitboxCategory.match(entity)
             val config = HitboxCategory.visualsOf(matched)
             if (!config.showSide && !config.showOutline && !config.showEyeHeight && !config.showViewRay) continue
@@ -662,7 +675,7 @@ object HitboxRenderer {
     fun renderEntity(entity: Entity, buffer: net.minecraft.client.renderer.MultiBufferSource) {
         if (!beginFrame(null)) return
         val player = viewer ?: return
-        if (entity === selfInFirstPerson || entity.isInvisible) return
+        if (entity === selfInFirstPerson || entity.isInvisible || hiddenGrounded(entity)) return
         val matched = HitboxCategory.match(entity)
         val config = HitboxCategory.visualsOf(matched)
         if (!config.showSide && !config.showOutline && !config.showEyeHeight && !config.showViewRay) return

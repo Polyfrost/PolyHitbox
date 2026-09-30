@@ -160,6 +160,15 @@ object ModConfig : Config(
             { cfg().showCondition }, { cfg().showCondition = it },
             arrayOf("Always", "Toggled", "Hovered", "Never"), tab, sub,
         )
+        val showGroundedProp: Property<Boolean>? = if (category == HitboxCategory.ARROW) {
+            switch(
+                "${key}_showGrounded", "Show Grounded Arrows",
+                "Draw hitboxes for arrows stuck in blocks.",
+                { cfg().showGrounded }, { cfg().showGrounded = it }, tab, sub,
+            )
+        } else {
+            null
+        }
         val toggleKeybindProp: Property<OneConfigKeybind>? = if (isDefault) {
             keybind(
                 "toggleKeybind", "Toggle Keybind",
@@ -232,6 +241,7 @@ object ModConfig : Config(
         val viewRayThickness = sliderFloat("${key}_viewRayThickness", "View Ray Thickness", THICKNESS_DESC, { cfg().viewRayThickness }, { cfg().viewRayThickness = it }, THICKNESS_MIN, THICKNESS_MAX, THICKNESS_STEP, tab, sub)
 
         enableProp?.let { tree.put(it) }
+        showGroundedProp?.let { tree.put(it) }
         hideInF1Prop?.let { tree.put(it) }
         logicProp?.let { tree.put(it) }
         tree.put(showCondition)

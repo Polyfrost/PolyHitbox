@@ -1,0 +1,28 @@
+classTweaker v1 official
+
+#? if >= 1.21.11 {
+accessible method net/minecraft/world/entity/projectile/arrow/AbstractArrow isInGround ()Z
+#?}
+
+#? if > 1.21.1 && < 1.21.11 {
+#accessible method net/minecraft/world/entity/projectile/AbstractArrow isInGround ()Z
+#?}
+
+#? if <= 1.21.1 {
+#accessible field net/minecraft/world/entity/projectile/AbstractArrow inGround Z
+#?}
+
+#? if = 1.8.9 {
+#accessible field net/minecraft/client/Minecraft timer Lnet/minecraft/client/Timer;
+#inject-interface net/minecraft/client/Minecraft org/polyfrost/polyhitbox/legacy/MinecraftCompat
+#inject-interface net/minecraft/client/Timer org/polyfrost/polyhitbox/legacy/TimerCompat
+#inject-interface net/minecraft/client/Options org/polyfrost/polyhitbox/legacy/OptionsCompat
+#inject-interface net/minecraft/client/multiplayer/ClientLevel org/polyfrost/polyhitbox/legacy/ClientLevelCompat
+#inject-interface net/minecraft/world/level/Level org/polyfrost/polyhitbox/legacy/LevelCompat
+#inject-interface net/minecraft/world/entity/Entity org/polyfrost/polyhitbox/legacy/EntityCompat
+#inject-interface net/minecraft/world/phys/AABB org/polyfrost/polyhitbox/legacy/AABBCompat
+#inject-interface net/minecraft/client/renderer/LevelRenderer org/polyfrost/polyhitbox/legacy/LevelRendererCompat
+#inject-interface com/mojang/blaze3d/vertex/BufferBuilder org/polyfrost/polyhitbox/legacy/VertexConsumerCompat
+#inject-interface net/minecraft/entity/projectile/FireballEntity org/polyfrost/polyhitbox/legacy/Fireball
+#inject-interface net/minecraft/entity/projectile/SmallFireballEntity org/polyfrost/polyhitbox/legacy/Fireball
+#?}

@@ -30,7 +30,7 @@ public class VanillaHitboxKeyMixin {
         }
     }
 }*/
-//?} else {
+//?} elif >1.8.9 {
 /*@Mixin(net.minecraft.client.KeyboardHandler.class)
 public class VanillaHitboxKeyMixin {
     @Inject(method = "handleDebugKeys(I)Z", at = @At("HEAD"), cancellable = true)
@@ -38,6 +38,17 @@ public class VanillaHitboxKeyMixin {
         if (ModConfig.INSTANCE.getEnabled() && key == org.lwjgl.glfw.GLFW.GLFW_KEY_B) {
             cir.setReturnValue(true);
         }
+    }
+}*/
+//?} else {
+/*@Mixin(net.minecraft.client.Minecraft.class)
+public class VanillaHitboxKeyMixin {
+    @com.llamalad7.mixinextras.injector.v2.WrapWithCondition(
+        method = "tick()V",
+        at = @At(value = "INVOKE", target = "Lnet/minecraft/client/render/entity/EntityRenderDispatcher;setRenderHitboxes(Z)V")
+    )
+    private boolean polyhitbox$suppressVanillaToggle(net.minecraft.client.render.entity.EntityRenderDispatcher dispatcher, boolean renderHitboxes) {
+        return !ModConfig.INSTANCE.getEnabled();
     }
 }*/
 //?}

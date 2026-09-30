@@ -17,10 +17,16 @@ public interface FovAccessor {
     @Invoker("getFov")
     float polyhitbox$fov(net.minecraft.client.Camera camera, float partialTick, boolean useFovSetting);
 }
-*///?} else {
+*///?} elif >1.8.9 {
 /*@Mixin(net.minecraft.client.renderer.GameRenderer.class)
 public interface FovAccessor {
     @Invoker("getFov")
     double polyhitbox$fov(net.minecraft.client.Camera camera, float partialTick, boolean useFovSetting);
+}*/
+//?} else {
+/*@Mixin(net.minecraft.client.render.GameRenderer.class)
+public interface FovAccessor {
+    @Invoker("getFov")
+    float polyhitbox$fov(float partialTick, boolean useFovSetting);
 }*/
 //?}

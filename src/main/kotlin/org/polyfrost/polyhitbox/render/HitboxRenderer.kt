@@ -1,7 +1,9 @@
 package org.polyfrost.polyhitbox.render
 
+//? if >1.8.9 {
 import com.mojang.blaze3d.systems.RenderSystem
 import com.mojang.blaze3d.vertex.PoseStack
+//?}
 import com.mojang.blaze3d.vertex.VertexConsumer
 import net.minecraft.client.Camera
 import net.minecraft.client.Minecraft
@@ -10,6 +12,11 @@ import net.minecraft.util.Mth
 import net.minecraft.world.entity.Entity
 import net.minecraft.world.entity.LivingEntity
 import net.minecraft.world.entity.player.Player
+//? if >=1.21.11 {
+import net.minecraft.world.entity.projectile.arrow.AbstractArrow
+//?} else {
+/*import net.minecraft.world.entity.projectile.AbstractArrow
+*///?}
 import org.polyfrost.polyhitbox.api.HitboxColorContext
 import org.polyfrost.polyhitbox.api.HitboxColorProvider
 import org.polyfrost.polyhitbox.api.HitboxColors
@@ -25,6 +32,8 @@ import kotlin.math.tan
 
 //? if >=26.3
 import net.minecraft.util.Util
+//? if = 1.8.9
+//import net.minecraft.client.render.platform.GlStateManager
 
 object HitboxRenderer {
     private const val DASH_STEP = 0.005
@@ -107,7 +116,7 @@ object HitboxRenderer {
         fwdY = forward.y().toDouble()
         fwdZ = forward.z().toDouble()
     }
-    //?} else {
+    //?} elif >1.8.9 {
     /*private fun readCamera(camera: Camera) {
         val pos = camera.position
         camX = pos.x
@@ -117,6 +126,35 @@ object HitboxRenderer {
         fwdX = forward.x.toDouble()
         fwdY = forward.y.toDouble()
         fwdZ = forward.z.toDouble()
+    }
+    *///?} else {
+    /*private val modelView = net.minecraft.client.render.platform.MemoryTracker.createFloatBuffer(16)
+
+    private var eyeOffsetX = 0.0
+    private var eyeOffsetY = 0.0
+    private var eyeOffsetZ = 0.0
+
+    // 1.8.9 bakes the eye offset, third person and bobbing into the modelview
+    private fun readCamera(camera: Entity) {
+        GlStateManager.getFloat(org.lwjgl.opengl.GL11.GL_MODELVIEW_MATRIX, modelView)
+        val m = modelView
+        val tx = m.get(12).toDouble()
+        val ty = m.get(13).toDouble()
+        val tz = m.get(14).toDouble()
+        eyeOffsetX = -(m.get(0) * tx + m.get(1) * ty + m.get(2) * tz)
+        eyeOffsetY = -(m.get(4) * tx + m.get(5) * ty + m.get(6) * tz)
+        eyeOffsetZ = -(m.get(8) * tx + m.get(9) * ty + m.get(10) * tz)
+        val dispatcher = Minecraft.getInstance().entityRenderDispatcher
+        camX = dispatcher.cameraX + eyeOffsetX
+        camY = dispatcher.cameraY + eyeOffsetY
+        camZ = dispatcher.cameraZ + eyeOffsetZ
+        val fx = -m.get(2).toDouble()
+        val fy = -m.get(6).toDouble()
+        val fz = -m.get(10).toDouble()
+        val length = sqrt(fx * fx + fy * fy + fz * fz)
+        fwdX = fx / length
+        fwdY = fy / length
+        fwdZ = fz / length
     }
     *///?}
 
@@ -131,14 +169,17 @@ object HitboxRenderer {
     //?} elif >=1.21.4 {
     /*private fun effectiveFov(camera: Camera): Float =
         (Minecraft.getInstance().gameRenderer as org.polyfrost.polyhitbox.mixin.FovAccessor).`polyhitbox$fov`(camera, partialTicks, true)
-    *///?} else {
+    *///?} elif >1.8.9 {
     /*private fun effectiveFov(camera: Camera): Float =
         (Minecraft.getInstance().gameRenderer as org.polyfrost.polyhitbox.mixin.FovAccessor).`polyhitbox$fov`(camera, partialTicks, true).toFloat()
+    *///?} else {
+    /*private fun effectiveFov(camera: Entity): Float =
+        (Minecraft.getInstance().gameRenderer as org.polyfrost.polyhitbox.mixin.FovAccessor).`polyhitbox$fov`(partialTicks, true)
     *///?}
 
     //? if >=1.21.11 {
     private fun quadsType() = net.minecraft.client.renderer.rendertype.RenderTypes.debugQuads()
-    //?} else {
+    //?} elif >1.8.9 {
     /*private fun quadsType() = net.minecraft.client.renderer.RenderType.debugQuads()
     *///?}
 
@@ -182,11 +223,19 @@ object HitboxRenderer {
         }
     }
 
+    private fun hiddenGrounded(entity: Entity): Boolean {
+        if (HitboxCategory.ARROW.config.showGrounded || entity !is AbstractArrow) return false
+        //? if >1.21.1 {
+        return entity.isInGround
+        //?} else
+        //return entity.inGround
+    }
+
     private fun drawLevel(vc: VertexConsumer) {
         val level = Minecraft.getInstance().level ?: return
         val player = viewer ?: return
         for (entity in level.entitiesForRendering()) {
-            if (entity === selfInFirstPerson || entity.isInvisible) continue
+            if (entity === selfInFirstPerson || entity.isInvisible || hiddenGrounded(entity)) continue
             val matched = HitboxCategory.match(entity)
             val config = HitboxCategory.visualsOf(matched)
             if (!config.showSide && !config.showOutline && !config.showEyeHeight && !config.showViewRay) continue
@@ -224,7 +273,10 @@ object HitboxRenderer {
         val mc = Minecraft.getInstance()
         val frustum = cullFrustum ?: return false
         if (!mc.entityRenderDispatcher.shouldRender(entity, frustum, camX, camY, camZ) && !entity.hasIndirectPassenger(player)) return false
+        //? if >1.8.9 {
         val pos = entity.blockPosition()
+        //?} else
+        //val pos = net.minecraft.core.BlockPos(entity)
         return mc.level?.isOutsideBuildHeight(pos.y) == true || mc.levelRenderer.isSectionCompiled(pos)
     }
     *///?}
@@ -286,7 +338,12 @@ object HitboxRenderer {
         val px = Mth.lerp(delta, entity.xo, entity.x)
         val py = Mth.lerp(delta, entity.yo, entity.y)
         val pz = Mth.lerp(delta, entity.zo, entity.z)
+        //? if >1.8.9 {
         val bb = entity.boundingBox
+        //?} else {
+        /*val pickRadius = entity.pickRadius.toDouble()
+        val bb = entity.boundingBox.inflate(pickRadius)
+        *///?}
         val dx = px - entity.x - camX
         val dy = py - entity.y - camY
         val dz = pz - entity.z - camZ
@@ -296,6 +353,11 @@ object HitboxRenderer {
         val maxX = bb.maxX + dx
         val maxY = bb.maxY + dy
         val maxZ = bb.maxZ + dz
+        //? if >1.8.9 {
+        val eyeY = minY + entity.eyeHeight
+        //?} else {
+        /*val eyeY = minY + pickRadius + entity.eyeHeight
+        *///?}
 
         val hover = entity === hovered && config.hoverColor
         val iframe = config.iframeColor && inIframes(entity)
@@ -313,12 +375,10 @@ object HitboxRenderer {
         }
         if (config.showEyeHeight) {
             val c = tint(entity, HitboxElement.EYE_HEIGHT, hover, iframe, pick(iframe, hover, config.eyeHeightIframeArgb, config.eyeHeightHoverArgb, config.eyeHeightArgb))
-            val eyeY = minY + entity.eyeHeight
             styledBox(vc, config, minX, eyeY - 0.01, minZ, maxX, eyeY + 0.01, maxZ, c, config.eyeHeightThickness)
         }
         if (config.showViewRay) {
             val c = tint(entity, HitboxElement.VIEW_RAY, hover, iframe, pick(iframe, hover, config.viewRayIframeArgb, config.viewRayHoverArgb, config.viewRayArgb))
-            val eyeY = minY + entity.eyeHeight
             val view = entity.getViewVector(partialTicks)
             val ax = px - camX
             val az = pz - camZ
@@ -657,12 +717,12 @@ object HitboxRenderer {
         val depth = RenderSystem.outputDepthTextureOverride ?: target.depthTextureView ?: return false
         return !depth.isClosed
     }
-    *///?} else {
+    *///?} elif >1.8.9 {
     /*
     fun renderEntity(entity: Entity, buffer: net.minecraft.client.renderer.MultiBufferSource) {
         if (!beginFrame(null)) return
         val player = viewer ?: return
-        if (entity === selfInFirstPerson || entity.isInvisible) return
+        if (entity === selfInFirstPerson || entity.isInvisible || hiddenGrounded(entity)) return
         val matched = HitboxCategory.match(entity)
         val config = HitboxCategory.visualsOf(matched)
         if (!config.showSide && !config.showOutline && !config.showEyeHeight && !config.showViewRay) return
@@ -674,6 +734,31 @@ object HitboxRenderer {
         }
         if (entity.isInvisibleTo(player)) return
         drawEntity(buffer.getBuffer(quadsType()), entity, config)
+    }
+    *///?} else {
+    /*fun renderHitboxes(cull: Frustum?) {
+        if (!beginFrame(cull)) return
+        val tesselator = net.minecraft.client.render.vertex.Tesselator.getInstance()
+        val buffer = tesselator.buffer
+        GlStateManager.pushMatrix()
+        GlStateManager.translated(eyeOffsetX, eyeOffsetY, eyeOffsetZ)
+        GlStateManager.depthMask(false)
+        GlStateManager.disableTexture()
+        GlStateManager.disableLighting()
+        GlStateManager.disableCull()
+        GlStateManager.disableAlphaTest()
+        GlStateManager.enableBlend()
+        GlStateManager.blendFuncSeparate(770, 771, 1, 0)
+        buffer.begin(org.lwjgl.opengl.GL11.GL_QUADS, net.minecraft.client.render.vertex.DefaultVertexFormat.POSITION_COLOR)
+        drawLevel(buffer)
+        tesselator.end()
+        GlStateManager.disableBlend()
+        GlStateManager.enableAlphaTest()
+        GlStateManager.enableCull()
+        GlStateManager.enableLighting()
+        GlStateManager.enableTexture()
+        GlStateManager.depthMask(true)
+        GlStateManager.popMatrix()
     }
     *///?}
 }

@@ -1,6 +1,6 @@
 package org.polyfrost.polyhitbox.render
 
-//? if <1.21.8 {
+//? if <1.21.8 && >1.8.9 {
 /*import com.mojang.blaze3d.shaders.FogShape
 import com.mojang.blaze3d.systems.RenderSystem
 *///?}
@@ -81,7 +81,7 @@ object HitboxFog {
         distance >= end -> 1f
         else -> (distance - start) / (end - start)
     }
-    //?} else {
+    //?} elif >1.8.9 {
     /*private const val SMOOTH_PIECES = 8
 
     private var start = Float.MAX_VALUE
@@ -132,6 +132,17 @@ object HitboxFog {
         val t = (distance - start) / (end - start)
         return t * t * (3f - 2f * t)
     }
+    *///?} else {
+    /*// GL fog stays enabled on 1.8.9
+    fun beginFrame() {}
+
+    fun distanceA(x: Double, y: Double, z: Double): Double = 0.0
+
+    fun distanceB(x: Double, y: Double, z: Double): Double = 0.0
+
+    fun dominance(a: Double, b: Double): Double = 0.0
+
+    private fun value(a: Double, b: Double): Float = 0f
     *///?}
 
     fun apply(a: Double, b: Double, argb: Int): Int {

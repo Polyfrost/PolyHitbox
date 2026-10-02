@@ -76,6 +76,7 @@ repositories {
     strictMaven("https://maven.fabricmc.net/", "FabricMC", "net.fabricmc")
     strictMaven("https://www.cursemaven.com", "CurseForge", "curse.maven")
     strictMaven("https://api.modrinth.com/maven", "Modrinth", "maven.modrinth")
+    strictMaven("https://maven.cloverclient.com/releases", "CloverClient", "pl.tomgirl")
 }
 
 dependencies {

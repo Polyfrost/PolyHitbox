@@ -1,2 +1,2 @@
-## 1.3.0
-- Added support for Minecraft 26.3
+## 1.3.1
+- add option to hide grounded arrow hitboxes

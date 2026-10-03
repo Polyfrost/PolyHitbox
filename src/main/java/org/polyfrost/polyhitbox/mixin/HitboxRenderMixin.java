@@ -45,12 +45,20 @@ public class HitboxRenderMixin {
         HitboxRenderer.INSTANCE.renderHitboxes(frustum);
     }
 }*/
-//?} else {
+//?} elif >1.8.9 {
 /*@Mixin(net.minecraft.client.renderer.LevelRenderer.class)
 public class HitboxRenderMixin {
     @Inject(method = "renderEntity(Lnet/minecraft/world/entity/Entity;DDDFLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;)V", at = @At("TAIL"))
     private void polyhitbox$render(net.minecraft.world.entity.Entity entity, double camX, double camY, double camZ, float partialTicks, com.mojang.blaze3d.vertex.PoseStack poseStack, net.minecraft.client.renderer.MultiBufferSource buffer, CallbackInfo ci) {
         HitboxRenderer.INSTANCE.renderEntity(entity, buffer);
+    }
+}*/
+//?} else {
+/*@Mixin(net.minecraft.client.renderer.LevelRenderer.class)
+public class HitboxRenderMixin {
+    @Inject(method = "renderEntities(Lnet/minecraft/world/entity/Entity;Lnet/minecraft/client/renderer/culling/Frustum;F)V", at = @At("TAIL"))
+    private void polyhitbox$render(net.minecraft.world.entity.Entity camera, net.minecraft.client.renderer.culling.Frustum frustum, float partialTicks, CallbackInfo ci) {
+        HitboxRenderer.INSTANCE.renderHitboxes(frustum);
     }
 }*/
 //?}

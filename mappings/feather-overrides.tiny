@@ -1,0 +1,40 @@
+tiny	2	0	intermediary	named
+c	net/minecraft/client/Minecraft	net/minecraft/client/Minecraft
+	f	Lnet/minecraft/unmapped/C_34399650;	f_26407825	level
+	m	()Lnet/minecraft/unmapped/C_42232651;	m_67314413	getCameraEntity
+	f	Lnet/minecraft/unmapped/C_42232651;	f_30642501	crosshairPickEntity
+	f	Lnet/minecraft/unmapped/C_24384787;	f_48619021	levelRenderer
+c	net/minecraft/unmapped/C_32220415	net/minecraft/server/Bootstrap
+c	net/minecraft/unmapped/C_32594356	net/minecraft/core/BlockPos
+c	net/minecraft/unmapped/C_34399650	net/minecraft/client/multiplayer/ClientLevel
+c	net/minecraft/unmapped/C_64041439	net/minecraft/world/level/Level
+	m	()J	m_13949261	getGameTime
+c	net/minecraft/unmapped/C_76792751	net/minecraft/client/Options
+c	net/minecraft/unmapped/C_82837181	net/minecraft/client/Timer
+c	net/minecraft/unmapped/C_93577926	net/minecraft/client/Camera
+c	net/minecraft/unmapped/C_93187338	net/minecraft/client/renderer/culling/Frustum
+c	net/minecraft/unmapped/C_24384787	net/minecraft/client/renderer/LevelRenderer
+c	net/minecraft/unmapped/C_93396801	com/mojang/blaze3d/vertex/BufferBuilder
+c	net/minecraft/unmapped/C_82690114	net/minecraft/world/phys/AABB
+	m	()Z	m_88345813	hasNaN
+c	net/minecraft/unmapped/C_94584382	net/minecraft/world/phys/Vec3
+c	net/minecraft/unmapped/C_42232651	net/minecraft/world/entity/Entity
+	f	D	f_09368719	xo
+	f	D	f_93723721	yo
+	f	D	f_84066837	zo
+	m	()Lnet/minecraft/unmapped/C_82690114;	m_41837471	getBoundingBox
+	m	(F)Lnet/minecraft/unmapped/C_94584382;	m_95361306	getViewVector
+	m	(D)Z	m_42189360	shouldRenderAtSqrDistance
+c	net/minecraft/unmapped/C_74425583	net/minecraft/world/entity/LivingEntity
+	f	I	f_51635995	hurtTime
+c	net/minecraft/unmapped/C_40996800	net/minecraft/world/entity/player/Player
+c	net/minecraft/unmapped/C_57778754	net/minecraft/client/player/LocalPlayer
+c	net/minecraft/unmapped/C_21461336	net/minecraft/world/entity/Mob
+c	net/minecraft/unmapped/C_46126015	net/minecraft/world/entity/monster/Enemy
+c	net/minecraft/unmapped/C_32974152	net/minecraft/world/entity/decoration/ArmorStand
+c	net/minecraft/unmapped/C_49852638	net/minecraft/world/entity/decoration/HangingEntity
+c	net/minecraft/unmapped/C_06774341	net/minecraft/world/entity/item/ItemEntity
+c	net/minecraft/unmapped/C_96168960	net/minecraft/world/entity/ExperienceOrb
+c	net/minecraft/unmapped/C_01402755	net/minecraft/world/entity/projectile/Projectile
+c	net/minecraft/unmapped/C_29057998	net/minecraft/world/entity/projectile/AbstractArrow
+c	net/minecraft/unmapped/C_03289195	net/minecraft/world/entity/projectile/WitherSkull

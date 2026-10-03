@@ -1,5 +1,6 @@
 package org.polyfrost.polyhitbox.mixin;
 
+//? if >1.8.9
 import org.joml.Vector4f;
 import org.polyfrost.polyhitbox.render.HitboxFog;
 import org.spongepowered.asm.mixin.Mixin;
@@ -22,8 +23,12 @@ public class FogCaptureMixin {
         HitboxFog.capture(color.x, color.y, color.z, color.w, environmentalStart, environmentalEnd, renderDistanceStart, renderDistanceEnd);
     }
 }
-//?} else {
+//?} elif >1.8.9 {
 /*@Mixin(net.minecraft.client.renderer.FogRenderer.class)
+public class FogCaptureMixin {
+}*/
+//?} else {
+/*@Mixin(net.minecraft.client.render.GameRenderer.class)
 public class FogCaptureMixin {
 }*/
 //?}

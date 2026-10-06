@@ -1,2 +1,2 @@
-## 1.3.1
-- add option to hide grounded arrow hitboxes
+## 1.3.2
+- re-add "Accurate Hitboxes" option on 1.8.9

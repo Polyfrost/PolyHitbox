@@ -341,7 +341,7 @@ object HitboxRenderer {
         //? if >1.8.9 {
         val bb = entity.boundingBox
         //?} else {
-        /*val pickRadius = entity.pickRadius.toDouble()
+        /*val pickRadius = if (ModConfig.accurateHitboxes) entity.pickRadius.toDouble() else 0.0
         val bb = entity.boundingBox.inflate(pickRadius)
         *///?}
         val dx = px - entity.x - camX

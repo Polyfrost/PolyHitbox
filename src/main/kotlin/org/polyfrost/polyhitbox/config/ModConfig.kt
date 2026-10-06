@@ -31,6 +31,8 @@ object ModConfig : Config(
 
     var hideInF1 = true
 
+    var accurateHitboxes = true
+
     var toggled = false
 
     var retainToggle = true
@@ -243,6 +245,17 @@ object ModConfig : Config(
         enableProp?.let { tree.put(it) }
         showGroundedProp?.let { tree.put(it) }
         hideInF1Prop?.let { tree.put(it) }
+        //? if = 1.8.9 {
+        /*if (enableProp != null) {
+            val accurateHitboxesProp = switch(
+                "accurateHitboxes", "Accurate Hitboxes",
+                "Draw the hitbox at the size attacks actually register against. ",
+                { accurateHitboxes }, { accurateHitboxes = it }, tab, sub,
+            )
+            tree.put(accurateHitboxesProp)
+            accurateHitboxesProp.addDisplayCondition(enableProp, true)
+        }
+        *///?}
         logicProp?.let { tree.put(it) }
         tree.put(showCondition)
         toggleKeybindProp?.let { tree.put(it) }

@@ -494,24 +494,19 @@ object HitboxRenderer {
         vx: Double, vy: Double, vz: Double,
         thickness: Float,
     ) {
-        // Offset perpendicular to the view axis scaled by the depth the perspective divide uses
-        // which keeps on-screen width constant across the frame
-        var cx = dy * fwdZ - dz * fwdY
-        var cy = dz * fwdX - dx * fwdZ
-        var cz = dx * fwdY - dy * fwdX
-        var lengthSq = cx * cx + cy * cy + cz * cz
+        val nx = dy * vz - dz * vy
+        val ny = dz * vx - dx * vz
+        val nz = dx * vy - dy * vx
+        val along = nx * fwdX + ny * fwdY + nz * fwdZ
+        val cx = nx - along * fwdX
+        val cy = ny - along * fwdY
+        val cz = nz - along * fwdZ
+        val lengthSq = cx * cx + cy * cy + cz * cz
         if (lengthSq < EPSILON) {
-            // Edge points down the view axis so fall back to a radial perpendicular
-            cx = dy * vz - dz * vy
-            cy = dz * vx - dx * vz
-            cz = dx * vy - dy * vx
-            lengthSq = cx * cx + cy * cy + cz * cz
-            if (lengthSq < EPSILON) {
-                offX = 0.0
-                offY = 0.0
-                offZ = 0.0
-                return
-            }
+            offX = 0.0
+            offY = 0.0
+            offZ = 0.0
+            return
         }
         val depth = max(vx * fwdX + vy * fwdY + vz * fwdZ, NEAR_PLANE)
         val scale = thickness * ribbonScale * depth / sqrt(lengthSq)

@@ -5,6 +5,8 @@
 
 PolyHitbox replaces Minecraft's hitboxes with ones you can style, down to which entities get one.
 
+![Styled hitboxes](.github/images/hitboxes.gif)
+
 ### What you can change
 
 - Toggle the outline, filled sides, eye height ring and view ray separately
@@ -13,6 +15,8 @@ PolyHitbox replaces Minecraft's hitboxes with ones you can style, down to which 
 - A different color for the entity you are looking at
 - A different color while an entity is in i-frames, so you can see when it can be hit again
 - Draw hitboxes on top of their entity
+
+![Picking an outline color](.github/images/color.gif)
 
 ### When they show
 
@@ -23,6 +27,8 @@ PolyHitbox replaces Minecraft's hitboxes with ones you can style, down to which 
 ### Per entity type
 
 All of the above can be set differently for players, yourself, mobs, monsters, projectiles, arrows, fireballs, wither skulls, item frames, armor stands, items and XP orbs.
+
+![Entity tabs](.github/images/entity-tabs.gif)
 
 On 1.8.9, "Accurate Hitboxes" draws each hitbox at the size attacks register against.
 

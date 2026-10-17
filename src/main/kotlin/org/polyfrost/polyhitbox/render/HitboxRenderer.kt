@@ -25,6 +25,7 @@ import org.polyfrost.polyhitbox.api.HitboxElement
 import org.polyfrost.polyhitbox.config.HitboxCategory
 import org.polyfrost.polyhitbox.config.HitboxConfig
 import org.polyfrost.polyhitbox.config.ModConfig
+import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.sqrt
@@ -79,22 +80,9 @@ object HitboxRenderer {
     private var offZ = 0.0
 
     private var clamping = false
-    private var gateMinX = 0.0
-    private var gateMinY = 0.0
-    private var gateMinZ = 0.0
-    private var gateMaxX = 0.0
-    private var gateMaxY = 0.0
-    private var gateMaxZ = 0.0
-    private var clampMinX = 0.0
-    private var clampMinY = 0.0
-    private var clampMinZ = 0.0
-    private var clampMaxX = 0.0
-    private var clampMaxY = 0.0
-    private var clampMaxZ = 0.0
-
-    private var gateEnter = 0.0
-    private var gateExit = 0.0
-    private var clampEnter = 0.0
+    private var clampInvTarget = 0.0
+    private var clampInvFar = 0.0
+    private var clampSquash = 1.0
 
     private fun active(): Boolean =
         ModConfig.enabled && !Minecraft.getInstance().showOnlyReducedInfo() && !(ModConfig.hideInF1 && guiHidden())
@@ -362,8 +350,7 @@ object HitboxRenderer {
         val hover = entity === hovered && config.hoverColor
         val iframe = config.iframeColor && inIframes(entity)
 
-        clamping = config.drawOverEntity
-        if (clamping) setClampBoxes(config, minX, minY, minZ, maxX, maxY, maxZ)
+        clamping = config.drawOverEntity && setClamp(config, minX, minY, minZ, maxX, maxY, maxZ)
 
         if (config.showSide) {
             val c = tint(entity, HitboxElement.SIDE, hover, iframe, pick(iframe, hover, config.sideIframeArgb, config.sideHoverArgb, config.sideArgb))
@@ -378,6 +365,7 @@ object HitboxRenderer {
             styledBox(vc, config, minX, eyeY - 0.01, minZ, maxX, eyeY + 0.01, maxZ, c, config.eyeHeightThickness)
         }
         if (config.showViewRay) {
+            clamping = false
             val c = tint(entity, HitboxElement.VIEW_RAY, hover, iframe, pick(iframe, hover, config.viewRayIframeArgb, config.viewRayHoverArgb, config.viewRayArgb))
             val view = entity.getViewVector(partialTicks)
             val ax = px - camX
@@ -515,69 +503,33 @@ object HitboxRenderer {
         offZ = cz * scale
     }
 
-    private fun setClampBoxes(
+    private fun setClamp(
         config: HitboxConfig,
         minX: Double, minY: Double, minZ: Double, maxX: Double, maxY: Double, maxZ: Double,
-    ) {
+    ): Boolean {
         var thickness = 0f
         if (config.showOutline) thickness = max(thickness, config.outlineThickness)
         if (config.showEyeHeight) thickness = max(thickness, config.eyeHeightThickness)
-        if (config.showViewRay) thickness = max(thickness, config.viewRayThickness)
-        val cx = (minX + maxX) * 0.5
-        val cy = (minY + maxY) * 0.5
-        val cz = (minZ + maxZ) * 0.5
-        val rx = (maxX - minX) * 0.5
-        val ry = (maxY - minY) * 0.5
-        val rz = (maxZ - minZ) * 0.5
-        val farDepth = cx * fwdX + cy * fwdY + cz * fwdZ + sqrt(rx * rx + ry * ry + rz * rz)
-        val margin = max(thickness * ribbonScale * farDepth, 0.0)
-        gateMinX = minX - margin
-        gateMinY = minY - margin
-        gateMinZ = minZ - margin
-        gateMaxX = maxX + margin
-        gateMaxY = maxY + margin
-        gateMaxZ = maxZ + margin
-        clampMinX = gateMinX - MODEL_MARGIN
-        clampMinY = gateMinY - MODEL_MARGIN
-        clampMinZ = gateMinZ - MODEL_MARGIN
-        clampMaxX = gateMaxX + MODEL_MARGIN
-        clampMaxY = gateMaxY + MODEL_MARGIN
-        clampMaxZ = gateMaxZ + MODEL_MARGIN
+        val centerDepth = (minX + maxX) * 0.5 * fwdX + (minY + maxY) * 0.5 * fwdY + (minZ + maxZ) * 0.5 * fwdZ
+        val extent = ((maxX - minX) * abs(fwdX) + (maxY - minY) * abs(fwdY) + (maxZ - minZ) * abs(fwdZ)) * 0.5
+        val far = centerDepth + extent
+        val margin = max(thickness * ribbonScale * far, 0.0)
+        val boxFar = far + margin
+        val boxNear = centerDepth - extent - margin
+        val modelNear = boxNear - MODEL_MARGIN * (abs(fwdX) + abs(fwdY) + abs(fwdZ))
+        val target = max(modelNear, NEAR_PLANE)
+        if (boxFar <= target) return false
+        clampInvTarget = 1.0 / target
+        clampInvFar = 1.0 / boxFar
+        val span = 1.0 / max(boxNear, NEAR_PLANE) - clampInvFar
+        clampSquash = if (span > 0.0) min(1.0, (1.0 / NEAR_PLANE - clampInvTarget) / span) else 1.0
+        return true
     }
 
     private fun depthScale(x: Double, y: Double, z: Double): Double {
-        gateEnter = -Double.MAX_VALUE
-        gateExit = Double.MAX_VALUE
-        clampEnter = -Double.MAX_VALUE
-        if (!slab(x, gateMinX, gateMaxX, clampMinX, clampMaxX)) return 1.0
-        if (!slab(y, gateMinY, gateMaxY, clampMinY, clampMaxY)) return 1.0
-        if (!slab(z, gateMinZ, gateMaxZ, clampMinZ, clampMaxZ)) return 1.0
-        // Hitbox is behind the camera, or the camera is inside the margin
-        if (gateExit <= 0.0 || clampEnter <= 0.0) return 1.0
-        var scale = min(1.0, clampEnter)
         val depth = x * fwdX + y * fwdY + z * fwdZ
-        if (depth * scale < NEAR_PLANE) scale = if (depth > NEAR_PLANE) NEAR_PLANE / depth else 1.0
-        return scale
-    }
-
-    private fun slab(d: Double, gateLo: Double, gateHi: Double, clampLo: Double, clampHi: Double): Boolean {
-        if (d > -EPSILON && d < EPSILON) return gateLo <= 0.0 && gateHi >= 0.0
-        val inv = 1.0 / d
-        var near = gateLo * inv
-        var far = gateHi * inv
-        if (near > far) {
-            val swap = near
-            near = far
-            far = swap
-        }
-        if (near > gateEnter) gateEnter = near
-        if (far < gateExit) gateExit = far
-        if (gateEnter > gateExit) return false
-        near = clampLo * inv
-        far = clampHi * inv
-        if (near > far) near = far
-        if (near > clampEnter) clampEnter = near
-        return true
+        if (depth <= NEAR_PLANE) return 1.0
+        return 1.0 / ((clampInvTarget + (1.0 / depth - clampInvFar) * clampSquash) * depth)
     }
 
     private fun fillBox(

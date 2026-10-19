@@ -615,25 +615,39 @@ object HitboxRenderer {
 
     private fun take(): FogPoly = if (spare.isEmpty()) FogPoly() else spare.removeAt(spare.size - 1)
 
+    //? if = 1.8.9
+    //private val quadData = IntArray(16)
+
     private fun fan(vc: VertexConsumer, poly: FogPoly, argb: Int) {
         var i = 1
         while (i + 1 < poly.n) {
-            vertex(vc, poly, 0, argb)
-            vertex(vc, poly, i, argb)
-            vertex(vc, poly, i + 1, argb)
-            vertex(vc, poly, min(i + 2, poly.n - 1), argb)
+            vertex(vc, poly, 0, argb, 0)
+            vertex(vc, poly, i, argb, 1)
+            vertex(vc, poly, i + 1, argb, 2)
+            vertex(vc, poly, min(i + 2, poly.n - 1), argb, 3)
+            //? if = 1.8.9
+            //vc.vertices(quadData)
             i += 2
         }
     }
 
-    private fun vertex(vc: VertexConsumer, poly: FogPoly, i: Int, argb: Int) {
+    private fun vertex(vc: VertexConsumer, poly: FogPoly, i: Int, argb: Int, slot: Int) {
         val x = poly.x[i]
         val y = poly.y[i]
         val z = poly.z[i]
         // Fog uses the true position to make sure drawing over the entity doesn't bypass fog
         val color = HitboxFog.apply(poly.a[i], poly.b[i], argb)
         val scale = if (clamping) depthScale(x, y, z) else 1.0
+        //? if > 1.8.9 {
         vc.addVertex((x * scale).toFloat(), (y * scale).toFloat(), (z * scale).toFloat()).setColor(color)
+        //?} else {
+        /*val o = slot * 4
+        quadData[o] = (x * scale).toFloat().toRawBits()
+        quadData[o + 1] = (y * scale).toFloat().toRawBits()
+        quadData[o + 2] = (z * scale).toFloat().toRawBits()
+        // Convert ARGB to ABGR like BufferBuilder.color
+        quadData[o + 3] = (color and 0xFF00FF00.toInt()) or (color ushr 16 and 0xFF) or (color and 0xFF shl 16)
+        *///?}
     }
 
     //? if >=26.2 {

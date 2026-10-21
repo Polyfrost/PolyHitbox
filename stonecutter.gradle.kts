@@ -27,6 +27,10 @@ stonecutter parameters {
                 "org.polyfrost.oneconfig.internal.legacy.InputConstants",
             )
             replace(
+                "net.minecraft.client.gui.screens.Screen",
+                "net.minecraft.client.gui.screen.Screen",
+            )
+            replace(
                 "import com.mojang.blaze3d.vertex.VertexConsumer",
                 "import com.mojang.blaze3d.vertex.BufferBuilder as VertexConsumer",
             )

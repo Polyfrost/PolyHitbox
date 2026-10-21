@@ -5,7 +5,7 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
     id("dev.kikugie.loom-back-compat")
-    id("org.jetbrains.kotlin.jvm") version "2.4.10"
+    id("org.jetbrains.kotlin.jvm") version "2.4.20"
     id("net.fabricmc.fabric-loom-remap") version "1.17-SNAPSHOT" apply false
     id("ploceus") version "1.17.4" apply false
     id("dev.deftu.gradle.bloom") version "0.2.0"
@@ -77,6 +77,7 @@ repositories {
     strictMaven("https://www.cursemaven.com", "CurseForge", "curse.maven")
     strictMaven("https://api.modrinth.com/maven", "Modrinth", "maven.modrinth")
     strictMaven("https://maven.cloverclient.com/releases", "CloverClient", "pl.tomgirl")
+    strictMaven("https://maven.pkg.jetbrains.space/public/p/compose/dev", "JetBrains Compose Dev", "org.jetbrains.skiko")
 }
 
 dependencies {

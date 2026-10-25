@@ -689,7 +689,6 @@ object HitboxRenderer {
         val buffer = tesselator.buffer
         GlStateManager.pushMatrix()
         GlStateManager.translated(eyeOffsetX, eyeOffsetY, eyeOffsetZ)
-        GlStateManager.depthMask(false)
         GlStateManager.disableTexture()
         GlStateManager.disableLighting()
         GlStateManager.disableCull()
@@ -698,13 +697,13 @@ object HitboxRenderer {
         GlStateManager.blendFuncSeparate(770, 771, 1, 0)
         buffer.begin(org.lwjgl.opengl.GL11.GL_QUADS, net.minecraft.client.render.vertex.DefaultVertexFormat.POSITION_COLOR)
         drawLevel(buffer)
+        buffer.sortQuads(0f, 0f, 0f)
         tesselator.end()
         GlStateManager.disableBlend()
         GlStateManager.enableAlphaTest()
         GlStateManager.enableCull()
         GlStateManager.enableLighting()
         GlStateManager.enableTexture()
-        GlStateManager.depthMask(true)
         GlStateManager.popMatrix()
     }
     *///?}

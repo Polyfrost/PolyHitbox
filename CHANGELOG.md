@@ -1,2 +1,2 @@
-## 1.3.4
-- Improved performance on 1.21.11 by skipping hitboxes outside the view
+## 1.3.5
+- Thin hitbox lines with distance to keep width consistent

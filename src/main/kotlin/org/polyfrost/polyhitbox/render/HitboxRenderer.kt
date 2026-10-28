@@ -49,6 +49,9 @@ object HitboxRenderer {
 
     private const val NEAR_PLANE = 0.05
 
+    // Past this many blocks "Thin Lines with Distance" stops growing lines with depth
+    private const val THIN_FROM = 4.0
+
     // How far a model may hang outside its hitbox, matching vanilla culling
     private const val MODEL_MARGIN = 0.5
 
@@ -496,7 +499,8 @@ object HitboxRenderer {
             offZ = 0.0
             return
         }
-        val depth = max(vx * fwdX + vy * fwdY + vz * fwdZ, NEAR_PLANE)
+        var depth = max(vx * fwdX + vy * fwdY + vz * fwdZ, NEAR_PLANE)
+        if (ModConfig.thinWithDistance) depth = min(depth, THIN_FROM)
         val scale = thickness * ribbonScale * depth / sqrt(lengthSq)
         offX = cx * scale
         offY = cy * scale

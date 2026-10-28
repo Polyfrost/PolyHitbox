@@ -31,7 +31,7 @@ object ModConfig : Config(
 
     var hideInF1 = true
 
-    var thinWithDistance = false
+    var thinWithDistance = true
 
     var accurateHitboxes = true
 
@@ -161,7 +161,7 @@ object ModConfig : Config(
         val thinWithDistanceProp: Property<Boolean>? = if (isDefault) {
             switch(
                 "thinWithDistance", "Thin Lines with Distance",
-                "Keep lines a fixed size in the world past a few blocks, so far hitboxes get thinner lines instead of the same width on screen.",
+                "Keep the hitbox width consistent across distances.",
                 { thinWithDistance }, { thinWithDistance = it }, tab, sub,
             )
         } else {

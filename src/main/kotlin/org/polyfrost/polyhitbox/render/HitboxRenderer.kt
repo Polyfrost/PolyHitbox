@@ -71,8 +71,8 @@ object HitboxRenderer {
     // Past this many blocks "Thin Lines with Distance" stops growing lines with depth
     private const val THIN_FROM = 4.0
 
-    // Thinned lines stop at this many framebuffer pixels since narrower ones drop out between frames
-    private const val MIN_THIN_PX = 1.5
+    // Thinned lines stop at one framebuffer pixel since narrower ones can miss every pixel and drop out
+    private const val MIN_THIN_PX = 1.0
 
     // How far a model may hang outside its hitbox, matching vanilla culling
     private const val MODEL_MARGIN = 0.5

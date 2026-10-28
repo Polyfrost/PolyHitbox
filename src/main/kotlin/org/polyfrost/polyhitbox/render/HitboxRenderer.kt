@@ -71,6 +71,9 @@ object HitboxRenderer {
     // Past this many blocks "Thin Lines with Distance" stops growing lines with depth
     private const val THIN_FROM = 4.0
 
+    // Thinned lines stop at this many framebuffer pixels since narrower ones drop out between frames
+    private const val MIN_THIN_PX = 1.5
+
     // How far a model may hang outside its hitbox, matching vanilla culling
     private const val MODEL_MARGIN = 0.5
 
@@ -519,7 +522,10 @@ object HitboxRenderer {
             return
         }
         var depth = max(vx * fwdX + vy * fwdY + vz * fwdZ, NEAR_PLANE)
-        if (ModConfig.thinWithDistance) depth = min(depth, THIN_FROM)
+        if (ModConfig.thinWithDistance) {
+            val floor = min(1.0, MIN_THIN_PX / (thickness * HitboxConfig.VANILLA_WIDTH))
+            depth = max(min(depth, THIN_FROM), depth * floor)
+        }
         val scale = thickness * ribbonScale * depth / sqrt(lengthSq)
         offX = cx * scale
         offY = cy * scale

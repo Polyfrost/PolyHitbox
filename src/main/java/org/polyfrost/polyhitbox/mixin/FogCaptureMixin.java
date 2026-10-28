@@ -1,5 +1,12 @@
 package org.polyfrost.polyhitbox.mixin;
 
+//? if >=1.21.8 {
+import net.minecraft.client.renderer.fog.FogRenderer;
+//?} elif >1.8.9 {
+/*import net.minecraft.client.renderer.FogRenderer;
+*///?} else {
+/*import net.minecraft.client.render.GameRenderer;
+*///?}
 //? if >1.8.9
 import org.joml.Vector4f;
 import org.polyfrost.polyhitbox.render.HitboxFog;
@@ -11,7 +18,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import java.nio.ByteBuffer;
 
 //? if >=1.21.8 {
-@Mixin(net.minecraft.client.renderer.fog.FogRenderer.class)
+@Mixin(FogRenderer.class)
 public class FogCaptureMixin {
     @Inject(method = "updateBuffer(Ljava/nio/ByteBuffer;ILorg/joml/Vector4f;FFFFFF)V", at = @At("HEAD"))
     private void polyhitbox$captureFog(
@@ -24,11 +31,11 @@ public class FogCaptureMixin {
     }
 }
 //?} elif >1.8.9 {
-/*@Mixin(net.minecraft.client.renderer.FogRenderer.class)
+/*@Mixin(FogRenderer.class)
 public class FogCaptureMixin {
 }*/
 //?} else {
-/*@Mixin(net.minecraft.client.render.GameRenderer.class)
+/*@Mixin(GameRenderer.class)
 public class FogCaptureMixin {
 }*/
 //?}

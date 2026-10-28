@@ -1,5 +1,21 @@
 package org.polyfrost.polyhitbox.mixin;
 
+//? if <1.21.11 && >1.8.9
+//import com.mojang.blaze3d.vertex.PoseStack;
+//? if != 1.21.10
+import net.minecraft.client.renderer.LevelRenderer;
+//? if <1.21.11 && >1.8.9
+//import net.minecraft.client.renderer.MultiBufferSource;
+//? if >=26.2
+import net.minecraft.client.renderer.SubmitNodeCollector;
+//? if = 1.21.10 || = 1.8.9
+//import net.minecraft.client.renderer.culling.Frustum;
+//? if = 1.21.10
+//import net.minecraft.client.renderer.debug.DebugRenderer;
+//? if >=26.1
+import net.minecraft.client.renderer.state.level.LevelRenderState;
+//? if <1.21.10
+//import net.minecraft.world.entity.Entity;
 import org.polyfrost.polyhitbox.render.HitboxRenderer;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
@@ -9,20 +25,20 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 //? if >=26.2 {
-@Mixin(net.minecraft.client.renderer.LevelRenderer.class)
+@Mixin(LevelRenderer.class)
 public class HitboxRenderMixin {
     @Inject(
         method = "submitFeatures(Lnet/minecraft/client/renderer/state/level/LevelRenderState;Lnet/minecraft/client/renderer/SubmitNodeCollector;Z)V",
         at = @At("TAIL")
     )
-    private void polyhitbox$submit(net.minecraft.client.renderer.state.level.LevelRenderState levelRenderState, net.minecraft.client.renderer.SubmitNodeCollector collector, boolean renderOutline, CallbackInfo ci) {
+    private void polyhitbox$submit(LevelRenderState levelRenderState, SubmitNodeCollector collector, boolean renderOutline, CallbackInfo ci) {
         HitboxRenderer.INSTANCE.submitHitboxes(levelRenderState.cameraRenderState, collector);
     }
 }
 //?} elif >=26.1 {
-/*@Mixin(net.minecraft.client.renderer.LevelRenderer.class)
+/*@Mixin(LevelRenderer.class)
 public class HitboxRenderMixin {
-    @Shadow @Final private net.minecraft.client.renderer.state.level.LevelRenderState levelRenderState;
+    @Shadow @Final private LevelRenderState levelRenderState;
 
     @Inject(method = "finalizeGizmoCollection()V", at = @At("HEAD"))
     private void polyhitbox$render(CallbackInfo ci) {
@@ -30,7 +46,7 @@ public class HitboxRenderMixin {
     }
 }*/
 //?} elif >=1.21.11 {
-/*@Mixin(net.minecraft.client.renderer.LevelRenderer.class)
+/*@Mixin(LevelRenderer.class)
 public class HitboxRenderMixin {
     @Inject(method = "finalizeGizmoCollection()V", at = @At("HEAD"))
     private void polyhitbox$render(CallbackInfo ci) {
@@ -38,26 +54,26 @@ public class HitboxRenderMixin {
     }
 }
 *///?} elif >=1.21.10 {
-/*@Mixin(net.minecraft.client.renderer.debug.DebugRenderer.class)
+/*@Mixin(DebugRenderer.class)
 public class HitboxRenderMixin {
     @Inject(method = "render(Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/culling/Frustum;Lnet/minecraft/client/renderer/MultiBufferSource$BufferSource;DDDZ)V", at = @At("TAIL"))
-    private void polyhitbox$render(com.mojang.blaze3d.vertex.PoseStack poseStack, net.minecraft.client.renderer.culling.Frustum frustum, net.minecraft.client.renderer.MultiBufferSource.BufferSource buffer, double camX, double camY, double camZ, boolean showChunkBorder, CallbackInfo ci) {
+    private void polyhitbox$render(PoseStack poseStack, Frustum frustum, MultiBufferSource.BufferSource buffer, double camX, double camY, double camZ, boolean showChunkBorder, CallbackInfo ci) {
         HitboxRenderer.INSTANCE.renderHitboxes(frustum);
     }
 }*/
 //?} elif >1.8.9 {
-/*@Mixin(net.minecraft.client.renderer.LevelRenderer.class)
+/*@Mixin(LevelRenderer.class)
 public class HitboxRenderMixin {
     @Inject(method = "renderEntity(Lnet/minecraft/world/entity/Entity;DDDFLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;)V", at = @At("TAIL"))
-    private void polyhitbox$render(net.minecraft.world.entity.Entity entity, double camX, double camY, double camZ, float partialTicks, com.mojang.blaze3d.vertex.PoseStack poseStack, net.minecraft.client.renderer.MultiBufferSource buffer, CallbackInfo ci) {
+    private void polyhitbox$render(Entity entity, double camX, double camY, double camZ, float partialTicks, PoseStack poseStack, MultiBufferSource buffer, CallbackInfo ci) {
         HitboxRenderer.INSTANCE.renderEntity(entity, buffer);
     }
 }*/
 //?} else {
-/*@Mixin(net.minecraft.client.renderer.LevelRenderer.class)
+/*@Mixin(LevelRenderer.class)
 public class HitboxRenderMixin {
     @Inject(method = "renderEntities(Lnet/minecraft/world/entity/Entity;Lnet/minecraft/client/renderer/culling/Frustum;F)V", at = @At("TAIL"))
-    private void polyhitbox$render(net.minecraft.world.entity.Entity camera, net.minecraft.client.renderer.culling.Frustum frustum, float partialTicks, CallbackInfo ci) {
+    private void polyhitbox$render(Entity camera, Frustum frustum, float partialTicks, CallbackInfo ci) {
         HitboxRenderer.INSTANCE.renderHitboxes(frustum);
     }
 }*/

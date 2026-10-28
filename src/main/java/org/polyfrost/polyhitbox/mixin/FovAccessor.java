@@ -1,30 +1,37 @@
 package org.polyfrost.polyhitbox.mixin;
 
+//? if >1.8.9
+import net.minecraft.client.Camera;
+//? if = 1.8.9 {
+/*import net.minecraft.client.render.GameRenderer;
+*///?} elif <26.1 {
+/*import net.minecraft.client.renderer.GameRenderer;
+*///?}
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.gen.Invoker;
 
 // The rendered FOV is private below 26.1 where it moved onto Camera
 // useFovSetting is what renderLevel passes for the level projection
 //? if >=26.1 {
-@Mixin(net.minecraft.client.Camera.class)
+@Mixin(Camera.class)
 public interface FovAccessor {
     @Invoker("getFov")
     float polyhitbox$fov();
 }
 //?} elif >=1.21.4 {
-/*@Mixin(net.minecraft.client.renderer.GameRenderer.class)
+/*@Mixin(GameRenderer.class)
 public interface FovAccessor {
     @Invoker("getFov")
-    float polyhitbox$fov(net.minecraft.client.Camera camera, float partialTick, boolean useFovSetting);
+    float polyhitbox$fov(Camera camera, float partialTick, boolean useFovSetting);
 }
 *///?} elif >1.8.9 {
-/*@Mixin(net.minecraft.client.renderer.GameRenderer.class)
+/*@Mixin(GameRenderer.class)
 public interface FovAccessor {
     @Invoker("getFov")
-    double polyhitbox$fov(net.minecraft.client.Camera camera, float partialTick, boolean useFovSetting);
+    double polyhitbox$fov(Camera camera, float partialTick, boolean useFovSetting);
 }*/
 //?} else {
-/*@Mixin(net.minecraft.client.render.GameRenderer.class)
+/*@Mixin(GameRenderer.class)
 public interface FovAccessor {
     @Invoker("getFov")
     float polyhitbox$fov(float partialTick, boolean useFovSetting);

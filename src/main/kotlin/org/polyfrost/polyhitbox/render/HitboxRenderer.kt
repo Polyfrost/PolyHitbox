@@ -7,7 +7,18 @@ import com.mojang.blaze3d.vertex.PoseStack
 import com.mojang.blaze3d.vertex.VertexConsumer
 import net.minecraft.client.Camera
 import net.minecraft.client.Minecraft
+//? if <1.21.10 && >1.8.9
+//import net.minecraft.client.renderer.MultiBufferSource
+//? if >=26.2
+import net.minecraft.client.renderer.SubmitNodeCollector
 import net.minecraft.client.renderer.culling.Frustum
+//? if >=1.21.11 {
+import net.minecraft.client.renderer.rendertype.RenderTypes
+//?} elif >1.8.9 {
+/*import net.minecraft.client.renderer.RenderType
+*///?}
+//? if >=26.2
+import net.minecraft.client.renderer.state.level.CameraRenderState
 import net.minecraft.util.Mth
 import net.minecraft.world.entity.Entity
 import net.minecraft.world.entity.LivingEntity
@@ -25,6 +36,8 @@ import org.polyfrost.polyhitbox.api.HitboxElement
 import org.polyfrost.polyhitbox.config.HitboxCategory
 import org.polyfrost.polyhitbox.config.HitboxConfig
 import org.polyfrost.polyhitbox.config.ModConfig
+//? if <26.1
+//import org.polyfrost.polyhitbox.mixin.FovAccessor
 import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
@@ -33,8 +46,14 @@ import kotlin.math.tan
 
 //? if >=26.3
 import net.minecraft.util.Util
-//? if = 1.8.9
-//import net.minecraft.client.render.platform.GlStateManager
+//? if = 1.8.9 {
+/*import net.minecraft.client.render.platform.GlStateManager
+import net.minecraft.client.render.platform.MemoryTracker
+import net.minecraft.client.render.vertex.DefaultVertexFormat
+import net.minecraft.client.render.vertex.Tesselator
+import net.minecraft.core.BlockPos
+import org.lwjgl.opengl.GL11
+*///?}
 
 object HitboxRenderer {
     private const val DASH_STEP = 0.005
@@ -116,7 +135,7 @@ object HitboxRenderer {
         fwdZ = forward.z.toDouble()
     }
     *///?} else {
-    /*private val modelView = net.minecraft.client.render.platform.MemoryTracker.createFloatBuffer(16)
+    /*private val modelView = MemoryTracker.createFloatBuffer(16)
 
     private var eyeOffsetX = 0.0
     private var eyeOffsetY = 0.0
@@ -124,7 +143,7 @@ object HitboxRenderer {
 
     // 1.8.9 bakes the eye offset, third person and bobbing into the modelview
     private fun readCamera(camera: Entity) {
-        GlStateManager.getFloat(org.lwjgl.opengl.GL11.GL_MODELVIEW_MATRIX, modelView)
+        GlStateManager.getFloat(GL11.GL_MODELVIEW_MATRIX, modelView)
         val m = modelView
         val tx = m.get(12).toDouble()
         val ty = m.get(13).toDouble()
@@ -156,19 +175,19 @@ object HitboxRenderer {
     private fun effectiveFov(camera: Camera): Float = camera.fov
     //?} elif >=1.21.4 {
     /*private fun effectiveFov(camera: Camera): Float =
-        (Minecraft.getInstance().gameRenderer as org.polyfrost.polyhitbox.mixin.FovAccessor).`polyhitbox$fov`(camera, partialTicks, true)
+        (Minecraft.getInstance().gameRenderer as FovAccessor).`polyhitbox$fov`(camera, partialTicks, true)
     *///?} elif >1.8.9 {
     /*private fun effectiveFov(camera: Camera): Float =
-        (Minecraft.getInstance().gameRenderer as org.polyfrost.polyhitbox.mixin.FovAccessor).`polyhitbox$fov`(camera, partialTicks, true).toFloat()
+        (Minecraft.getInstance().gameRenderer as FovAccessor).`polyhitbox$fov`(camera, partialTicks, true).toFloat()
     *///?} else {
     /*private fun effectiveFov(camera: Entity): Float =
-        (Minecraft.getInstance().gameRenderer as org.polyfrost.polyhitbox.mixin.FovAccessor).`polyhitbox$fov`(partialTicks, true)
+        (Minecraft.getInstance().gameRenderer as FovAccessor).`polyhitbox$fov`(partialTicks, true)
     *///?}
 
     //? if >=1.21.11 {
-    private fun quadsType() = net.minecraft.client.renderer.rendertype.RenderTypes.debugQuads()
+    private fun quadsType() = RenderTypes.debugQuads()
     //?} elif >1.8.9 {
-    /*private fun quadsType() = net.minecraft.client.renderer.RenderType.debugQuads()
+    /*private fun quadsType() = RenderType.debugQuads()
     *///?}
 
     private fun beginFrame(cull: Frustum?): Boolean {
@@ -264,7 +283,7 @@ object HitboxRenderer {
         //? if >1.8.9 {
         val pos = entity.blockPosition()
         //?} else
-        //val pos = net.minecraft.core.BlockPos(entity)
+        //val pos = BlockPos(entity)
         return mc.level?.isOutsideBuildHeight(pos.y) == true || mc.levelRenderer.isSectionCompiled(pos)
     }
     *///?}
@@ -653,9 +672,9 @@ object HitboxRenderer {
     //? if >=26.2 {
     private val identityPose = PoseStack()
 
-    private val geometry = net.minecraft.client.renderer.SubmitNodeCollector.CustomGeometryRenderer { _, buffer -> drawLevel(buffer) }
+    private val geometry = SubmitNodeCollector.CustomGeometryRenderer { _, buffer -> drawLevel(buffer) }
 
-    fun submitHitboxes(camera: net.minecraft.client.renderer.state.level.CameraRenderState, collector: net.minecraft.client.renderer.SubmitNodeCollector) {
+    fun submitHitboxes(camera: CameraRenderState, collector: SubmitNodeCollector) {
         if (!beginFrame(camera.cullFrustum)) return
         collector.submitCustomGeometry(identityPose, quadsType(), geometry)
     }
@@ -680,7 +699,7 @@ object HitboxRenderer {
     }
     *///?} elif >1.8.9 {
     /*
-    fun renderEntity(entity: Entity, buffer: net.minecraft.client.renderer.MultiBufferSource) {
+    fun renderEntity(entity: Entity, buffer: MultiBufferSource) {
         if (!beginFrame(null)) return
         val player = viewer ?: return
         if (entity === selfInFirstPerson || entity.isInvisible || hiddenGrounded(entity)) return
@@ -699,7 +718,7 @@ object HitboxRenderer {
     *///?} else {
     /*fun renderHitboxes(cull: Frustum?) {
         if (!beginFrame(cull)) return
-        val tesselator = net.minecraft.client.render.vertex.Tesselator.getInstance()
+        val tesselator = Tesselator.getInstance()
         val buffer = tesselator.buffer
         GlStateManager.pushMatrix()
         GlStateManager.translated(eyeOffsetX, eyeOffsetY, eyeOffsetZ)
@@ -709,7 +728,7 @@ object HitboxRenderer {
         GlStateManager.disableAlphaTest()
         GlStateManager.enableBlend()
         GlStateManager.blendFuncSeparate(770, 771, 1, 0)
-        buffer.begin(org.lwjgl.opengl.GL11.GL_QUADS, net.minecraft.client.render.vertex.DefaultVertexFormat.POSITION_COLOR)
+        buffer.begin(GL11.GL_QUADS, DefaultVertexFormat.POSITION_COLOR)
         drawLevel(buffer)
         buffer.sortQuads(0f, 0f, 0f)
         tesselator.end()

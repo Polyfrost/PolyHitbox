@@ -31,6 +31,8 @@ object ModConfig : Config(
 
     var hideInF1 = true
 
+    var thinWithDistance = true
+
     var accurateHitboxes = true
 
     var toggled = false
@@ -156,6 +158,16 @@ object ModConfig : Config(
             null
         }
 
+        val thinWithDistanceProp: Property<Boolean>? = if (isDefault) {
+            switch(
+                "thinWithDistance", "Thin Lines with Distance",
+                "Keep the hitbox width consistent across distances.",
+                { thinWithDistance }, { thinWithDistance = it }, tab, sub,
+            )
+        } else {
+            null
+        }
+
         val showCondition = radio(
             "${key}_showCondition", "Show Condition",
             "When to draw this hitbox. \"Toggled\" is switched on and off with the toggle keybind.",
@@ -245,6 +257,7 @@ object ModConfig : Config(
         enableProp?.let { tree.put(it) }
         showGroundedProp?.let { tree.put(it) }
         hideInF1Prop?.let { tree.put(it) }
+        thinWithDistanceProp?.let { tree.put(it) }
         //? if = 1.8.9 {
         /*if (enableProp != null) {
             val accurateHitboxesProp = switch(
@@ -275,6 +288,7 @@ object ModConfig : Config(
         toggleProps.addAll(toggles)
         if (enableProp != null) {
             hideInF1Prop?.addDisplayCondition(enableProp, true)
+            thinWithDistanceProp?.addDisplayCondition(enableProp, true)
             showCondition.addDisplayCondition(enableProp, true)
             toggles.forEach { it.addDisplayCondition(enableProp, true) }
             visuals.forEach { it.addDisplayCondition(enableProp, true) }

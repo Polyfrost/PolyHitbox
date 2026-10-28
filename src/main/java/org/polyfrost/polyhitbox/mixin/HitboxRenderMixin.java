@@ -1,5 +1,6 @@
 package org.polyfrost.polyhitbox.mixin;
 
+import com.llamalad7.mixinextras.sugar.Local;
 //? if <1.21.11 && >1.8.9
 //import com.mojang.blaze3d.vertex.PoseStack;
 //? if != 1.21.10
@@ -8,7 +9,7 @@ import net.minecraft.client.renderer.LevelRenderer;
 //import net.minecraft.client.renderer.MultiBufferSource;
 //? if >=26.2
 import net.minecraft.client.renderer.SubmitNodeCollector;
-//? if = 1.21.10 || = 1.8.9
+//? if = 1.21.11 || = 1.21.10 || = 1.8.9
 //import net.minecraft.client.renderer.culling.Frustum;
 //? if = 1.21.10
 //import net.minecraft.client.renderer.debug.DebugRenderer;
@@ -20,6 +21,7 @@ import org.polyfrost.polyhitbox.render.HitboxRenderer;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
+import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
@@ -48,9 +50,17 @@ public class HitboxRenderMixin {
 //?} elif >=1.21.11 {
 /*@Mixin(LevelRenderer.class)
 public class HitboxRenderMixin {
+    // the main pass lambda that renders gizmos doesn't capture the frustum
+    @Unique private Frustum polyhitbox$frustum;
+
+    @Inject(method = "addMainPass", at = @At("HEAD"))
+    private void polyhitbox$captureFrustum(CallbackInfo ci, @Local(argsOnly = true) Frustum frustum) {
+        this.polyhitbox$frustum = frustum;
+    }
+
     @Inject(method = "finalizeGizmoCollection()V", at = @At("HEAD"))
     private void polyhitbox$render(CallbackInfo ci) {
-        HitboxRenderer.INSTANCE.renderHitboxes(null);
+        HitboxRenderer.INSTANCE.renderHitboxes(this.polyhitbox$frustum);
     }
 }
 *///?} elif >=1.21.10 {

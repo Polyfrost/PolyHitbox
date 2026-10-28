@@ -1,2 +1,2 @@
-## 1.3.5
-- Thin hitbox lines with distance to keep width consistent
+## 1.3.6
+- fix: keep thinned hitbox lines from dropping out at distance

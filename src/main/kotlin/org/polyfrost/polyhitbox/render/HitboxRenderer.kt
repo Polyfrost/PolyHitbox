@@ -19,6 +19,9 @@ import net.minecraft.client.renderer.rendertype.RenderTypes
 *///?}
 //? if >=26.2
 import net.minecraft.client.renderer.state.level.CameraRenderState
+import net.minecraft.core.BlockPos
+//? if >1.8.9
+import net.minecraft.core.Direction
 import net.minecraft.util.Mth
 import net.minecraft.world.entity.Entity
 import net.minecraft.world.entity.LivingEntity
@@ -28,6 +31,7 @@ import net.minecraft.world.entity.projectile.arrow.AbstractArrow
 //?} else {
 /*import net.minecraft.world.entity.projectile.AbstractArrow
 *///?}
+import net.minecraft.world.level.Level
 import org.polyfrost.polyhitbox.api.HitboxColorContext
 import org.polyfrost.polyhitbox.api.HitboxColorProvider
 import org.polyfrost.polyhitbox.api.HitboxColors
@@ -39,6 +43,7 @@ import org.polyfrost.polyhitbox.config.ModConfig
 //? if <26.1
 //import org.polyfrost.polyhitbox.mixin.FovAccessor
 import kotlin.math.abs
+import kotlin.math.floor
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.sqrt
@@ -51,7 +56,6 @@ import net.minecraft.util.Util
 import net.minecraft.client.render.platform.MemoryTracker
 import net.minecraft.client.render.vertex.DefaultVertexFormat
 import net.minecraft.client.render.vertex.Tesselator
-import net.minecraft.core.BlockPos
 import org.lwjgl.opengl.GL11
 *///?}
 
@@ -76,6 +80,8 @@ object HitboxRenderer {
 
     // How far a model may hang outside its hitbox, matching vanilla culling
     private const val MODEL_MARGIN = 0.5
+
+    private const val CONTACT = 1.0e-4
 
     private var camX = 0.0
     private var camY = 0.0
@@ -552,7 +558,83 @@ object HitboxRenderer {
         clampInvFar = 1.0 / boxFar
         val span = 1.0 / max(boxNear, NEAR_PLANE) - clampInvFar
         clampSquash = if (span > 0.0) min(1.0, (1.0 / NEAR_PLANE - clampInvTarget) / span) else 1.0
+        return !pullCrossesBlock(minX, minY, minZ, maxX, maxY, maxZ, target / boxFar)
+    }
+
+    private val boxMin = DoubleArray(3)
+    private val boxMax = DoubleArray(3)
+    private val blockMin = DoubleArray(3)
+    private val blockMax = DoubleArray(3)
+
+    private fun pullCrossesBlock(
+        minX: Double, minY: Double, minZ: Double, maxX: Double, maxY: Double, maxZ: Double,
+        minScale: Double,
+    ): Boolean {
+        val level = Minecraft.getInstance().level ?: return true
+        boxMin[0] = minX
+        boxMin[1] = minY
+        boxMin[2] = minZ
+        boxMax[0] = maxX
+        boxMax[1] = maxY
+        boxMax[2] = maxZ
+        val x0 = floor(min(minX, minX * minScale) + camX).toInt() - 1
+        val y0 = floor(min(minY, minY * minScale) + camY).toInt() - 1
+        val z0 = floor(min(minZ, minZ * minScale) + camZ).toInt() - 1
+        val x1 = floor(max(maxX, maxX * minScale) + camX).toInt() + 1
+        val y1 = floor(max(maxY, maxY * minScale) + camY).toInt() + 1
+        val z1 = floor(max(maxZ, maxZ * minScale) + camZ).toInt() + 1
+        for (x in x0..x1) for (y in y0..y1) for (z in z0..z1) {
+            if (blockBounds(level, x, y, z) && sweepHitsBlock(blockMin, blockMax, boxMin, boxMax, minScale)) return true
+        }
+        return false
+    }
+
+    //? if >1.8.9 {
+    private val scanPos = BlockPos.MutableBlockPos()
+
+    private fun blockBounds(level: Level, x: Int, y: Int, z: Int): Boolean {
+        val pos = scanPos.set(x, y, z)
+        val state = level.getBlockState(pos)
+        if (state.isAir) return false
+        if (state.hasBlockEntity()) {
+            setBlockBounds(x, y, z, -1.0, -1.0, -1.0, 2.0, 2.0, 2.0)
+            return true
+        }
+        val shape = if (state.canOcclude() && state.fluidState.isEmpty) state.getShape(level, pos) else null
+        if (shape == null || shape.isEmpty) {
+            setBlockBounds(x, y, z, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0)
+        } else {
+            setBlockBounds(
+                x, y, z,
+                shape.min(Direction.Axis.X), shape.min(Direction.Axis.Y), shape.min(Direction.Axis.Z),
+                shape.max(Direction.Axis.X), shape.max(Direction.Axis.Y), shape.max(Direction.Axis.Z),
+            )
+        }
         return true
+    }
+    //?} else {
+    /*private fun blockBounds(level: Level, x: Int, y: Int, z: Int): Boolean {
+        val pos = BlockPos(x, y, z)
+        if (level.isAir(pos)) return false
+        if (level.getBlockEntity(pos) != null) {
+            setBlockBounds(x, y, z, -1.0, -1.0, -1.0, 2.0, 2.0, 2.0)
+        } else {
+            setBlockBounds(x, y, z, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0)
+        }
+        return true
+    }
+    *///?}
+
+    private fun setBlockBounds(
+        x: Int, y: Int, z: Int,
+        minX: Double, minY: Double, minZ: Double, maxX: Double, maxY: Double, maxZ: Double,
+    ) {
+        blockMin[0] = x + minX - camX + CONTACT
+        blockMin[1] = y + minY - camY + CONTACT
+        blockMin[2] = z + minZ - camZ + CONTACT
+        blockMax[0] = x + maxX - camX - CONTACT
+        blockMax[1] = y + maxY - camY - CONTACT
+        blockMax[2] = z + maxZ - camZ - CONTACT
     }
 
     private fun depthScale(x: Double, y: Double, z: Double): Double {
@@ -732,6 +814,8 @@ object HitboxRenderer {
         val buffer = tesselator.buffer
         GlStateManager.pushMatrix()
         GlStateManager.translated(eyeOffsetX, eyeOffsetY, eyeOffsetZ)
+        GlStateManager.enableDepthTest()
+        GlStateManager.depthFunc(GL11.GL_LEQUAL)
         GlStateManager.disableTexture()
         GlStateManager.disableLighting()
         GlStateManager.disableCull()
@@ -750,4 +834,26 @@ object HitboxRenderer {
         GlStateManager.popMatrix()
     }
     *///?}
+}
+
+internal fun sweepHitsBlock(
+    blockMin: DoubleArray, blockMax: DoubleArray, boxMin: DoubleArray, boxMax: DoubleArray, minScale: Double,
+): Boolean {
+    var lo = 1.0
+    var hi = 1.0 / minScale
+    for (i in 0..2) {
+        val a = blockMin[i]
+        val b = blockMax[i]
+        when {
+            a > 0.0 -> hi = min(hi, boxMax[i] / a)
+            a < 0.0 -> lo = max(lo, boxMax[i] / a)
+            boxMax[i] <= 0.0 -> return false
+        }
+        when {
+            b > 0.0 -> lo = max(lo, boxMin[i] / b)
+            b < 0.0 -> hi = min(hi, boxMin[i] / b)
+            boxMin[i] >= 0.0 -> return false
+        }
+    }
+    return lo < hi
 }

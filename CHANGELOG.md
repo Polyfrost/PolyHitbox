@@ -1,2 +1,2 @@
-## 1.3.6
-- fix: keep thinned hitbox lines from dropping out at distance
+## 1.3.7
+- fix: stop draw over entity from showing hitboxes through blocks

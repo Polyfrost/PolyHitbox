@@ -816,6 +816,7 @@ object HitboxRenderer {
         GlStateManager.translated(eyeOffsetX, eyeOffsetY, eyeOffsetZ)
         GlStateManager.enableDepthTest()
         GlStateManager.depthFunc(GL11.GL_LEQUAL)
+        GlStateManager.depthMask(false)
         GlStateManager.disableTexture()
         GlStateManager.disableLighting()
         GlStateManager.disableCull()
@@ -824,13 +825,13 @@ object HitboxRenderer {
         GlStateManager.blendFuncSeparate(770, 771, 1, 0)
         buffer.begin(GL11.GL_QUADS, DefaultVertexFormat.POSITION_COLOR)
         drawLevel(buffer)
-        buffer.sortQuads(0f, 0f, 0f)
         tesselator.end()
         GlStateManager.disableBlend()
         GlStateManager.enableAlphaTest()
         GlStateManager.enableCull()
         GlStateManager.enableLighting()
         GlStateManager.enableTexture()
+        GlStateManager.depthMask(true)
         GlStateManager.popMatrix()
     }
     *///?}

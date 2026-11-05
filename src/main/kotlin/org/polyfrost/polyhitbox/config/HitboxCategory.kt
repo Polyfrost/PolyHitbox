@@ -4,6 +4,8 @@ import net.minecraft.client.player.LocalPlayer
 import net.minecraft.world.entity.Entity
 import net.minecraft.world.entity.ExperienceOrb
 import net.minecraft.world.entity.Mob
+//? if >1.8.9
+import net.minecraft.world.entity.boss.enderdragon.EndCrystal
 import net.minecraft.world.entity.decoration.ArmorStand
 import net.minecraft.world.entity.decoration.HangingEntity
 import net.minecraft.world.entity.item.ItemEntity
@@ -46,6 +48,8 @@ enum class HitboxCategory(
     FRAMES("Frames", { it is HangingEntity }),
     ARMOR_STAND("Armor Stand", { it is ArmorStand }),
     ITEM("Item", { it is ItemEntity }),
+    //? if >1.8.9
+    END_CRYSTAL("End Crystal", { it is EndCrystal }),
     XP("XP", { it is ExperienceOrb });
 
     companion object {

@@ -26,7 +26,7 @@ PolyHitbox replaces Minecraft's hitboxes with ones you can style, down to which 
 
 ### Per entity type
 
-All of the above can be set differently for players, yourself, mobs, monsters, projectiles, arrows, fireballs, wither skulls, item frames, armor stands, items and XP orbs.
+All of the above can be set differently for players, yourself, mobs, monsters, projectiles, arrows, fireballs, wither skulls, item frames, armor stands, items, end crystals (1.21+) and XP orbs.
 
 ![Entity tabs](.github/images/entity-tabs.gif)
 

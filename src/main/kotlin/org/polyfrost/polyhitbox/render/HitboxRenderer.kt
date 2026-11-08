@@ -256,9 +256,9 @@ object HitboxRenderer {
         for (entity in level.entitiesForRendering()) {
             if (entity === selfInFirstPerson || entity.isInvisible || hiddenGrounded(entity)) continue
             val matched = HitboxCategory.match(entity)
-            val config = HitboxCategory.visualsOf(matched)
+            val config = HitboxCategory.effective(matched)
             if (!config.showSide && !config.showOutline && !config.showEyeHeight && !config.showViewRay) continue
-            when (HitboxCategory.logicOf(matched).showCondition) {
+            when (config.showCondition) {
                 0 -> {}
                 1 -> if (!toggled) continue
                 2 -> if (entity !== hovered) continue
@@ -796,9 +796,9 @@ object HitboxRenderer {
         val player = viewer ?: return
         if (entity === selfInFirstPerson || entity.isInvisible || hiddenGrounded(entity)) return
         val matched = HitboxCategory.match(entity)
-        val config = HitboxCategory.visualsOf(matched)
+        val config = HitboxCategory.effective(matched)
         if (!config.showSide && !config.showOutline && !config.showEyeHeight && !config.showViewRay) return
-        when (HitboxCategory.logicOf(matched).showCondition) {
+        when (config.showCondition) {
             0 -> {}
             1 -> if (!toggled) return
             2 -> if (entity !== hovered) return

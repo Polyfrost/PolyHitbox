@@ -1,2 +1,2 @@
-## 1.3.9
-- Added a section for End Crystals on relevant versions
+## 1.4.0
+- Revamp design of config

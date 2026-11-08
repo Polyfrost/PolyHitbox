@@ -77,20 +77,16 @@ enum class HitboxCategory(
             return DEFAULT
         }
 
-        fun logicOf(matched: HitboxConfig): HitboxConfig =
-            if (matched.overwriteLogic) matched else DEFAULT.config
+        fun effective(matched: HitboxConfig): HitboxConfig =
+            if (matched.override) matched else DEFAULT.config
 
-        fun visualsOf(matched: HitboxConfig): HitboxConfig =
-            if (matched.overwriteVisuals) matched else DEFAULT.config
-
-        fun anyToggled(): Boolean = all.any { logicOf(it.config).showCondition == TOGGLED }
+        fun anyToggled(): Boolean = all.any { effective(it.config).showCondition == TOGGLED }
 
         fun anythingVisible(): Boolean {
             for (category in all) {
-                val matched = category.config
-                if (logicOf(matched).showCondition == NEVER) continue
-                val visuals = visualsOf(matched)
-                if (!visuals.showSide && !visuals.showOutline && !visuals.showEyeHeight && !visuals.showViewRay) continue
+                val cfg = effective(category.config)
+                if (cfg.showCondition == NEVER) continue
+                if (!cfg.showSide && !cfg.showOutline && !cfg.showEyeHeight && !cfg.showViewRay) continue
                 return true
             }
             return false

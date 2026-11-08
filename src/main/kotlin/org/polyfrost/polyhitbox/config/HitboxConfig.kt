@@ -17,9 +17,7 @@ class HitboxConfig {
 
     var showGrounded = true
 
-    var overwriteLogic = false
-
-    var overwriteVisuals = false
+    var override = false
 
     var lineMode = NORMAL
     var dashFactor = 10
@@ -65,6 +63,34 @@ class HitboxConfig {
     @JvmField var viewRayArgb = 0
     @JvmField var viewRayHoverArgb = 0
     @JvmField var viewRayIframeArgb = 0
+
+    fun copyVisualsFrom(other: HitboxConfig) {
+        fun PolyColor.copy() = withChroma(chroma)
+        lineMode = other.lineMode
+        dashFactor = other.dashFactor
+        drawOverEntity = other.drawOverEntity
+        hoverColor = other.hoverColor
+        iframeColor = other.iframeColor
+        showSide = other.showSide
+        sideColor = other.sideColor.copy()
+        sideHoverColor = other.sideHoverColor.copy()
+        sideIframeColor = other.sideIframeColor.copy()
+        showOutline = other.showOutline
+        outlineColor = other.outlineColor.copy()
+        outlineHoverColor = other.outlineHoverColor.copy()
+        outlineIframeColor = other.outlineIframeColor.copy()
+        outlineThickness = other.outlineThickness
+        showEyeHeight = other.showEyeHeight
+        eyeHeightColor = other.eyeHeightColor.copy()
+        eyeHeightHoverColor = other.eyeHeightHoverColor.copy()
+        eyeHeightIframeColor = other.eyeHeightIframeColor.copy()
+        eyeHeightThickness = other.eyeHeightThickness
+        showViewRay = other.showViewRay
+        viewRayColor = other.viewRayColor.copy()
+        viewRayHoverColor = other.viewRayHoverColor.copy()
+        viewRayIframeColor = other.viewRayIframeColor.copy()
+        viewRayThickness = other.viewRayThickness
+    }
 
     fun resolveColors() {
         if (showSide) {

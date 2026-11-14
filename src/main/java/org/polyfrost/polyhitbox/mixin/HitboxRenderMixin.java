@@ -74,6 +74,11 @@ public class HitboxRenderMixin {
 //?} elif >1.8.9 {
 /*@Mixin(LevelRenderer.class)
 public class HitboxRenderMixin {
+    @Inject(method = "renderLevel", at = @At("HEAD"))
+    private void polyhitbox$beginLevel(CallbackInfo ci) {
+        HitboxRenderer.INSTANCE.clearBlockCache();
+    }
+
     @Inject(method = "renderEntity(Lnet/minecraft/world/entity/Entity;DDDFLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;)V", at = @At("TAIL"))
     private void polyhitbox$render(Entity entity, double camX, double camY, double camZ, float partialTicks, PoseStack poseStack, MultiBufferSource buffer, CallbackInfo ci) {
         HitboxRenderer.INSTANCE.renderEntity(entity, buffer);

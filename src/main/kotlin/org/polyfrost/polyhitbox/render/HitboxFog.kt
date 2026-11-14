@@ -71,6 +71,9 @@ object HitboxFog {
     fun dominance(a: Double, b: Double): Double =
         (linear(a.toFloat(), environmentalStart, environmentalEnd) - linear(b.toFloat(), renderDistanceStart, renderDistanceEnd)).toDouble()
 
+    private fun spansFinite(): Boolean =
+        (environmentalEnd - environmentalStart).isFinite() && (renderDistanceEnd - renderDistanceStart).isFinite()
+
     private fun value(a: Double, b: Double): Float = max(
         linear(a.toFloat(), environmentalStart, environmentalEnd),
         linear(b.toFloat(), renderDistanceStart, renderDistanceEnd),
@@ -125,6 +128,8 @@ object HitboxFog {
 
     fun dominance(a: Double, b: Double): Double = 0.0
 
+    private fun spansFinite(): Boolean = (end - start).isFinite()
+
     private fun value(a: Double, b: Double): Float {
         val distance = a.toFloat()
         if (distance <= start) return 0f
@@ -142,8 +147,27 @@ object HitboxFog {
 
     fun dominance(a: Double, b: Double): Double = 0.0
 
+    private fun spansFinite(): Boolean = true
+
     private fun value(a: Double, b: Double): Float = 0f
     *///?}
+
+    const val SPLIT = 0
+    const val UNCUT = 1
+    const val CLEAR = 2
+
+    fun classify(loA: Double, loB: Double, hiA: Double, hiB: Double): Int = when {
+        !alpha.isFinite() || !spansFinite() || !(loA + loB + hiA + hiB).isFinite() -> SPLIT
+        cutWithin(cutsA, loA, hiA) || cutWithin(cutsB, loB, hiB) -> SPLIT
+        dominance(loA, hiB) < 0.0 && dominance(hiA, loB) > 0.0 -> SPLIT
+        value(hiA, hiB) * alpha <= 0f -> CLEAR
+        else -> UNCUT
+    }
+
+    private fun cutWithin(cuts: DoubleArray, lo: Double, hi: Double): Boolean {
+        for (cut in cuts) if (cut >= lo && cut <= hi) return true
+        return false
+    }
 
     fun apply(a: Double, b: Double, argb: Int): Int {
         val amount = value(a, b) * alpha

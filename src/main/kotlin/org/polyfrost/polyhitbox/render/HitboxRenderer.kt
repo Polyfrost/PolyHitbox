@@ -385,20 +385,26 @@ object HitboxRenderer {
 
         if (config.showSide) {
             val c = tint(entity, HitboxElement.SIDE, hover, iframe, pick(iframe, hover, config.sideIframeArgb, config.sideHoverArgb, config.sideArgb))
+            classifyFog(minX, minY, minZ, maxX, maxY, maxZ, 0f)
             fillBox(vc, minX, minY, minZ, maxX, maxY, maxZ, c)
         }
         if (config.showOutline) {
             val c = tint(entity, HitboxElement.OUTLINE, hover, iframe, pick(iframe, hover, config.outlineIframeArgb, config.outlineHoverArgb, config.outlineArgb))
-            styledBox(vc, config, minX, minY, minZ, maxX, maxY, maxZ, c, config.outlineThickness)
+            val thickness = config.outlineThickness
+            classifyFog(minX, minY, minZ, maxX, maxY, maxZ, thickness)
+            styledBox(vc, config, minX, minY, minZ, maxX, maxY, maxZ, c, thickness)
         }
         if (config.showEyeHeight) {
             val c = tint(entity, HitboxElement.EYE_HEIGHT, hover, iframe, pick(iframe, hover, config.eyeHeightIframeArgb, config.eyeHeightHoverArgb, config.eyeHeightArgb))
-            styledBox(vc, config, minX, eyeY - 0.01, minZ, maxX, eyeY + 0.01, maxZ, c, config.eyeHeightThickness)
+            val thickness = config.eyeHeightThickness
+            classifyFog(minX, eyeY - 0.01, minZ, maxX, eyeY + 0.01, maxZ, thickness)
+            styledBox(vc, config, minX, eyeY - 0.01, minZ, maxX, eyeY + 0.01, maxZ, c, thickness)
         }
         if (config.showViewRay) {
             clamping = false
             val c = tint(entity, HitboxElement.VIEW_RAY, hover, iframe, pick(iframe, hover, config.viewRayIframeArgb, config.viewRayHoverArgb, config.viewRayArgb))
             val view = entity.getViewVector(partialTicks)
+            fogMode = HitboxFog.SPLIT
             val ax = px - camX
             val az = pz - camZ
             styledEdge(
@@ -670,6 +676,22 @@ object HitboxRenderer {
         argb: Int,
     ) {
         poly.n = 0
+        if (fogMode == HitboxFog.CLEAR) {
+            poly.add(x1, y1, z1, 0.0, 0.0, 0.0)
+            poly.add(x2, y2, z2, 0.0, 0.0, 0.0)
+            poly.add(x3, y3, z3, 0.0, 0.0, 0.0)
+            poly.add(x4, y4, z4, 0.0, 0.0, 0.0)
+            fan(vc, poly, argb)
+            return
+        }
+        if (fogMode == HitboxFog.UNCUT) {
+            poly.add(x1, y1, z1, HitboxFog.distanceA(x1, y1, z1), HitboxFog.distanceB(x1, y1, z1), 0.0)
+            poly.add(x2, y2, z2, HitboxFog.distanceA(x2, y2, z2), HitboxFog.distanceB(x2, y2, z2), 0.0)
+            poly.add(x3, y3, z3, HitboxFog.distanceA(x3, y3, z3), HitboxFog.distanceB(x3, y3, z3), 0.0)
+            poly.add(x4, y4, z4, HitboxFog.distanceA(x4, y4, z4), HitboxFog.distanceB(x4, y4, z4), 0.0)
+            fan(vc, poly, argb)
+            return
+        }
         poly.add(x1, y1, z1, HitboxFog.distanceA(x1, y1, z1), HitboxFog.distanceB(x1, y1, z1))
         poly.add(x2, y2, z2, HitboxFog.distanceA(x2, y2, z2), HitboxFog.distanceB(x2, y2, z2))
         poly.add(x3, y3, z3, HitboxFog.distanceA(x3, y3, z3), HitboxFog.distanceB(x3, y3, z3))
@@ -723,6 +745,34 @@ object HitboxRenderer {
         for (channel in 0..1) for (cut in fogCuts(channel)) if (poly.straddles(channel, cut)) return true
         return poly.straddles(FogPoly.DOMINANCE, 0.0)
     }
+
+    private var fogMode = HitboxFog.SPLIT
+
+    private fun classifyFog(
+        minX: Double, minY: Double, minZ: Double, maxX: Double, maxY: Double, maxZ: Double,
+        thickness: Float,
+    ) {
+        val farX = max(abs(minX), abs(maxX))
+        val farY = max(abs(minY), abs(maxY))
+        val farZ = max(abs(minZ), abs(maxZ))
+        val forward = sqrt(fwdX * fwdX + fwdY * fwdY + fwdZ * fwdZ)
+        val reach = max(sqrt(farX * farX + farY * farY + farZ * farZ) * forward, NEAR_PLANE)
+        val m = abs(thickness * ribbonScale) * reach * 1.01 + 1.0e-3
+        if (!(farX + farY + farZ + m).isFinite()) {
+            fogMode = HitboxFog.SPLIT
+            return
+        }
+        val nearX = nearest(minX - m, maxX + m)
+        val nearY = nearest(minY - m, maxY + m)
+        val nearZ = nearest(minZ - m, maxZ + m)
+        val loA = HitboxFog.distanceA(nearX, nearY, nearZ)
+        val loB = HitboxFog.distanceB(nearX, nearY, nearZ)
+        val hiA = HitboxFog.distanceA(farX + m, farY + m, farZ + m)
+        val hiB = HitboxFog.distanceB(farX + m, farY + m, farZ + m)
+        fogMode = HitboxFog.classify(loA, loB, hiA, hiB)
+    }
+
+    private fun nearest(lo: Double, hi: Double): Double = if (lo > 0.0) lo else if (hi < 0.0) -hi else 0.0
 
     private fun take(): FogPoly = if (spare.isEmpty()) FogPoly() else spare.removeAt(spare.size - 1)
 

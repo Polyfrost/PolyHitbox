@@ -21,6 +21,8 @@ build
 .fabric/
 versions/*/logs/
 versions/*/mods/
+versions/*/config/
+versions/*/oneconfig/
 
 # other
 eclipse

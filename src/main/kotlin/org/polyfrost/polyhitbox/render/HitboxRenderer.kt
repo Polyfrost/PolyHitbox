@@ -404,16 +404,24 @@ object HitboxRenderer {
             clamping = false
             val c = tint(entity, HitboxElement.VIEW_RAY, hover, iframe, pick(iframe, hover, config.viewRayIframeArgb, config.viewRayHoverArgb, config.viewRayArgb))
             val view = entity.getViewVector(partialTicks)
-            fogMode = HitboxFog.SPLIT
             val ax = px - camX
             val az = pz - camZ
-            styledEdge(
+            viewRay(
                 vc, config,
                 ax, eyeY, az,
                 ax + view.x * VIEW_RAY_LENGTH, eyeY + view.y * VIEW_RAY_LENGTH, az + view.z * VIEW_RAY_LENGTH,
                 c, config.viewRayThickness,
             )
         }
+    }
+
+    internal fun viewRay(
+        vc: VertexConsumer, config: HitboxConfig,
+        ax: Double, ay: Double, az: Double, bx: Double, by: Double, bz: Double,
+        argb: Int, thickness: Float,
+    ) {
+        classifyFog(min(ax, bx), min(ay, by), min(az, bz), max(ax, bx), max(ay, by), max(az, bz), thickness)
+        styledEdge(vc, config, ax, ay, az, bx, by, bz, argb, thickness)
     }
 
     private fun styledBox(
@@ -590,46 +598,64 @@ object HitboxRenderer {
         val y1 = floor(max(maxY, maxY * minScale) + camY).toInt() + 1
         val z1 = floor(max(maxZ, maxZ * minScale) + camZ).toInt() + 1
         for (x in x0..x1) for (y in y0..y1) for (z in z0..z1) {
-            if (blockBounds(level, x, y, z) && sweepHitsBlock(blockMin, blockMax, boxMin, boxMax, minScale)) return true
+            if (cachedBounds(level, x, y, z) && sweepHitsBlock(blockMin, blockMax, boxMin, boxMax, minScale)) return true
         }
         return false
+    }
+
+    private val blockCache = BlockBoundsCache()
+    private val localBounds = DoubleArray(6)
+
+    fun clearBlockCache() = blockCache.clear()
+
+    private fun cachedBounds(level: Level, x: Int, y: Int, z: Int): Boolean {
+        val b = localBounds
+        val cacheable = BlockBoundsCache.packable(x, y, z)
+        val key = BlockBoundsCache.pack(x, y, z)
+        if (!cacheable || !blockCache.get(key, b)) {
+            blockBounds(level, x, y, z, b)
+            if (cacheable) blockCache.put(key, b)
+        }
+        if (b[0].isNaN()) return false
+        setBlockBounds(x, y, z, b[0], b[1], b[2], b[3], b[4], b[5])
+        return true
     }
 
     //? if >1.8.9 {
     private val scanPos = BlockPos.MutableBlockPos()
 
-    private fun blockBounds(level: Level, x: Int, y: Int, z: Int): Boolean {
+    private fun blockBounds(level: Level, x: Int, y: Int, z: Int, out: DoubleArray) {
         val pos = scanPos.set(x, y, z)
         val state = level.getBlockState(pos)
-        if (state.isAir) return false
-        if (state.hasBlockEntity()) {
-            setBlockBounds(x, y, z, -1.0, -1.0, -1.0, 2.0, 2.0, 2.0)
-            return true
-        }
+        if (state.isAir) return setBounds(out, Double.NaN, 0.0, 0.0, 0.0, 0.0, 0.0)
+        if (state.hasBlockEntity()) return setBounds(out, -1.0, -1.0, -1.0, 2.0, 2.0, 2.0)
         val shape = if (state.canOcclude() && state.fluidState.isEmpty) state.getShape(level, pos) else null
-        if (shape == null || shape.isEmpty) {
-            setBlockBounds(x, y, z, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0)
-        } else {
-            setBlockBounds(
-                x, y, z,
-                shape.min(Direction.Axis.X), shape.min(Direction.Axis.Y), shape.min(Direction.Axis.Z),
-                shape.max(Direction.Axis.X), shape.max(Direction.Axis.Y), shape.max(Direction.Axis.Z),
-            )
-        }
-        return true
+        if (shape == null || shape.isEmpty) return setBounds(out, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0)
+        setBounds(
+            out,
+            shape.min(Direction.Axis.X), shape.min(Direction.Axis.Y), shape.min(Direction.Axis.Z),
+            shape.max(Direction.Axis.X), shape.max(Direction.Axis.Y), shape.max(Direction.Axis.Z),
+        )
     }
     //?} else {
-    /*private fun blockBounds(level: Level, x: Int, y: Int, z: Int): Boolean {
+    /*private fun blockBounds(level: Level, x: Int, y: Int, z: Int, out: DoubleArray) {
         val pos = BlockPos(x, y, z)
-        if (level.isAir(pos)) return false
-        if (level.getBlockEntity(pos) != null) {
-            setBlockBounds(x, y, z, -1.0, -1.0, -1.0, 2.0, 2.0, 2.0)
-        } else {
-            setBlockBounds(x, y, z, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0)
+        when {
+            level.isAir(pos) -> setBounds(out, Double.NaN, 0.0, 0.0, 0.0, 0.0, 0.0)
+            level.getBlockEntity(pos) != null -> setBounds(out, -1.0, -1.0, -1.0, 2.0, 2.0, 2.0)
+            else -> setBounds(out, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0)
         }
-        return true
     }
     *///?}
+
+    private fun setBounds(out: DoubleArray, minX: Double, minY: Double, minZ: Double, maxX: Double, maxY: Double, maxZ: Double) {
+        out[0] = minX
+        out[1] = minY
+        out[2] = minZ
+        out[3] = maxX
+        out[4] = maxY
+        out[5] = maxZ
+    }
 
     private fun setBlockBounds(
         x: Int, y: Int, z: Int,
@@ -649,7 +675,7 @@ object HitboxRenderer {
         return 1.0 / ((clampInvTarget + (1.0 / depth - clampInvFar) * clampSquash) * depth)
     }
 
-    private fun fillBox(
+    internal fun fillBox(
         vc: VertexConsumer,
         minX: Double, minY: Double, minZ: Double, maxX: Double, maxY: Double, maxZ: Double,
         argb: Int,
@@ -741,14 +767,12 @@ object HitboxRenderer {
 
     private fun fogCuts(channel: Int): DoubleArray = if (channel == 0) HitboxFog.cutsA else HitboxFog.cutsB
 
-    private fun crossesFogCut(poly: FogPoly): Boolean {
-        for (channel in 0..1) for (cut in fogCuts(channel)) if (poly.straddles(channel, cut)) return true
-        return poly.straddles(FogPoly.DOMINANCE, 0.0)
-    }
+    private fun crossesFogCut(poly: FogPoly): Boolean =
+        poly.straddlesAny(0, HitboxFog.cutsA) || poly.straddlesAny(1, HitboxFog.cutsB) || poly.straddles(FogPoly.DOMINANCE, 0.0)
 
     private var fogMode = HitboxFog.SPLIT
 
-    private fun classifyFog(
+    internal fun classifyFog(
         minX: Double, minY: Double, minZ: Double, maxX: Double, maxY: Double, maxZ: Double,
         thickness: Float,
     ) {
@@ -797,7 +821,7 @@ object HitboxRenderer {
         val y = poly.y[i]
         val z = poly.z[i]
         // Fog uses the true position to make sure drawing over the entity doesn't bypass fog
-        val color = HitboxFog.apply(poly.a[i], poly.b[i], argb)
+        val color = if (fogMode == HitboxFog.CLEAR) argb else HitboxFog.apply(poly.a[i], poly.b[i], argb)
         val scale = if (clamping) depthScale(x, y, z) else 1.0
         //? if > 1.8.9 {
         vc.addVertex((x * scale).toFloat(), (y * scale).toFloat(), (z * scale).toFloat()).setColor(color)
@@ -817,12 +841,14 @@ object HitboxRenderer {
     private val geometry = SubmitNodeCollector.CustomGeometryRenderer { _, buffer -> drawLevel(buffer) }
 
     fun submitHitboxes(camera: CameraRenderState, collector: SubmitNodeCollector) {
+        clearBlockCache()
         if (!beginFrame(camera.cullFrustum)) return
         collector.submitCustomGeometry(identityPose, quadsType(), geometry)
     }
     //?} elif >=1.21.10 {
     
     /*fun renderHitboxes(cull: Frustum?) {
+        clearBlockCache()
         if (!drawTargetUsable()) return
         if (!beginFrame(cull)) return
         val type = quadsType()
@@ -859,6 +885,7 @@ object HitboxRenderer {
     }
     *///?} else {
     /*fun renderHitboxes(cull: Frustum?) {
+        clearBlockCache()
         if (!beginFrame(cull)) return
         val tesselator = Tesselator.getInstance()
         val buffer = tesselator.buffer
@@ -907,4 +934,77 @@ internal fun sweepHitsBlock(
         }
     }
     return lo < hi
+}
+
+internal class BlockBoundsCache {
+    private var keys = LongArray(INITIAL_CAPACITY)
+    private var stamps = IntArray(INITIAL_CAPACITY)
+    private var values = DoubleArray(INITIAL_CAPACITY * 6)
+    private var shift = 64 - Integer.numberOfTrailingZeros(INITIAL_CAPACITY)
+    private var stamp = 1
+    private var size = 0
+
+    fun clear() {
+        size = 0
+        if (++stamp == 0) {
+            stamps.fill(0)
+            stamp = 1
+        }
+    }
+
+    fun get(key: Long, out: DoubleArray): Boolean {
+        val i = find(key)
+        if (stamps[i] != stamp) return false
+        values.copyInto(out, 0, i * 6, i * 6 + 6)
+        return true
+    }
+
+    fun put(key: Long, bounds: DoubleArray) {
+        if ((size + 1) * 2 > keys.size) grow()
+        val i = find(key)
+        if (stamps[i] != stamp) {
+            stamps[i] = stamp
+            keys[i] = key
+            size++
+        }
+        bounds.copyInto(values, i * 6, 0, 6)
+    }
+
+    private fun find(key: Long): Int {
+        val mask = keys.size - 1
+        var i = (key * -7046029254386353131L ushr shift).toInt()
+        while (stamps[i] == stamp && keys[i] != key) i = (i + 1) and mask
+        return i
+    }
+
+    private fun grow() {
+        val oldKeys = keys
+        val oldStamps = stamps
+        val oldValues = values
+        keys = LongArray(oldKeys.size * 2)
+        stamps = IntArray(oldKeys.size * 2)
+        values = DoubleArray(oldValues.size * 2)
+        shift--
+        for (j in oldKeys.indices) {
+            if (oldStamps[j] != stamp) continue
+            val i = find(oldKeys[j])
+            keys[i] = oldKeys[j]
+            stamps[i] = stamp
+            oldValues.copyInto(values, i * 6, j * 6, j * 6 + 6)
+        }
+    }
+
+    companion object {
+        private const val INITIAL_CAPACITY = 1024
+
+        private const val HORIZONTAL_LIMIT = 1 shl 25
+        private const val VERTICAL_LIMIT = 1 shl 11
+
+        fun packable(x: Int, y: Int, z: Int): Boolean =
+            x >= -HORIZONTAL_LIMIT && x < HORIZONTAL_LIMIT && z >= -HORIZONTAL_LIMIT && z < HORIZONTAL_LIMIT &&
+                y >= -VERTICAL_LIMIT && y < VERTICAL_LIMIT
+
+        fun pack(x: Int, y: Int, z: Int): Long =
+            (x.toLong() and 0x3FFFFFF shl 38) or (z.toLong() and 0x3FFFFFF shl 12) or (y.toLong() and 0xFFF)
+    }
 }

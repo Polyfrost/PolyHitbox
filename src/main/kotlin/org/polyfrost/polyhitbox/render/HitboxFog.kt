@@ -92,28 +92,28 @@ object HitboxFog {
     private var cylinder = false
 
     fun beginFrame() {
-        val lastStart = start
-        val lastEnd = end
         //? if >=1.21.4 {
         val fog = RenderSystem.getShaderFog()
-        red = fog.red
-        green = fog.green
-        blue = fog.blue
-        alpha = fog.alpha
-        start = fog.start
-        end = fog.end
-        cylinder = fog.shape == FogShape.CYLINDER
+        capture(fog.red, fog.green, fog.blue, fog.alpha, fog.start, fog.end, fog.shape == FogShape.CYLINDER)
         //?} else {
         /*val color = RenderSystem.getShaderFogColor()
-        red = color[0]
-        green = color[1]
-        blue = color[2]
-        alpha = color[3]
-        start = RenderSystem.getShaderFogStart()
-        end = RenderSystem.getShaderFogEnd()
-        cylinder = RenderSystem.getShaderFogShape() == FogShape.CYLINDER
+        capture(
+            color[0], color[1], color[2], color[3],
+            RenderSystem.getShaderFogStart(), RenderSystem.getShaderFogEnd(), RenderSystem.getShaderFogShape() == FogShape.CYLINDER,
+        )
         *///?}
-        if (start != lastStart || end != lastEnd) cutsA = smoothCuts()
+    }
+
+    fun capture(red: Float, green: Float, blue: Float, alpha: Float, start: Float, end: Float, cylinder: Boolean) {
+        this.red = red
+        this.green = green
+        this.blue = blue
+        this.alpha = alpha
+        this.cylinder = cylinder
+        if (start == this.start && end == this.end) return
+        this.start = start
+        this.end = end
+        cutsA = smoothCuts()
     }
 
     private fun smoothCuts(): DoubleArray = when {
@@ -229,6 +229,19 @@ internal class FogPoly {
             hi = max(hi, d[i])
         }
         return lo < cut && hi > cut
+    }
+
+    fun straddlesAny(channel: Int, cuts: DoubleArray): Boolean {
+        if (cuts.isEmpty()) return false
+        val d = distance(channel)
+        var lo = d[0]
+        var hi = d[0]
+        for (i in 1 until n) {
+            lo = min(lo, d[i])
+            hi = max(hi, d[i])
+        }
+        for (cut in cuts) if (lo < cut && hi > cut) return true
+        return false
     }
 
     fun split(channel: Int, cut: Double, below: FogPoly, above: FogPoly) {

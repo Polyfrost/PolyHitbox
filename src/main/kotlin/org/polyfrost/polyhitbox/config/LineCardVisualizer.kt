@@ -17,15 +17,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import org.polyfrost.compose.render.PolyColor
 import org.polyfrost.oneconfig.api.config.v1.Property
 import org.polyfrost.oneconfig.api.config.v1.Visualizer
 import org.polyfrost.oneconfig.api.ui.v1.ExperimentalOneConfigUiApi
-import org.polyfrost.oneconfig.api.ui.v1.components.Text
-import org.polyfrost.oneconfig.api.ui.v1.components.Tooltip
-import org.polyfrost.oneconfig.api.ui.v1.theme.OneConfigTheme
-import org.polyfrost.oneconfig.internal.ui.components.settings.CheckboxIndicator
+import org.polyfrost.oneconfig.api.ui.v1.components.Checkbox
+import org.polyfrost.oneconfig.api.ui.v1.components.TooltipBox
+import org.polyfrost.oneconfig.api.ui.v1.theme.OneConfigSpacing
+import org.polyfrost.oneconfig.internal.ui.components.settings.Option
 import java.util.function.Predicate
 
 class LineCard(
@@ -66,18 +65,14 @@ class LineCardVisualizer : Visualizer {
                     Spacer(Modifier.width(SPINNER_WIDTH))
                 }
             }
-            CheckboxIndicator(shown, onToggle = { toggle.set(!shown) })
+            Checkbox(shown, { toggle.set(it) }, label = toggle.title?.toString())
         }
     }
 
     @Composable
     private fun Swatch(label: String, prop: Property<PolyColor>) {
-        Tooltip(
-            text = { Text(label, Modifier, OneConfigTheme.current.textColor, 12.sp) },
-            modifier = Modifier,
-            anchor = Alignment.TopCenter,
-        ) {
-            Visualizer[Visualizer.ColorVisualizer::class.java]?.visualize(prop)
+        TooltipBox(label) {
+            Option(prop)
         }
     }
 
@@ -94,8 +89,8 @@ class LineCardVisualizer : Visualizer {
 
     companion object {
         private val SPINNER_WIDTH = 96.dp
-        private val SWATCH_GAP = 6.dp
-        private val GROUP_GAP = 14.dp
+        private val SWATCH_GAP = OneConfigSpacing.Default.s
+        private val GROUP_GAP = OneConfigSpacing.Default.l
 
         private val CONTROL_SIZE = 24.dp
 

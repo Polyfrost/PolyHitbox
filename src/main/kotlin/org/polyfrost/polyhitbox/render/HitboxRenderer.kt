@@ -116,7 +116,11 @@ object HitboxRenderer {
     private var clampSquash = 1.0
 
     private fun active(): Boolean =
-        ModConfig.enabled && !Minecraft.getInstance().showOnlyReducedInfo() && !(ModConfig.hideInF1 && guiHidden())
+        ModConfig.enabled &&
+        // reduced debug info hides vanilla hitboxes on Minecraft 1.10 and above
+        //? if > 1.8.9
+        !Minecraft.getInstance().showOnlyReducedInfo() &&
+        !(ModConfig.hideInF1 && guiHidden())
 
     //? if >=26.2 {
     private fun guiHidden(): Boolean = Minecraft.getInstance().gui.hud.isHidden

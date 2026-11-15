@@ -1,2 +1,2 @@
-## 1.4.0
-- Revamp design of config
+## 1.4.1
+- Cull hitboxes in fog

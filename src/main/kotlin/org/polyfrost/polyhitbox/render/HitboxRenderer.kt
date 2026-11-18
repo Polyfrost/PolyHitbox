@@ -83,6 +83,9 @@ object HitboxRenderer {
 
     private const val CONTACT = 1.0e-4
 
+    // The pulled path widens with distance, so a far box (e.g. one lerping across a teleport) would scan billions of blocks
+    private const val MAX_PULL_SCAN = 1L shl 16
+
     private var camX = 0.0
     private var camY = 0.0
     private var camZ = 0.0
@@ -601,6 +604,7 @@ object HitboxRenderer {
         val x1 = floor(max(maxX, maxX * minScale) + camX).toInt() + 1
         val y1 = floor(max(maxY, maxY * minScale) + camY).toInt() + 1
         val z1 = floor(max(maxZ, maxZ * minScale) + camZ).toInt() + 1
+        if ((x1.toLong() - x0 + 1) * (y1.toLong() - y0 + 1) * (z1.toLong() - z0 + 1) > MAX_PULL_SCAN) return true
         for (x in x0..x1) for (y in y0..y1) for (z in z0..z1) {
             if (cachedBounds(level, x, y, z) && sweepHitsBlock(blockMin, blockMax, boxMin, boxMax, minScale)) return true
         }

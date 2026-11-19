@@ -307,8 +307,14 @@ object HitboxRenderer {
     }
     *///?}
 
+    // Cull where drawEntity draws, which can lag far behind after an interpolated teleport
     private fun culled(entity: Entity, config: HitboxConfig): Boolean {
-        val bb = entity.boundingBox
+        val delta = partialTicks.toDouble()
+        val bb = entity.boundingBox.move(
+            Mth.lerp(delta, entity.xo, entity.x) - entity.x,
+            Mth.lerp(delta, entity.yo, entity.y) - entity.y,
+            Mth.lerp(delta, entity.zo, entity.z) - entity.z,
+        )
         if (bb.hasNaN()) return true
         val ex = (bb.minX + bb.maxX) * 0.5 - camX
         val ey = (bb.minY + bb.maxY) * 0.5 - camY
@@ -989,9 +995,13 @@ internal class BlockBoundsCache {
         val oldKeys = keys
         val oldStamps = stamps
         val oldValues = values
-        keys = LongArray(oldKeys.size * 2)
-        stamps = IntArray(oldKeys.size * 2)
-        values = DoubleArray(oldValues.size * 2)
+        // Allocate before assigning so an OOM can't leave the arrays mismatched
+        val newKeys = LongArray(oldKeys.size * 2)
+        val newStamps = IntArray(oldKeys.size * 2)
+        val newValues = DoubleArray(oldValues.size * 2)
+        keys = newKeys
+        stamps = newStamps
+        values = newValues
         shift--
         for (j in oldKeys.indices) {
             if (oldStamps[j] != stamp) continue

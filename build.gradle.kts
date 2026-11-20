@@ -104,9 +104,6 @@ dependencies {
 
     modImplementation("net.fabricmc:fabric-loader:$loaderversion")
     modImplementation("org.polyfrost.oneconfig:$mcversion-$loader:$oneconfigversion")
-    for (module in arrayOf("commands", "config", "config-impl", "events", "internal", "notifications", "ui", "utils", "hud")) {
-        implementation("org.polyfrost.oneconfig:$module:$oneconfigversion")
-    }
 
     sc.properties.getOrNull<String>("deps.fabric_api")?.let {
         modImplementation("net.fabricmc.fabric-api:fabric-api:$it")
@@ -230,8 +227,9 @@ val changelogs = rootProject.file("CHANGELOG.md").takeIf { it.exists() }?.readTe
 
 val validateChangelog = tasks.register("validateChangelog") {
     description = "Validates that the changelog is written for the current version."
+    val hasChangelog = changelogs.contains(modversion)
     doLast {
-        if (!changelogs.contains(modversion)) {
+        if (!hasChangelog) {
             throw GradleException("Changelog for version $modversion not found.")
         }
     }

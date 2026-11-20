@@ -7,5 +7,9 @@ public interface AABBCompat {
     default AABB inflate(double amount) {
         return ((AABB) (Object) this).grown(amount, amount, amount);
     }
+
+    default AABB move(double dx, double dy, double dz) {
+        return ((AABB) (Object) this).moved(dx, dy, dz);
+    }
 }
 *///?}

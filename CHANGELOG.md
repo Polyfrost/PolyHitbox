@@ -1,5 +1,2 @@
-## 1.4.3
-- Updated to OneConfig 1.8.0
-
-## 1.4.2
-- Fixed hitboxes not being shown with Reduced Debug Info enabled on 1.8.9 (vanilla only hides them on 1.10 and above)
+## Unreleased changes
+- Fixed a crash when Draw Over Entity was enabled and an entity was far from the camera, such as when requeuing on some servers

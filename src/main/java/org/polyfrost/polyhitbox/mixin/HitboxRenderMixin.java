@@ -76,7 +76,7 @@ public class HitboxRenderMixin {
 public class HitboxRenderMixin {
     @Inject(method = "renderLevel", at = @At("HEAD"))
     private void polyhitbox$beginLevel(CallbackInfo ci) {
-        HitboxRenderer.INSTANCE.clearBlockCache();
+        HitboxRenderer.INSTANCE.refreshBlockCache();
     }
 
     @Inject(method = "renderEntity(Lnet/minecraft/world/entity/Entity;DDDFLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;)V", at = @At("TAIL"))

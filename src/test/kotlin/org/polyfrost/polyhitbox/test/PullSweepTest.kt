@@ -76,15 +76,18 @@ class PullSweepTest {
 
     //? if >=26.2 {
     @Test
-    fun `submitting a frame forgets cached blocks`() {
+    fun `cached blocks survive frames until blocks change`() {
         val cache = HitboxRenderer::class.java.getDeclaredField("blockCache").apply { isAccessible = true }.get(null) as BlockBoundsCache
         val key = BlockBoundsCache.pack(1, 2, 3)
         val out = DoubleArray(6)
+        HitboxRenderer.refreshBlockCache()
         cache.put(key, DoubleArray(6))
-        assertTrue(cache.get(key, out))
         val collector = Proxy.newProxyInstance(SubmitNodeCollector::class.java.classLoader, arrayOf(SubmitNodeCollector::class.java)) { _, method, _ ->
             error("Unexpected ${method.name}")
         } as SubmitNodeCollector
+        HitboxRenderer.submitHitboxes(CameraRenderState(), collector)
+        assertTrue(cache.get(key, out))
+        HitboxRenderer.onBlocksChanged()
         HitboxRenderer.submitHitboxes(CameraRenderState(), collector)
         assertFalse(cache.get(key, out))
     }

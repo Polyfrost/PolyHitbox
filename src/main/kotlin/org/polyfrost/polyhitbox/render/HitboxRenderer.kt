@@ -42,6 +42,8 @@ import org.polyfrost.polyhitbox.config.HitboxConfig
 import org.polyfrost.polyhitbox.config.ModConfig
 //? if <26.1
 //import org.polyfrost.polyhitbox.mixin.FovAccessor
+import java.lang.ref.WeakReference
+import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.math.abs
 import kotlin.math.floor
 import kotlin.math.max
@@ -598,6 +600,10 @@ object HitboxRenderer {
         minScale: Double,
     ): Boolean {
         val level = Minecraft.getInstance().level ?: return true
+        if (cacheLevel.get() !== level) {
+            blockCache.clear()
+            cacheLevel = WeakReference(level)
+        }
         boxMin[0] = minX
         boxMin[1] = minY
         boxMin[2] = minZ
@@ -619,8 +625,15 @@ object HitboxRenderer {
 
     private val blockCache = BlockBoundsCache()
     private val localBounds = DoubleArray(6)
+    private var cacheLevel = WeakReference<Level>(null)
+    private val blocksChanged = AtomicBoolean()
 
-    fun clearBlockCache() = blockCache.clear()
+    @JvmStatic
+    fun onBlocksChanged() = blocksChanged.set(true)
+
+    fun refreshBlockCache() {
+        if (blocksChanged.getAndSet(false)) blockCache.clear()
+    }
 
     private fun cachedBounds(level: Level, x: Int, y: Int, z: Int): Boolean {
         val b = localBounds
@@ -716,12 +729,17 @@ object HitboxRenderer {
         argb: Int,
     ) {
         poly.n = 0
-        if (fogMode == HitboxFog.CLEAR) {
+        val flat = when (fogMode) {
+            HitboxFog.CLEAR -> true
+            HitboxFog.UNCUT -> uniformFog(argb)
+            else -> false
+        }
+        if (flat) {
             poly.add(x1, y1, z1, 0.0, 0.0, 0.0)
             poly.add(x2, y2, z2, 0.0, 0.0, 0.0)
             poly.add(x3, y3, z3, 0.0, 0.0, 0.0)
             poly.add(x4, y4, z4, 0.0, 0.0, 0.0)
-            fan(vc, poly, argb)
+            fan(vc, poly, if (fogMode == HitboxFog.CLEAR) argb else uniformColor, false)
             return
         }
         if (fogMode == HitboxFog.UNCUT) {
@@ -729,7 +747,7 @@ object HitboxRenderer {
             poly.add(x2, y2, z2, HitboxFog.distanceA(x2, y2, z2), HitboxFog.distanceB(x2, y2, z2), 0.0)
             poly.add(x3, y3, z3, HitboxFog.distanceA(x3, y3, z3), HitboxFog.distanceB(x3, y3, z3), 0.0)
             poly.add(x4, y4, z4, HitboxFog.distanceA(x4, y4, z4), HitboxFog.distanceB(x4, y4, z4), 0.0)
-            fan(vc, poly, argb)
+            fan(vc, poly, argb, true)
             return
         }
         poly.add(x1, y1, z1, HitboxFog.distanceA(x1, y1, z1), HitboxFog.distanceB(x1, y1, z1))
@@ -737,7 +755,7 @@ object HitboxRenderer {
         poly.add(x3, y3, z3, HitboxFog.distanceA(x3, y3, z3), HitboxFog.distanceB(x3, y3, z3))
         poly.add(x4, y4, z4, HitboxFog.distanceA(x4, y4, z4), HitboxFog.distanceB(x4, y4, z4))
         if (!crossesFogCut(poly)) {
-            fan(vc, poly, argb)
+            fan(vc, poly, argb, true)
             return
         }
         triangle(vc, 0, 1, 2, argb)
@@ -755,7 +773,7 @@ object HitboxRenderer {
         for (piece in pieces) piece.refreshDominance()
         cutPieces(FogPoly.DOMINANCE, 0.0)
         for (piece in pieces) {
-            fan(vc, piece, argb)
+            fan(vc, piece, argb, true)
             spare.add(piece)
         }
         pieces.clear()
@@ -786,6 +804,25 @@ object HitboxRenderer {
 
     private var fogMode = HitboxFog.SPLIT
 
+    private var fogLoA = 0.0
+    private var fogLoB = 0.0
+    private var fogHiA = 0.0
+    private var fogHiB = 0.0
+    private var uniformKnown = false
+    private var uniformArgb = 0
+    private var uniformHit = false
+    private var uniformColor = 0
+
+    private fun uniformFog(argb: Int): Boolean {
+        if (!uniformKnown || argb != uniformArgb) {
+            uniformKnown = true
+            uniformArgb = argb
+            uniformColor = HitboxFog.apply(fogLoA, fogLoB, argb)
+            uniformHit = uniformColor == HitboxFog.apply(fogHiA, fogHiB, argb)
+        }
+        return uniformHit
+    }
+
     internal fun classifyFog(
         minX: Double, minY: Double, minZ: Double, maxX: Double, maxY: Double, maxZ: Double,
         thickness: Float,
@@ -808,6 +845,11 @@ object HitboxRenderer {
         val hiA = HitboxFog.distanceA(farX + m, farY + m, farZ + m)
         val hiB = HitboxFog.distanceB(farX + m, farY + m, farZ + m)
         fogMode = HitboxFog.classify(loA, loB, hiA, hiB)
+        fogLoA = loA
+        fogLoB = loB
+        fogHiA = hiA
+        fogHiB = hiB
+        uniformKnown = false
     }
 
     private fun nearest(lo: Double, hi: Double): Double = if (lo > 0.0) lo else if (hi < 0.0) -hi else 0.0
@@ -817,25 +859,25 @@ object HitboxRenderer {
     //? if = 1.8.9
     //private val quadData = IntArray(16)
 
-    private fun fan(vc: VertexConsumer, poly: FogPoly, argb: Int) {
+    private fun fan(vc: VertexConsumer, poly: FogPoly, argb: Int, fogged: Boolean) {
         var i = 1
         while (i + 1 < poly.n) {
-            vertex(vc, poly, 0, argb, 0)
-            vertex(vc, poly, i, argb, 1)
-            vertex(vc, poly, i + 1, argb, 2)
-            vertex(vc, poly, min(i + 2, poly.n - 1), argb, 3)
+            vertex(vc, poly, 0, argb, 0, fogged)
+            vertex(vc, poly, i, argb, 1, fogged)
+            vertex(vc, poly, i + 1, argb, 2, fogged)
+            vertex(vc, poly, min(i + 2, poly.n - 1), argb, 3, fogged)
             //? if = 1.8.9
             //vc.vertices(quadData)
             i += 2
         }
     }
 
-    private fun vertex(vc: VertexConsumer, poly: FogPoly, i: Int, argb: Int, slot: Int) {
+    private fun vertex(vc: VertexConsumer, poly: FogPoly, i: Int, argb: Int, slot: Int, fogged: Boolean) {
         val x = poly.x[i]
         val y = poly.y[i]
         val z = poly.z[i]
         // Fog uses the true position to make sure drawing over the entity doesn't bypass fog
-        val color = if (fogMode == HitboxFog.CLEAR) argb else HitboxFog.apply(poly.a[i], poly.b[i], argb)
+        val color = if (fogged) HitboxFog.apply(poly.a[i], poly.b[i], argb) else argb
         val scale = if (clamping) depthScale(x, y, z) else 1.0
         //? if > 1.8.9 {
         vc.addVertex((x * scale).toFloat(), (y * scale).toFloat(), (z * scale).toFloat()).setColor(color)
@@ -855,14 +897,14 @@ object HitboxRenderer {
     private val geometry = SubmitNodeCollector.CustomGeometryRenderer { _, buffer -> drawLevel(buffer) }
 
     fun submitHitboxes(camera: CameraRenderState, collector: SubmitNodeCollector) {
-        clearBlockCache()
+        refreshBlockCache()
         if (!beginFrame(camera.cullFrustum)) return
         collector.submitCustomGeometry(identityPose, quadsType(), geometry)
     }
     //?} elif >=1.21.10 {
     
     /*fun renderHitboxes(cull: Frustum?) {
-        clearBlockCache()
+        refreshBlockCache()
         if (!drawTargetUsable()) return
         if (!beginFrame(cull)) return
         val type = quadsType()
@@ -899,7 +941,7 @@ object HitboxRenderer {
     }
     *///?} else {
     /*fun renderHitboxes(cull: Frustum?) {
-        clearBlockCache()
+        refreshBlockCache()
         if (!beginFrame(cull)) return
         val tesselator = Tesselator.getInstance()
         val buffer = tesselator.buffer
@@ -974,6 +1016,7 @@ internal class BlockBoundsCache {
     }
 
     fun put(key: Long, bounds: DoubleArray) {
+        if (size >= MAX_SIZE) clear()
         if ((size + 1) * 2 > keys.size) grow()
         val i = find(key)
         if (stamps[i] != stamp) {
@@ -1014,6 +1057,8 @@ internal class BlockBoundsCache {
 
     companion object {
         private const val INITIAL_CAPACITY = 1024
+
+        private const val MAX_SIZE = 1 shl 16
 
         private const val HORIZONTAL_LIMIT = 1 shl 25
         private const val VERTICAL_LIMIT = 1 shl 11

@@ -38,6 +38,12 @@ object ModConfig : Config(
 
     var retainToggle = true
 
+    var holdingItems: List<String> = emptyList()
+
+    var keepShowingFor = 0f
+
+    var includeOffhand = false
+
     var toggleKeybind: OneConfigKeybind = defaultToggleKeybind()
 
     private fun defaultToggleKeybind(): OneConfigKeybind = KeybindHelper.builder()
@@ -51,6 +57,8 @@ object ModConfig : Config(
         .build()
 
     private val toggleProps = ArrayList<Property<*>>()
+
+    private val holdingProps = ArrayList<Property<*>>()
 
     init {
         preload()
@@ -117,6 +125,7 @@ object ModConfig : Config(
     override fun makeTree(): Tree {
         val tree = Tree.tree(id)
         toggleProps.clear()
+        holdingProps.clear()
         for (category in HitboxCategory.entries) {
             addCategory(tree, category)
         }
@@ -180,7 +189,7 @@ object ModConfig : Config(
             "${key}_showCondition", "Show Condition",
             "When to draw this hitbox. \"Toggled\" is switched on and off with the toggle keybind.",
             { cfg().showCondition }, { cfg().showCondition = it },
-            arrayOf("Always", "Toggled", "Hovered", "Never"), tab, sub,
+            arrayOf("Always", "Toggled", "Hovered", "Never", "Held"), tab, sub,
         )
         val showGroundedProp: Property<Boolean>? = if (category == HitboxCategory.ARROW) {
             switch(
@@ -213,6 +222,36 @@ object ModConfig : Config(
         val toggledProp: Property<Boolean>? = if (isDefault) {
             switch("toggled", "Toggled", "", { toggled }, { toggled = it }, tab, globalSub)
                 .also { it.addMetadata("hidden", true) }
+        } else {
+            null
+        }
+        val holdingItemsProp: Property<List<String>>? = if (isDefault) {
+            itemList(
+                "holdingItems", "Held Items",
+                "Items that show hitboxes while held.",
+                { holdingItems }, { holdingItems = it }, tab, globalSub,
+            )
+        } else {
+            null
+        }
+        //? if >1.8.9 {
+        val offhandProp: Property<Boolean>? = if (isDefault) {
+            switch(
+                "includeOffhand", "Include Offhand", "Also count the item in your offhand.",
+                { includeOffhand }, { includeOffhand = it }, tab, globalSub,
+            )
+        } else {
+            null
+        }
+        //?} else {
+        /*val offhandProp: Property<Boolean>? = null
+        *///?}
+        val keepShowingProp: Property<Float>? = if (isDefault) {
+            sliderFloat(
+                "keepShowingFor", "Keep Showing For",
+                "Seconds hitboxes stay after you switch items.",
+                { keepShowingFor }, { keepShowingFor = it }, 0f, 10f, 0.5f, tab, globalSub,
+            )
         } else {
             null
         }
@@ -300,6 +339,9 @@ object ModConfig : Config(
         toggleKeybindProp?.let { root.put(it) }
         retainToggleProp?.let { root.put(it) }
         toggledProp?.let { root.put(it) }
+        holdingItemsProp?.let { root.put(it) }
+        offhandProp?.let { root.put(it) }
+        keepShowingProp?.let { root.put(it) }
         root.put(tree)
         overrideProp?.let { tree.put(it) }
         tree.put(showCondition)
@@ -314,11 +356,14 @@ object ModConfig : Config(
 
         val toggles = listOfNotNull(toggleKeybindProp, retainToggleProp)
         toggleProps.addAll(toggles)
+        val holdings = listOfNotNull(holdingItemsProp, offhandProp, keepShowingProp)
+        holdingProps.addAll(holdings)
         if (enableProp != null) {
             hideInF1Prop?.addDisplayCondition(enableProp, true)
             thinWithDistanceProp?.addDisplayCondition(enableProp, true)
             showCondition.addDisplayCondition(enableProp, true)
             toggles.forEach { it.addDisplayCondition(enableProp, true) }
+            holdings.forEach { it.addDisplayCondition(enableProp, true) }
             visuals.forEach { it.addDisplayCondition(enableProp, true) }
         }
         overrideProp?.let { p ->
@@ -326,6 +371,7 @@ object ModConfig : Config(
             visuals.forEach { it.addDisplayCondition(p, false) }
         }
         toggles.forEach { p -> p.addDisplayCondition(Supplier { shown(HitboxCategory.anyToggled()) }) }
+        holdings.forEach { p -> p.addDisplayCondition(Supplier { shown(HitboxCategory.anyHolding()) }) }
         showCondition.addCallback(Predicate<Int> { revaluateToggleProps(); false })
         overrideProp?.addCallback(Predicate<Boolean> { revaluateToggleProps(); false })
         dashFactor.addDisplayCondition(Supplier { shown(cfg().lineMode == HitboxConfig.DASHED) })
@@ -343,6 +389,7 @@ object ModConfig : Config(
 
     private fun revaluateToggleProps() {
         for (prop in toggleProps) prop.revaluateDisplay()
+        for (prop in holdingProps) prop.revaluateDisplay()
     }
 
     private fun shown(condition: Boolean): Display = if (condition) Display.SHOWN else Display.HIDDEN
@@ -372,6 +419,13 @@ object ModConfig : Config(
         p.addMetadata("controlWidth", LineCardVisualizer.MAX_WIDTH.value)
         return p
     }
+
+    @Suppress("UNCHECKED_CAST")
+    private fun itemList(
+        id: String, title: String, desc: String,
+        getter: () -> List<String>, setter: (List<String>) -> Unit, category: String, subcategory: String,
+    ): Property<List<String>> =
+        functional(id, title, desc, getter, setter, List::class.java as Class<List<String>>, Visualizer.ItemListVisualizer::class.java, category, subcategory)
 
     private fun dropdown(id: String, title: String, desc: String, getter: () -> Int, setter: (Int) -> Unit, options: Array<String>, category: String, subcategory: String): Property<Int> {
         val p = functional(id, title, desc, getter, setter, Int::class.javaObjectType, Visualizer.DropdownVisualizer::class.java, category, subcategory)

@@ -11,6 +11,18 @@ import net.minecraft.client.Minecraft
 //import net.minecraft.client.renderer.MultiBufferSource
 //? if >=26.2
 import net.minecraft.client.renderer.SubmitNodeCollector
+//? if = 26.2 {
+/*import com.mojang.blaze3d.PrimitiveTopology
+import com.mojang.blaze3d.pipeline.BlendFunction
+import com.mojang.blaze3d.pipeline.ColorTargetState
+import com.mojang.blaze3d.pipeline.DepthStencilState
+import com.mojang.blaze3d.pipeline.RenderPipeline
+import com.mojang.blaze3d.vertex.DefaultVertexFormat
+import net.minecraft.client.renderer.BindGroupLayouts
+import net.minecraft.client.renderer.rendertype.RenderSetup
+import net.minecraft.client.renderer.rendertype.RenderType
+import net.minecraft.resources.Identifier
+*///?}
 import net.minecraft.client.renderer.culling.Frustum
 //? if >=1.21.11 {
 import net.minecraft.client.renderer.rendertype.RenderTypes
@@ -205,7 +217,9 @@ object HitboxRenderer {
         (Minecraft.getInstance().gameRenderer as FovAccessor).`polyhitbox$fov`(partialTicks, true)
     *///?}
 
-    //? if >=1.21.11 {
+    //? if = 26.2 {
+    /*private fun quadsType() = hitboxQuads
+    *///?} elif >=1.21.11 {
     private fun quadsType() = RenderTypes.debugQuads()
     //?} elif >1.8.9 {
     /*private fun quadsType() = RenderType.debugQuads()
@@ -895,6 +909,26 @@ object HitboxRenderer {
     private val identityPose = PoseStack()
 
     private val geometry = SubmitNodeCollector.CustomGeometryRenderer { _, buffer -> drawLevel(buffer) }
+
+    //? if = 26.2 {
+    /*private val hitboxQuads: RenderType = RenderType.create(
+        "polyhitbox_quads",
+        RenderSetup.builder(
+            RenderPipeline.builder()
+                .withBindGroupLayout(BindGroupLayouts.GLOBALS)
+                .withBindGroupLayout(BindGroupLayouts.MATRICES_PROJECTION)
+                .withLocation(Identifier.fromNamespaceAndPath("polyhitbox", "pipeline/hitbox_quads"))
+                .withVertexShader("core/position_color")
+                .withFragmentShader("core/position_color")
+                .withColorTargetState(ColorTargetState(BlendFunction.TRANSLUCENT))
+                .withVertexBinding(0, DefaultVertexFormat.POSITION_COLOR)
+                .withPrimitiveTopology(PrimitiveTopology.QUADS)
+                .withDepthStencilState(DepthStencilState.DEFAULT)
+                .withCull(false)
+                .build()
+        ).sortOnUpload().createRenderSetup()
+    )
+    *///?}
 
     fun submitHitboxes(camera: CameraRenderState, collector: SubmitNodeCollector) {
         refreshBlockCache()

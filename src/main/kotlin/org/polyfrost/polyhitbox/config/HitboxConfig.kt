@@ -8,11 +8,13 @@ class HitboxConfig {
         const val NORMAL = 0
         const val DASHED = 1
 
+        const val HOLDING = 4
+
         // Vanilla line width in framebuffer pixels which is what one thickness unit draws
         const val VANILLA_WIDTH = 2.5f
     }
 
-    // 0 Always 1 Toggled 2 Hovered 3 Never
+    // 0 Always 1 Toggled 2 Hovered 3 Never 4 Holding
     var showCondition = 0
 
     var showGrounded = true

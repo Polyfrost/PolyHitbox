@@ -109,6 +109,8 @@ object HitboxRenderer {
     private var viewer: Player? = null
     private var selfInFirstPerson: Entity? = null
     private var toggled = false
+
+    private var holding = false
     private var colorProviders: Array<HitboxColorProvider> = emptyArray()
 
     private var offX = 0.0
@@ -232,6 +234,7 @@ object HitboxRenderer {
         viewer = player
         selfInFirstPerson = if (mc.options.cameraType.isFirstPerson) mc.cameraEntity else null
         toggled = ModConfig.toggled
+        holding = HeldItems.active(player)
         colorProviders = HitboxColors.snapshot()
         return true
     }
@@ -271,6 +274,7 @@ object HitboxRenderer {
                 0 -> {}
                 1 -> if (!toggled) continue
                 2 -> if (entity !== hovered) continue
+                HitboxConfig.HOLDING -> if (!holding) continue
                 else -> continue
             }
             // Cull first because it is pure math while isInvisibleTo walks scoreboard teams
@@ -934,6 +938,7 @@ object HitboxRenderer {
             0 -> {}
             1 -> if (!toggled) return
             2 -> if (entity !== hovered) return
+            HitboxConfig.HOLDING -> if (!holding) return
             else -> return
         }
         if (entity.isInvisibleTo(player)) return

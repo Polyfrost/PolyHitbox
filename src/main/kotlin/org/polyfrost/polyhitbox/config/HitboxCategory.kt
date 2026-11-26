@@ -82,6 +82,8 @@ enum class HitboxCategory(
 
         fun anyToggled(): Boolean = all.any { effective(it.config).showCondition == TOGGLED }
 
+        fun anyHolding(): Boolean = all.any { effective(it.config).showCondition == HitboxConfig.HOLDING }
+
         fun anythingVisible(): Boolean {
             for (category in all) {
                 val cfg = effective(category.config)

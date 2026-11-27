@@ -34,7 +34,7 @@ object ModConfig : Config(
 
     var accurateHitboxes = true
 
-    var toggled = false
+    var toggled = true
 
     var retainToggle = true
 
@@ -45,7 +45,7 @@ object ModConfig : Config(
         .action { pressed: Boolean ->
             // Rebinding through the settings UI swaps in a keybind that is not screen aware
             // so we check here instead of in the keybind itself
-            if (pressed && Platform.screen().current<Any?>() == null) toggled = !toggled
+            if (pressed && enabled && Platform.screen().current<Any?>() == null) toggled = !toggled
             true
         }
         .build()
